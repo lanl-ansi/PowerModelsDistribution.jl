@@ -1,6 +1,4 @@
-
-"""
-"""
+"Helper function for Base.parse for dss matrices"
 function _fill_matrix!(matrix::Matrix{T}, rows::Vector{Vector{String}})::Nothing where T
     nphases = size(matrix)[1]
 
@@ -26,8 +24,7 @@ function _fill_matrix!(matrix::Matrix{T}, rows::Vector{Vector{String}})::Nothing
 end
 
 
-"""
-"""
+"Helper function for Base.parse for dss matrices"
 function _parse_dss_matrix(data::String)::Vector{Vector{String}}
     rows = Vector{String}[]
     for line in split(strip(strip(data, _array_delimiters)), '|')
@@ -42,8 +39,7 @@ function _parse_dss_matrix(data::String)::Vector{Vector{String}}
 end
 
 
-"""
-"""
+"Helper function for Base.parse for dss vectors"
 function _parse_dss_vector(data::String)::Vector{String}
     if _isa_rpn(data)
         matches = collect((m.match for m = eachmatch(_dss_rpn_array_sep_regex, data, overlap=false)))
@@ -63,8 +59,7 @@ function _parse_dss_vector(data::String)::Vector{String}
 end
 
 
-"""
-"""
+"Helper function for Base.parse for dss vectors"
 function _fill_vector!(vector::Vector{T}, elements::Vector{String})::Nothing where T
     for (i, element) in enumerate(elements)
         if _isa_rpn(element)
@@ -78,7 +73,7 @@ function _fill_vector!(vector::Vector{T}, elements::Vector{String})::Nothing whe
 end
 
 
-""
+"Helper function to convert InfrastructureModel,InfrastructureObject into Dict{String,Any}"
 function _convert_model_to_dict(data::Union{InfrastructureModel,InfrastructureObject})::Dict{String,Any}
     out = Dict{String,Any}(
     )
@@ -106,7 +101,7 @@ function _convert_model_to_dict(data::Union{InfrastructureModel,InfrastructureOb
 end
 
 
-""
+"Helper function to pull the specified properties from dss property pairs"
 function _get_raw_fields(property_pairs::Vector{Pair{String,String}})::Vector{Symbol}
     collect(Symbol(x.first) for x in property_pairs)
 end

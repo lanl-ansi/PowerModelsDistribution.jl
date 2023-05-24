@@ -1,4 +1,9 @@
 """
+    create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssLoad
+
+Creates a DssLoad struct containing all of the expected properties for a
+Load. See OpenDSS documentation for valid fields and ways to specify the
+different properties.
 """
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssLoad
     raw_fields = _get_raw_fields(property_pairs)
@@ -29,35 +34,11 @@ end
 
 
 """
-"""
-function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssStorage
-    raw_fields = _get_raw_fields(property_pairs)
+    create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssGenerator
 
-    strg = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
-
-    if Symbol("%stored") ∈ raw_fields
-        strg.kwhstored = strg[Symbol("%stored")] / 100 * strg.kwhrated
-    elseif :kwhstored ∈ raw_fields
-        strg[Symbol("%stored")] = strg.kwhstored / strg.kwhrated * 100
-    end
-
-    if :kwrated ∈ raw_fields && :kva ∉ raw_fields
-        strg.kva = strg.kwrated
-    elseif :kva ∈ raw_fields && :kwrated ∉ raw_fields
-        strg.kwrated = strg.kva
-    end
-
-    if :pf ∈ raw_fields && :kw ∈ raw_fields
-        strg.kvar = sign(strg.pf) * strg.kw * sqrt(1 / strg.pf^2 - 1)
-    elseif :kw ∈ raw_fields && :kvar ∈ raw_fields
-        strg.pf = strg.kw == 0.0 ? 1.0 : strg.kvar / strg.kw
-    end
-
-    return strg
-end
-
-
-"""
+Creates a DssGenerator struct containing all of the expected properties for a
+Generator. See OpenDSS documentation for valid fields and ways to specify the
+different properties.
 """
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssGenerator
     raw_fields = _get_raw_fields(property_pairs)
@@ -95,6 +76,12 @@ end
 
 
 """
+    create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssPvsystem
+
+Creates a DssPvsystem struct containing all of the expected properties for a
+PVSystem. See OpenDSS document
+https://github.com/tshort/OpenDSS/blob/master/Doc/OpenDSS%20PVSystem%20Model.doc
+for valid fields and ways to specify the different properties.
 """
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssPvsystem
     raw_fields = _get_raw_fields(property_pairs)
@@ -121,4 +108,38 @@ function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}
     end
 
     return pv
+end
+
+
+"""
+    create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssStorage
+
+Creates a DssStorage struct containing all expected properties for a storage
+element. See OpenDSS documentation for valid fields and ways to specify the
+different properties.
+"""
+function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssStorage
+    raw_fields = _get_raw_fields(property_pairs)
+
+    strg = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
+
+    if Symbol("%stored") ∈ raw_fields
+        strg.kwhstored = strg[Symbol("%stored")] / 100 * strg.kwhrated
+    elseif :kwhstored ∈ raw_fields
+        strg[Symbol("%stored")] = strg.kwhstored / strg.kwhrated * 100
+    end
+
+    if :kwrated ∈ raw_fields && :kva ∉ raw_fields
+        strg.kva = strg.kwrated
+    elseif :kva ∈ raw_fields && :kwrated ∉ raw_fields
+        strg.kwrated = strg.kva
+    end
+
+    if :pf ∈ raw_fields && :kw ∈ raw_fields
+        strg.kvar = sign(strg.pf) * strg.kw * sqrt(1 / strg.pf^2 - 1)
+    elseif :kw ∈ raw_fields && :kvar ∈ raw_fields
+        strg.pf = strg.kw == 0.0 ? 1.0 : strg.kvar / strg.kw
+    end
+
+    return strg
 end

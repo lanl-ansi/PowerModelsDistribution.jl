@@ -3,6 +3,7 @@
 *.jl.cov
 *.jl.*.cov
 *.jl.mem
+lcov.info
 deps/deps.jl
 docs/build
 

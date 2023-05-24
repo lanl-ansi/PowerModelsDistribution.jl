@@ -1,6 +1,4 @@
-
-"""
-"""
+"parses a dss type vector into Vector{T}"
 function Base.parse(::Type{T}, data::String) where {subtype, T <: Vector{subtype}}
     elements = _parse_dss_vector(data)
     nphases = length(elements)
@@ -10,9 +8,7 @@ function Base.parse(::Type{T}, data::String) where {subtype, T <: Vector{subtype
     return vector
 end
 
-
-"""
-"""
+"parses a dss type matrix into Matrix{T}"
 function Base.parse(::Type{T}, data::String) where {subtype, T <: Matrix{subtype}}
     rows = _parse_dss_matrix(data)
     nphases = maximum([length(row) for row in rows])
@@ -22,12 +18,10 @@ function Base.parse(::Type{T}, data::String) where {subtype, T <: Matrix{subtype
     return matrix
 end
 
-
+"parser to pass through String"
 Base.parse(::Type{T}, data::String) where T <: String = data
 
-
-"""
-"""
+"Parses dss conn properties into ConnConfig enum"
 function Base.parse(::Type{T}, conn::String)::T where T <: ConnConfig
     if conn ∈ ["wye", "y", "ln"]
         return WYE
@@ -39,12 +33,10 @@ function Base.parse(::Type{T}, conn::String)::T where T <: ConnConfig
     return WYE
 end
 
-
-"""
-"""
+"Parses dss load model into LoadModel enum"
 function Base.parse(::Type{T}, model::String)::T where T <: LoadModel
     model = parse(Int, model)
-    if model ∈ [3, 4, 7, 8]
+    if model ∈ [3, 4, 7]
         @warn "dss load model $model not supported; treating as constant POWER model"
         model = 1
     elseif model == 6
@@ -55,11 +47,8 @@ function Base.parse(::Type{T}, model::String)::T where T <: LoadModel
     return _dss2pmd_load_model[model]
 end
 
-
-"""
-"""
+"Parses dss capacitor control type into CapControlType enum"
 function Base.parse(::Type{T}, model::String)::T where T <: CapControlType
-
     if isempty(model)
         return CAP_DISABLED
     elseif model == "kvar"
@@ -77,9 +66,7 @@ function Base.parse(::Type{T}, model::String)::T where T <: CapControlType
     end
 end
 
-
-"""
-"""
+"Parses dss enabled property into Status enum"
 function Base.parse(::Type{T}, status::String)::T where T <: Status
     if status ∈ ["y", "yes", "true"]
         return ENABLED

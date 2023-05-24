@@ -124,4 +124,5 @@ function print_file(io::IO, data::Dict{String,<:Any}; indent::Int=2)
 end
 
 
+"print_file variant for InfrastructureModel that converts to Dict first"
 print_file(io::IO, data::InfrastructureModel; kwargs...) = print_file(io, _convert_model_to_dict(data); kwargs...)

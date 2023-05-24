@@ -1,5 +1,7 @@
-
 """
+    create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssObject
+
+Default Dss struct creator, for those objects that do not require special processing
 """
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssObject
     _apply_property_pairs(T(), property_pairs, dss, dss_raw)
@@ -7,6 +9,11 @@ end
 
 
 """
+    create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}})::T where T <: DssOptions
+
+Creates a DssOptions struct with all the possible options. See OpenDSS
+documentation for valid fields and ways to specify the different
+properties.
 """
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}})::T where T <: DssOptions
     _apply_property_pairs(T(), property_pairs)
@@ -14,6 +21,11 @@ end
 
 
 """
+    create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssLine
+
+Creates a DssLine struct containing all of the properties for a Line. See
+OpenDSS documentation for valid fields and ways to specify the different
+properties.
 """
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssLine
     raw_fields = _get_raw_fields(property_pairs)
@@ -90,6 +102,7 @@ function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}
     line.cmatrix = line.cmatrix / _convert_to_meters[line.units]
     line.b1 = line.b1 / _convert_to_meters[line.units]
     line.b0 = line.b0 / _convert_to_meters[line.units]
+    line.length = line.length * _convert_to_meters[line.units]
     line.units = "m"
 
     return line
@@ -97,6 +110,137 @@ end
 
 
 """
+    create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssCapacitor
+
+Creates a DssCapacitor struct containing all of the expected properties for a
+Capacitor. If `bus2` is not specified, the capacitor will be treated as a shunt.
+See OpenDSS documentation for valid fields and ways to specify the
+different properties.
+"""
+function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssCapacitor
+    raw_fields = _get_raw_fields(property_pairs)
+
+    capacitor = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
+
+    capacitor.bus2 = :bus2 ∉ raw_fields ? string(split(capacitor.bus1, ".")[1],".",join(fill("0", capacitor.phases), ".")) : capacitor.bus2
+
+    return capacitor
+end
+
+
+"""
+    create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssReactor
+
+Creates a DssReactor struct containing all of the expected properties for
+a Reactor. If `bus2` is not specified Reactor is treated like a shunt. See
+OpenDSS documentation for valid fields and ways to specify the different
+properties.
+"""
+function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssReactor
+    raw_fields = _get_raw_fields(property_pairs)
+
+    reactor = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
+
+    if :basefreq ∉ raw_fields
+        reactor.basefreq = dss.options.defaultbasefrequency
+    end
+
+    # TODO: handle `parallel`
+    if (:kv ∈ raw_fields && :kvar ∈ raw_fields) || :x ∈ raw_fields || :lmh ∈ raw_fields || :z ∈ raw_fields
+        if :kvar ∈ raw_fields && :kv ∈ raw_fields
+            kvarperphase = reactor.kvar / reactor.phases
+            if reactor.conn == DELTA
+                phasekv = reactor.kv
+            else
+                if reactor.phases == 2 || reactor.phases == 3
+                    phasekv = reactor.kv / sqrt(3.0)
+                else
+                    phasekv = reactor.kv
+                end
+            end
+
+            reactor.x = phasekv^2 * 1.0e3 / kvarperphase
+            reactor.l = reactor.x / (2 * pi) / reactor.basefreq
+            reactor.lmh = reactor.l * 1e3
+            reactor.normamps = kvarperphase / phasekv
+            reactor.emergamps = reactor.normamps * 1.35
+
+        elseif :x ∈ raw_fields
+            reactor.l = reactor.x / (2 * pi) / reactor.basefreq
+            reactor.lmh = reactor.l * 1e3
+
+        elseif :lmh ∈ raw_fields
+            reactor.l = reactor.lmh / 1.0e3
+            reactor.x = reactor.l * 2 * pi * reactor.basefreq
+
+        elseif :z ∈ raw_fields
+            z = complex(reactor.z...)
+            reactor.r = real(z)
+            reactor.x = imag(z)
+            reactor.l = reactor.x / (2 * pi) / reactor.basefreq
+            reactor.lmh = reactor.l * 1e3
+        end
+
+        reactor.rmatrix = LinearAlgebra.diagm(0 => fill(reactor.r, reactor.phases))
+        reactor.xmatrix = LinearAlgebra.diagm(0 => fill(reactor.x, reactor.phases))
+    elseif :rmatrix ∈ raw_fields && :xmatrix ∈ raw_fields
+        reactor.r = reactor.rmatrix[1, 1]
+        reactor.x = reactor.xmatrix[1, 1]
+
+        # TODO: account for off-diagonal and single phase
+        reactor.z = reactor.z1 = reactor.z2 = reactor.z0 = [reactor.r, reactor.x]
+        reactor.lmh = reactor.x / (2 * pi) / reactor.basefreq * 1e3
+    elseif :z1 ∈ raw_fields
+        z1 = complex(reactor.z1...)
+        z2 = complex(reactor.z2...)
+        z0 = complex(reactor.z0...)
+
+        Z = zeros(Complex{Float64}, reactor.phases, reactor.phases)
+
+        for i in 1:reactor.phases
+            if reactor.phases == 1
+                Z[i,i] = complex(z1...) / 3.0
+            else
+                Z[i,i] = (complex(z2...) + complex(z1...) + complex(z0...)) / 3.0
+            end
+        end
+
+        if reactor.phases == 3
+            Z[2, 1] = Z[3, 2] = Z[1, 3] = (conj(exp(-2*pi*im/3))^2 * z2 + conj(exp(-2*pi*im/3)) * z1 + z0) / 3
+            Z[3, 1] = Z[1, 2] = Z[2, 3] = (conj(exp(-2*pi*im/3))^2 * z1 + conj(exp(-2*pi*im/3)) * z2 + z0) / 3
+        end
+
+        reactor.rmatrix = real(Z)
+        reactor.xmatrix = imag(Z)
+
+        reactor.r = reactor.rmatrix[1,1]
+        reactor.x = reactor.xmatrix[1,1]
+        reactor.lmh = reactor.x / (2 * pi * reactor.basefreq) * 1e3
+    else
+        reactor.rmatrix = LinearAlgebra.diagm(0 => fill(reactor.r, reactor.phases))
+        reactor.xmatrix = LinearAlgebra.diagm(0 => fill(reactor.x, reactor.phases))
+    end
+
+    if :gmatrix ∉ raw_fields
+        reactor.gmatrix = LinearAlgebra.diagm(0 => fill(0.0, reactor.phases))
+    end
+
+    if :bmatrix ∉ raw_fields
+        reactor.bmatrix = LinearAlgebra.diagm(0 => fill(0.0, reactor.phases))
+    end
+
+    return reactor
+end
+
+
+"""
+    create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssVsource
+
+Creates a DssVsource struct containing all of the expected properties for a
+Voltage Source. If `bus2` is not specified, VSource will be treated like a
+generator. Mostly used as `source` which represents the circuit. See
+OpenDSS documentation for valid fields and ways to specify the different
+properties.
 """
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssVsource
     raw_fields = _get_raw_fields(property_pairs)
@@ -245,104 +389,50 @@ end
 
 
 """
+    create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: Union{DssTransformer,DssXfmrcode}
+
+Creates a DssTranformer or DssXfmrcode struct containing all of the properties
+of a Transformer or Xfmrcode, respectively. See OpenDSS documentation for valid
+fields and ways to specify the different properties. DssXfmrcode contain all of
+the same properties as a DssTransformer except bus, buses, bank, xfmrcode.
 """
-function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssCapacitor
+function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: Union{DssTransformer,DssXfmrcode}
     raw_fields = _get_raw_fields(property_pairs)
 
-    capacitor = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
+    transformer = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
 
-    capacitor.bus2 = :bus2 ∉ raw_fields ? string(split(capacitor.bus1, ".")[1],".",join(fill("0", capacitor.phases), ".")) : capacitor.bus2
-
-    return capacitor
-end
-
-
-"""
-"""
-function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssReactor
-    raw_fields = _get_raw_fields(property_pairs)
-
-    reactor = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
-
-    if :basefreq ∉ raw_fields
-        reactor.basefreq = dss.options.defaultbasefrequency
+    if :normhkva ∉ raw_fields && (:kvas ∈ raw_fields) || (:kva ∈ raw_fields)
+        transformer.normhkva = 1.1 * transformer.kvas[1]
+    elseif :normhkva ∈ raw_fields && _is_after(property_pairs, "normhkva", "kva") && _is_after(property_pairs, "normhkva", "kvas") && _is_after(property_pairs, "normhkva", "emerghkva")
+        transformer.kvas = fill(transformer.normhkva, transformer.windings) ./ 1.1
+        transformer.kva = transformer.normhkva / 1.1
     end
 
-    # TODO: handle `parallel`
-    if (:kv ∈ raw_fields && :kvar ∈ raw_fields) || :x ∈ raw_fields || :lmh ∈ raw_fields || :z ∈ raw_fields
-        if :kvar ∈ raw_fields && :kv ∈ raw_fields
-            kvarperphase = reactor.kvar / reactor.phases
-            if reactor.conn == DELTA
-                phasekv = reactor.kv
-            else
-                if reactor.phases == 2 || reactor.phases == 3
-                    phasekv = reactor.kv / sqrt(3.0)
-                else
-                    phasekv = reactor.kv
-                end
-            end
-
-            reactor.x = phasekv^2 * 1.0e3 / kvarperphase
-            reactor.l = reactor.x / (2 * pi) / reactor.basefreq
-            reactor.lmh = reactor.l * 1e3
-            reactor.normamps = kvarperphase / phasekv
-            reactor.emergamps = reactor.normamps * 1.35
-
-        elseif :x ∈ raw_fields
-            reactor.l = reactor.x / (2 * pi) / reactor.basefreq
-            reactor.lmh = reactor.l * 1e3
-
-        elseif :lmh ∈ raw_fields
-            reactor.l = reactor.lmh / 1.0e3
-            reactor.x = reactor.l * 2 * pi * reactor.basefreq
-
-        elseif :z ∈ raw_fields
-            z = complex(reactor.z...)
-            reactor.r = real(z)
-            reactor.x = imag(z)
-            reactor.l = reactor.x / (2 * pi) / reactor.basefreq
-            lmh = reactor.l * 1e3
-        end
-
-        rmatrix = LinearAlgebra.diagm(0 => fill(reactor.r, reactor.phases))
-        xmatrix = LinearAlgebra.diagm(0 => fill(reactor.x, reactor.phases))
-    elseif :rmatrix ∈ raw_fields && :xmatrix ∈ raw_fields
-        reactor.r = reactor.rmatrix[1, 1]
-        reactor.x = reactor.xmatrix[1, 1]
-
-        # TODO: account for off-diagonal and single phase
-        reactor.z = reactor.z1 = reactor.z2 = reactor.z0 = [reactor.r, reactor.x]
-        reactor.lmh = reactor.x / (2 * pi) / reactor.basefreq * 1e3
-    elseif :z1 ∈ raw_fields
-        z1 = complex(reactor.z1...)
-        z2 = complex(reactor.z2...)
-        z0 = complex(reactor.z0...)
-
-        Z = zeros(Complex{Float64}, reactor.phases, reactor.phases)
-
-        for i in 1:reactor.phases
-            if reactor.phases == 1
-                Z[i,i] = complex(z1...) / 3.0
-            else
-                Z[i,i] = (complex(z2...) + complex(z1...) + complex(z0...)) / 3.0
-            end
-        end
-
-        if reactor.phases == 3
-            Z[2, 1] = Z[3, 2] = Z[1, 3] = (conj(exp(-2*pi*im/3))^2 * z2 + conj(exp(-2*pi*im/3)) * z1 + z0) / 3
-            Z[3, 1] = Z[1, 2] = Z[2, 3] = (conj(exp(-2*pi*im/3))^2 * z1 + conj(exp(-2*pi*im/3)) * z2 + z0) / 3
-        end
-
-        reactor.rmatrix = real(Z)
-        reactor.xmatrix = imag(Z)
-
-        reactor.r = rmatrix[1,1]
-        reactor.x = xmatrix[1,1]
-        reactor.lmh = reactor.x / (2 * pi * reactor.basefreq) * 1e3
-    else
-        reactor.rmatrix = LinearAlgebra.diagm(0 => fill(reactor.r, reactor.phases))
-        reactor.xmatrix = LinearAlgebra.diagm(0 => fill(reactor.x, reactor.phases))
+    if :emerghkva ∉ raw_fields && (:kvas ∈ raw_fields) || (:kva ∈ raw_fields)
+        transformer.emerghkva = 1.5 * transformer.kvas[1]
+    elseif :emerghkva ∈ raw_fields && _is_after(property_pairs, "emerghkva", "kva") && _is_after(property_pairs, "emerghkva", "kvas") && _is_after(property_pairs, "emerghkva", "normhkva")
+        transformer.kvas = fill(transformer.emerghkva, transformer.windings) ./ 1.5
+        transformer.kva = transformer.emerghkva / 1.5
     end
 
-    return reactor
+    if Symbol("%loadloss") ∉ raw_fields && (Symbol("%r") ∈ raw_fields || Symbol("%rs") ∈ raw_fields)
+        transformer[Symbol("%loadloss")] = sum(transformer[Symbol("%rs")][1:2])
+    elseif Symbol("%loadloss") ∈ raw_fields && _is_after(property_pairs, "%loadloss", "%rs")
+        if _is_after(property_pairs, "%loadloss", "%r", 1)
+            transformer[Symbol("%rs")][1] = transformer[Symbol("%loadloss")] / 2.0
+        end
+        if _is_after(property_pairs, "%loadloss", "%r", 2)
+            transformer[Symbol("%rs")][2] = transformer[Symbol("%loadloss")] / 2.0
+        end
+    end
+
+    if Symbol("rdcohms") ∉ raw_fields && (Symbol("%r") ∈ raw_fields || Symbol("%rs") ∈ raw_fields)
+        transformer.rdcohms = 0.85 .* transformer[Symbol("%rs")]
+    end
+
+    if :leadlag ∉ raw_fields && :lag ∈ raw_fields
+        transformer.leadlag = transformer.lag
+    end
+
+    return transformer
 end

@@ -57,11 +57,6 @@ end
 ""
 function _parse_dss_obj_type_name(dss_obj_type_name::AbstractString)::Vector{String}
     obj_type_name = string.(split(replace(replace(dss_obj_type_name, "\""=>""), "\'"=>""), '.'))
-    # if obj_type_name[1] == "circuit"
-    #     obj_type_name = String["vsource", "source"]
-    # end
-
-    obj_type_name
 end
 
 
@@ -331,44 +326,44 @@ function parse_raw_dss(io::IO, data::DssRawModel)::DssRawModel
 end
 
 
-# """
-#     parse_dss_voltages_export(file::String)::Dict{String,Any}
+"""
+    parse_dss_voltages_export(file::String)::Dict{String,Any}
 
-# Parses a voltages CSV file exported from OpenDSS with the command `Export Voltages [filename.csv]`
-# """
-# function parse_dss_voltages_export(path::FilePaths.AbstractPath)::Dict{String,Any}
-#     open(first(Glob.glob([Glob.FilenameMatch(basename(path), "i")], dirname(path))), "r") do io
-#         parse_dss_voltages_export(io)
-#     end
-# end
+Parses a voltages CSV file exported from OpenDSS with the command `Export Voltages [filename.csv]`
+"""
+function parse_dss_voltages_export(path::Union{String,FilePaths.AbstractPath})::Dict{String,Any}
+    open(first(Glob.glob([Glob.FilenameMatch(basename(path), "i")], dirname(path))), "r") do io
+        parse_dss_voltages_export(io)
+    end
+end
 
 
-# """
-#     parse_dss_voltages_export(io::IO)::Dict{String,Any}
+"""
+    parse_dss_voltages_export(io::IO)::Dict{String,Any}
 
-# Parses a voltages CSV file exported from OpenDSS with the command `Export Voltages [filename.csv]`
+Parses a voltages CSV file exported from OpenDSS with the command `Export Voltages [filename.csv]`
 
-# Units of `vm` are volts, and units of `va` are degrees.
-# """
-# function parse_dss_voltages_export(io::IO)::Dict{String,Any}
-#     data = Dict{String,Any}()
-#     for row in CSV.File(IOBuffer(lowercase(read(io, String))); normalizenames=true)
-#         data[row.bus] = Dict{String,Any}(
-#             "vbase" => row.basekv * 1e3,  # convert to volts, same units as vm
-#             "terminals" => Int[],
-#             "vm" => Real[],
-#             "va" => Real[],
-#         )
-#         nodes = [parse(Int, match(r"(\d+)", string(n)).captures[1]) for n in propertynames(row) if startswith(string(n), "node")]
-#         for i in nodes
-#             terminal = getproperty(row, Symbol("node$i"))
-#             if terminal != 0
-#                 push!(data[row.bus]["terminals"], terminal)
-#                 push!(data[row.bus]["vm"], getproperty(row, Symbol("magnitude$i")))
-#                 push!(data[row.bus]["va"], getproperty(row, Symbol("angle$i")))
-#             end
-#         end
-#     end
+Units of `vm` are volts, and units of `va` are degrees.
+"""
+function parse_dss_voltages_export(io::IO)::Dict{String,Any}
+    data = Dict{String,Any}()
+    for row in CSV.File(IOBuffer(lowercase(read(io, String))); normalizenames=true)
+        data[row.bus] = Dict{String,Any}(
+            "vbase" => row.basekv * 1e3,  # convert to volts, same units as vm
+            "terminals" => Int[],
+            "vm" => Real[],
+            "va" => Real[],
+        )
+        nodes = [parse(Int, match(r"(\d+)", string(n)).captures[1]) for n in propertynames(row) if startswith(string(n), "node")]
+        for i in nodes
+            terminal = getproperty(row, Symbol("node$i"))
+            if terminal != 0
+                push!(data[row.bus]["terminals"], terminal)
+                push!(data[row.bus]["vm"], getproperty(row, Symbol("magnitude$i")))
+                push!(data[row.bus]["va"], getproperty(row, Symbol("angle$i")))
+            end
+        end
+    end
 
-#     return data
-# end
+    return data
+end

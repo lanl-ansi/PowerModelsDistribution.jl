@@ -90,6 +90,44 @@ end
 
 """
 """
+function _apply_property_pairs(dss_obj::T, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssRegcontrol
+    raw_fields = _get_raw_fields(property_pairs)
+
+    obj_type = Symbol(lowercase(replace(replace(string(T), "Dss"=>""), "PowerModelsDistribution."=>"")))
+    for (pn, v) in filter(x->x.first != "__path__", property_pairs)
+        pn = _infer_partial_property_name(pn, dss_obj)
+        if Symbol(pn) ∉ propertynames(dss_obj) && pn != "__path__"
+            @warn "$(T) has no field `$(pn)`, skipping..."
+            continue
+        end
+        if pn == "like"
+            if v in keys(getproperty(dss, obj_type))
+                like_dss_obj = getproperty(dss, obj_type)[v]
+            elseif v in keys(getproperty(dss_raw, obj_type))
+                like_dss_obj = create_dss_object(T, getproperty(dss_raw, obj_type)[v], dss, dss_raw)
+            else
+                @warn "$(obj_type).$(v) does not exist, can't apply 'like' on $(obj_type).$(getproperty(dss_obj, :name))"
+                continue
+            end
+            merge!(dss_obj, like_dss_obj)
+        end
+        setproperty!(dss_obj, pn, v, fieldtype(typeof(dss_obj), Symbol(pn)))
+    end
+
+    dss_obj.raw_dss = filter(x->x.first != "__path__", property_pairs)
+
+    :phases ∉ raw_fields && _get_implied_nphases!(dss_obj)
+
+    if :tapwinding ∉ raw_fields && :winding ∈ raw_fields
+        dss_obj.tapwinding = dss_obj.winding
+    end
+
+    return dss_obj
+end
+
+
+"""
+"""
 function _apply_property_pairs(dss_obj::T, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssMultObjects
     obj_type = Symbol(lowercase(replace(replace(string(T), "Dss"=>""), "PowerModelsDistribution."=>"")))
 
@@ -223,7 +261,7 @@ function _apply_property_pairs(dss_obj::T, property_pairs::Vector{Pair{String,St
         setproperty!(dss_obj, pn_to, fill(getproperty(dss_obj, pn_fr), windings))
     end
 
-    _wdg = 1
+    _wdg = windings
     for (pn, v) in filter(x->x.first != "__path__", property_pairs)
         if Symbol(pn) ∉ propertynames(dss_obj) && pn != "__path__"
             @warn "$(T) has no field `$(pn)`, skipping..."
@@ -250,6 +288,8 @@ function _apply_property_pairs(dss_obj::T, property_pairs::Vector{Pair{String,St
     end
 
     :phases ∉ raw_fields && _get_implied_nphases!(dss_obj)
+
+    dss_obj.raw_dss = filter(x->x.first != "__path__", property_pairs)
 
     return dss_obj
 end
@@ -301,6 +341,8 @@ function _apply_property_pairs(dss_obj::T, property_pairs::Vector{Pair{String,St
 
     setproperty!(dss_obj, :fx, getproperty(dss_obj, :xs))
     setproperty!(dss_obj, :fh, getproperty(dss_obj, :hs))
+
+    dss_obj.raw_dss = filter(x->x.first != "__path__", property_pairs)
 
     return dss_obj
 end

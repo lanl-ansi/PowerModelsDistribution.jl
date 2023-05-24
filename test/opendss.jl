@@ -49,7 +49,7 @@
 
     @testset "opendss parse generic warnings and errors" begin
         @test_throws ErrorException parse_file("../test/data/opendss/test_simple2.dss"; data_model=MATHEMATICAL)
-        # @test_logs (:info, "Command 'solve' on line 70 in 'test2_master.dss' is not supported, skipping.") (:info, "Command 'show' on line 72 in 'test2_master.dss' is not supported, skipping.") (:info, "reactors as constant impedance elements is not explicitly supported, treating reactor.reactor1 like line") (:warn, "line.something does not exist, can't apply 'like' on line.l1") (:info, "Circuit has been reset with the 'clear' on line 2 in 'test2_master.dss'") (:info, "Redirecting to 'test2_linecodes.dss' on line 10 in 'test2_Linecodes.dss'") (:info, "Redirecting to 'test2_loadshape.dss' on line 11 in 'test2_Linecodes.dss'") match_mode=:any parse_file("../test/data/opendss/test2_master.dss")
+        @test_logs (:info, "Command 'solve' on line 70 in 'test2_master.dss' is not supported, skipping.") (:info, "Command 'show' on line 72 in 'test2_master.dss' is not supported, skipping.") (:warn, "reactors as constant impedance elements is not yet supported, treating reactor.reactor1 like line") (:warn, "line.something does not exist, can't apply 'like' on line.l1") (:info, "Circuit has been reset with the 'clear' on line 2 in 'test2_master.dss'") (:info, "Redirecting to 'test2_linecodes.dss' on line 10 in 'test2_Linecodes.dss'") (:info, "Redirecting to 'test2_loadshape.dss' on line 11 in 'test2_Linecodes.dss'") match_mode=:any parse_file("../test/data/opendss/test2_master.dss")
     end
 
     raw_dss = parse_raw_dss("../test/data/opendss/test2_master.dss")
@@ -87,8 +87,6 @@
     end
 
     @testset "opendss parse generic parser verification" begin
-        # @test dss["line"]["l7"]["test_param"] == 100.0
-
         @test math["name"] == "test2"
 
         @test length(math) == 18
@@ -221,15 +219,13 @@
     end
 
     @testset "opendss capcontrol parse" begin
-        raw_obj = dss["capcontrol"]["c1_ctrl"]
+        defaults = filter(x->x.first!="raw_dss",PowerModelsDistribution._convert_model_to_dict(dss["capcontrol"]["c1_ctrl"]))
 
-        defaults = dss["capcontrol"]["c1_ctrl"]
-
-        @test defaults == Dict{String,Any}(
+        @test isempty(PowerModelsDistribution._check_equal(defaults, Dict{String,Any}(
             "name" => "c1_ctrl",
             "element" => "line.l2",
             "capacitor" => "c1",
-            "type" => "kvar",
+            "type" => CAP_REACTIVE_POWER,
             "ctphase" => 1,
             "ctratio" => 1.0,
             "deadtime" => 300.0,
@@ -246,15 +242,15 @@
             "vmin" => 7110.0,
             "voltoverride" => true,
             "pctminkvar" => 50.0,
-            "enabled" => true,
+            "enabled" => ENABLED,
             "like" => "",
-        )
+        )))
     end
 
     @testset "opendss regcontrol parse" begin
-        defaults = dss["regcontrol"]["t1"]
+        defaults = filter(x->x.first!="raw_dss",PowerModelsDistribution._convert_model_to_dict(dss["regcontrol"]["t1"]))
 
-        @test defaults == Dict{String,Any}(
+        @test isempty(PowerModelsDistribution._check_equal(defaults, Dict{String,Any}(
             "name" => "t1",
             "transformer" => "t1",
             "winding" => 2,
@@ -283,19 +279,19 @@
             "tapdelay" => 2.0,
             "tapnum" => 0,
             "vlimit" => 0.0,
-            "rev_z" => 0.0,
-            "ldc_z" => 0.0,
+            "rev_z" => [0.0, 0.0],
+            "ldc_z" => [0.0, 0.0],
             "cogen" => false,
             "remoteptratio" => 60.0,
-            "enabled" => true,
+            "enabled" => ENABLED,
             "like" => "",
-        )
+        )))
     end
 
     @testset "tabulation parse" begin
         eng = parse_file("../test/data/opendss/case_tabulation.dss")
 
-        number_buses = 3
+        number_buses = 2
         @test length(eng["bus"]) == number_buses
     end
 end

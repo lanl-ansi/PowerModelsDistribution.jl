@@ -1,4 +1,6 @@
+# Defines data structures (defaults) for OpenDSS objects
 
+"Struct to maintain current state in dss parser"
 Base.@kwdef mutable struct DssCurrentState <: DssRawModel
     current_command::String = ""
     last_command::String = ""
@@ -9,7 +11,7 @@ Base.@kwdef mutable struct DssCurrentState <: DssRawModel
     base_path::Union{Missing,FilePaths.AbstractPath} = missing
 end
 
-
+"OpenDSS option defaults"
 Base.@kwdef mutable struct DssOptions <: DssDataObject
     var"%growth"::Float64 = 2.5
     var"%mean"::Float64 = 65.0
@@ -112,16 +114,17 @@ Base.@kwdef mutable struct DssOptions <: DssDataObject
 end
 
 
+"OpenDSS buscoordinates"
 struct DssBuscoords <: DssDataObject
     bus::String
     x::Float64
     y::Float64
 end
 
-
 DssSetbusxy = DssBuscoords
 
 
+"Raw dss data structure"
 Base.@kwdef struct OpenDssRawDataModel <: DssRawModel
     filename::Vector{String} = Vector{String}()
     current_state::DssCurrentState = DssCurrentState()
@@ -165,6 +168,7 @@ Base.@kwdef struct OpenDssRawDataModel <: DssRawModel
 end
 
 
+"OpenDSS LineCode defaults"
 Base.@kwdef mutable struct DssLinecode <: DssDataObject
     name::String = ""
     nphases::Int = 3
@@ -196,6 +200,7 @@ Base.@kwdef mutable struct DssLinecode <: DssDataObject
 end
 
 
+"OpenDSS LineGeometry defaults"
 Base.@kwdef mutable struct DssLinegeometry <: DssDataObject
     name::String = ""
     nconds::Int = 3
@@ -225,6 +230,7 @@ Base.@kwdef mutable struct DssLinegeometry <: DssDataObject
 end
 
 
+"OpenDSS LineSpacing defaults"
 Base.@kwdef mutable struct DssLinespacing <: DssDataObject
     name::String = ""
     nconds::Int = 3
@@ -240,6 +246,7 @@ Base.@kwdef mutable struct DssLinespacing <: DssDataObject
 end
 
 
+"OpenDSS LoadShape defaults"
 Base.@kwdef mutable struct DssLoadshape <: DssDataObject
     name::String = ""
     npts::Int = 0
@@ -256,7 +263,7 @@ Base.@kwdef mutable struct DssLoadshape <: DssDataObject
     dblfile::String = ""
     pqcsvfile::String = ""
     action::String = ""
-    useactual::Bool = true
+    useactual::Bool = false
     pmax::Float64 = 1.0
     qmax::Float64 = 1.0
     pbase::Float64 = 0.0
@@ -265,6 +272,7 @@ Base.@kwdef mutable struct DssLoadshape <: DssDataObject
 end
 
 
+"OpenDSS XYCurve defaults"
 Base.@kwdef mutable struct DssXycurve <: DssDataObject
     name::String = ""
     npts::Int = 0
@@ -285,6 +293,7 @@ Base.@kwdef mutable struct DssXycurve <: DssDataObject
 end
 
 
+"OpenDSS GrowthShape defaults"
 Base.@kwdef mutable struct DssGrowthshape <: DssDataObject
     name::String = ""
     npts::Int = 0
@@ -298,6 +307,7 @@ Base.@kwdef mutable struct DssGrowthshape <: DssDataObject
 end
 
 
+"OpenDSS Tcc_curve defaults"
 Base.@kwdef mutable struct DssTcc_curve <: DssDataObject
     name::String = ""
     npts::Int = 0
@@ -308,6 +318,7 @@ Base.@kwdef mutable struct DssTcc_curve <: DssDataObject
 end
 
 
+"OpenDSS CNData defaults"
 Base.@kwdef mutable struct DssCndata <: DssDataObject
     name::String = ""
     diacable::Float64 = 0.0
@@ -333,6 +344,7 @@ Base.@kwdef mutable struct DssCndata <: DssDataObject
 end
 
 
+"OpenDSS TSData defaults"
 Base.@kwdef mutable struct DssTsdata <: DssDataObject
     name::String = ""
     diacable::Float64 = 0.0
@@ -357,6 +369,7 @@ Base.@kwdef mutable struct DssTsdata <: DssDataObject
 end
 
 
+"OpenDSS WireData defaults"
 Base.@kwdef mutable struct DssWiredata <: DssDataObject
     name::String = ""
     rdc::Float64 = 0.0
@@ -375,6 +388,7 @@ Base.@kwdef mutable struct DssWiredata <: DssDataObject
 end
 
 
+"OpenDSS XfmrCode defaults"
 Base.@kwdef mutable struct DssXfmrcode <: DssDataObject
     name::String = ""
     phases::Int = 3
@@ -425,6 +439,7 @@ Base.@kwdef mutable struct DssXfmrcode <: DssDataObject
 end
 
 
+"OpenDSS Spectrum defaults"
 Base.@kwdef mutable struct DssSpectrum <: DssDataObject
     name::String = ""
     numharm::Int = 0
@@ -437,6 +452,7 @@ Base.@kwdef mutable struct DssSpectrum <: DssDataObject
 end
 
 
+"OpenDSS VSource defaults"
 Base.@kwdef mutable struct DssVsource <: DssEdgeObject
     name::String = ""
     bus1::String = ""
@@ -480,6 +496,7 @@ Base.@kwdef mutable struct DssVsource <: DssEdgeObject
 end
 
 
+"OpenDSS Circuit (VSource) defaults"
 Base.@kwdef mutable struct DssCircuit <: DssDataObject
     name::String = ""
     bus1::String = ""
@@ -523,6 +540,7 @@ Base.@kwdef mutable struct DssCircuit <: DssDataObject
 end
 
 
+"OpenDSS ISource defaults"
 Base.@kwdef mutable struct DssIsource <: DssNodeObject
     name::String = ""
     phases::Int = 3
@@ -540,6 +558,7 @@ Base.@kwdef mutable struct DssIsource <: DssNodeObject
 end
 
 
+"OpenDSS Fault defaults"
 Base.@kwdef mutable struct DssFault <: DssEdgeObject
     name::String = ""
     phases::Int = 1
@@ -563,6 +582,7 @@ Base.@kwdef mutable struct DssFault <: DssEdgeObject
 end
 
 
+"OpenDSS Capacitor defaults"
 Base.@kwdef mutable struct DssCapacitor <: DssEdgeObject
     name::String = ""
     bus1::String = ""
@@ -589,6 +609,7 @@ Base.@kwdef mutable struct DssCapacitor <: DssEdgeObject
 end
 
 
+"OpenDSS Line defaults"
 Base.@kwdef mutable struct DssLine <: DssEdgeObject
     name::String = ""
     bus1::String = ""
@@ -632,6 +653,7 @@ Base.@kwdef mutable struct DssLine <: DssEdgeObject
 end
 
 
+"OpenDSS Reactor defaults"
 Base.@kwdef mutable struct DssReactor <: DssEdgeObject
     name::String = ""
     phases::Int = 3
@@ -668,6 +690,7 @@ Base.@kwdef mutable struct DssReactor <: DssEdgeObject
 end
 
 
+"OpenDSS Transformer defaults"
 Base.@kwdef mutable struct DssTransformer <: DssEdgeObject
     name::String = ""
     phases::Int = 3
@@ -722,6 +745,7 @@ Base.@kwdef mutable struct DssTransformer <: DssEdgeObject
 end
 
 
+"OpenDSS GICTransformer defaults"
 Base.@kwdef mutable struct DssGictransformer <: DssEdgeObject
     name::String = ""
     basefreq::Float64 = 60.0
@@ -750,6 +774,7 @@ Base.@kwdef mutable struct DssGictransformer <: DssEdgeObject
 end
 
 
+"OpenDSS GICLine defaults"
 Base.@kwdef mutable struct DssGicline <: DssEdgeObject
     name::String = ""
     angle::Float64 = 0.0
@@ -775,6 +800,7 @@ Base.@kwdef mutable struct DssGicline <: DssEdgeObject
 end
 
 
+"OpenDSS Load defaults"
 Base.@kwdef mutable struct DssLoad <: DssNodeObject
     name::String = ""
     phases::Int = 3
@@ -823,6 +849,7 @@ Base.@kwdef mutable struct DssLoad <: DssNodeObject
 end
 
 
+"OpenDSS Generator defaults"
 Base.@kwdef mutable struct DssGenerator <: DssNodeObject
     name::String = ""
     bus1::String = ""
@@ -872,6 +899,7 @@ Base.@kwdef mutable struct DssGenerator <: DssNodeObject
 end
 
 
+"OpenDSS IndMach012 defaults"
 Base.@kwdef mutable struct DssIndmach012 <: DssNodeObject
     name::String = ""
     phases::Int = 3
@@ -903,6 +931,7 @@ Base.@kwdef mutable struct DssIndmach012 <: DssNodeObject
 end
 
 
+"OpenDSS Storage defaults"
 Base.@kwdef mutable struct DssStorage <: DssNodeObject
     name::String = ""
     phases::Int = 3
@@ -951,6 +980,7 @@ Base.@kwdef mutable struct DssStorage <: DssNodeObject
 end
 
 
+"OpenDSS CapControl defaults"
 Base.@kwdef mutable struct DssCapcontrol <: DssControlObject
     name::String = ""
     element::String = ""
@@ -971,12 +1001,14 @@ Base.@kwdef mutable struct DssCapcontrol <: DssControlObject
     vmax::Float64 = 126.0
     vmin::Float64 = 115.0
     voltoverride::Bool = false
+    pctminkvar::Float64 = 50.0
     enabled::Status = ENABLED
     like::String = ""
     raw_dss::Vector{Pair{String,String}} = Pair{String,String}[]
 end
 
 
+"OpenDSS RegControl defaults"
 Base.@kwdef mutable struct DssRegcontrol <: DssControlObject
     name::String = ""
     transformer::String = ""
@@ -1016,6 +1048,7 @@ Base.@kwdef mutable struct DssRegcontrol <: DssControlObject
 end
 
 
+"OpenDSS EnergyMeter defaults"
 Base.@kwdef mutable struct DssEnergymeter <: DssDataObject
     name::String = ""
     element::String = ""
@@ -1044,6 +1077,7 @@ Base.@kwdef mutable struct DssEnergymeter <: DssDataObject
 end
 
 
+"OpenDSS Monitor defaults"
 Base.@kwdef mutable struct DssMonitor <: DssControlObject
     name::String = ""
     element::String = ""
@@ -1054,6 +1088,7 @@ Base.@kwdef mutable struct DssMonitor <: DssControlObject
 end
 
 
+"OpenDSS PVSystem defaults"
 Base.@kwdef mutable struct DssPvsystem <: DssNodeObject
     name::String = ""
     phases::Int = 3
@@ -1105,6 +1140,7 @@ Base.@kwdef mutable struct DssPvsystem <: DssNodeObject
 end
 
 
+"OpenDSS Recloser defaults"
 Base.@kwdef mutable struct DssRecloser <: DssControlObject
     name::String = ""
     monitoredobj::String = ""
@@ -1136,6 +1172,7 @@ Base.@kwdef mutable struct DssRecloser <: DssControlObject
 end
 
 
+"OpenDSS Relay defaults"
 Base.@kwdef mutable struct DssRelay <: DssControlObject
     name::String = ""
     monitoredobj::String = ""
@@ -1174,6 +1211,7 @@ Base.@kwdef mutable struct DssRelay <: DssControlObject
 end
 
 
+"OpenDSS Fuse defaults"
 Base.@kwdef mutable struct DssFuse <: DssControlObject
     name::String = ""
     monitoredobj::String = ""
@@ -1191,6 +1229,7 @@ Base.@kwdef mutable struct DssFuse <: DssControlObject
 end
 
 
+"OpenDSS SwtControl defaults"
 Base.@kwdef mutable struct DssSwtcontrol <: DssControlObject
     name::String = ""
     action::SwitchState = OPEN
@@ -1208,6 +1247,7 @@ Base.@kwdef mutable struct DssSwtcontrol <: DssControlObject
 end
 
 
+"Parsed OpenDSS model struct"
 Base.@kwdef mutable struct OpenDssDataModel <: DssModel
     options::DssOptions = DssOptions()
     circuit::Dict{String,DssCircuit} = Dict{String,DssCircuit}()
@@ -1248,13 +1288,17 @@ Base.@kwdef mutable struct OpenDssDataModel <: DssModel
     buscoordinates::Dict{String,DssBuscoords} = Dict{String,DssBuscoords}()
 end
 
-
+"Collect of objects that include 'mult' fields"
 DssMultObjects = Union{DssLoadshape,DssXycurve,DssSpectrum,DssGrowthshape}
+
+"Sub-collection of objects that are explicitly 'mult' types with intervals"
 DssIntervalMultObjects = Union{DssXycurve,DssSpectrum}
+
+"Collection of objects that inlude time series fields"
 DssTimeSeriesObjects = Union{DssLoad,DssGenerator,DssStorage,DssPvsystem}
 
 
-""
+"Helper function to generate 'short' property names"
 function _generate_short_property_names()::Dict{Type,Dict{String,String}}
     short_pn = Dict{Type,Dict{String,String}}()
 
@@ -1264,18 +1308,20 @@ function _generate_short_property_names()::Dict{Type,Dict{String,String}}
             obj_type = obj_type.parameters[2]
         end
         short_pn[obj_type] = Dict{String,String}()
-        for pn in fieldnames(obj_type)
+
+        indict = Set()
+        obj_fields = string.(collect(fieldnames(obj_type)))
+        for pn in obj_fields
             _pn = string(pn)
-            indict = false
             while length(_pn) >= 1
-                if _pn ∉ keys(short_pn[obj_type]) && !indict
+                if _pn ∉ indict
                     short_pn[obj_type][_pn] = string(pn)
-                elseif indict
-                    delete!(short_pn[obj_type], _pn)
+                elseif _pn ∈ obj_fields
+                    short_pn[obj_type][_pn] = string(_pn)
                 else
                     delete!(short_pn[obj_type], _pn)
-                    indict = true
                 end
+                push!(indict, _pn)
                 _pn = _pn[1:end-1]
             end
         end
@@ -1285,8 +1331,5 @@ function _generate_short_property_names()::Dict{Type,Dict{String,String}}
 end
 
 
-""
-const _dss_short_prop_names_map::Dict{Type,Dict{String,String}} = _generate_short_property_names()
-
-""
-# create_dss_object(::Type{T}, ::Vector{Pair{String,String}}, ::DistributionModel, ::DistributionModel) where T = throw(ErrorException("Creating a DssObject of type $(typeof(T)) is not supported)"))
+"const built at import of short property names"
+const _dss_short_prop_names_map = _generate_short_property_names()

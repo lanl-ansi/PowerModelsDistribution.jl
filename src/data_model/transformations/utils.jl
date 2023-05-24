@@ -1,5 +1,4 @@
-"""
-"""
+"helper function to determine if `property1` appears after `property2` in the property pair list"
 function _is_after(prop_order::Vector{Pair{String,String}}, property1::String, property2::String)::Bool
     property1_idx = 0
     property2_idx = 0
@@ -16,8 +15,7 @@ function _is_after(prop_order::Vector{Pair{String,String}}, property1::String, p
 end
 
 
-"""
-"""
+"helper function to determine if `property1` appears after `property2` in the property pair list for objects that have windings"
 function _is_after(prop_order::Vector{Pair{String,String}}, property1::String, property2::String, winding::Int)::Bool
     property1_idx = 0
     property2_idx = 0
@@ -39,55 +37,55 @@ function _is_after(prop_order::Vector{Pair{String,String}}, property1::String, p
 end
 
 
+"returns number of phases implied by a two-bus (edge) object"
+function _get_implied_nphases(bus1::AbstractString, bus2::AbstractString; default::Int=3)
+    f_conds = _get_conductors_ordered(bus1; default=collect(1:default), check_length=false)
+    t_conds = _get_conductors_ordered(bus2; default=collect(1:default), check_length=false)
 
-"""
-"""
-function _register_awaiting_ground!(eng::EngineeringDataModel, bus::EngBus, connections::Vector{Int})
-    if !haskey(eng.metadata["awaiting_ground"], bus.name)
-        eng.metadata.awaiting_ground[bus.name] = Vector{Int}[]
+    if !isempty(f_conds) || !isempty(t_conds)
+        return maximum([length(f_conds), length(t_conds)])
+    else
+        return default
     end
-
-    push!(eng.metadata.awaiting_ground[bus.name], connections)
 end
 
 
-"""
-"""
-function _parse_dss_pairs(property_pairs::Vector{Pair{String,String}}, dss_obj_type::String)::Dict{Symbol,Any}
-    dss_struct = getfield(PowerModelsDistribution, Symbol("Dss$(titlecase(dss_obj_type))"))
-    dtypes = Dict{String,Type}(string(k) => v for (k,v) in zip(fieldnames(dss_struct), fieldtypes(dss_struct)))
-
-    Dict{Symbol,Any}(Symbol(k) => parse(dtypes[k], v) for (k,v) in property_pairs)
-end
-
-
-""
-function _correct_ptphase!(controller::EngTransformerControls, transformer::EngTransformer)
-    controller["terminals"][1][1] = transformer["connections"][1][1]
-end
-
-
-"""
-"""
-function apply_linecode!(line::EngLine, linecode::EngLinecode)::EngLine
-    for pn in [:rs, :xs, :g_fr, :g_to, :b_fr, :b_to, :cm_ub, :sm_ub]
-        if ismissing(line[pn]) && !ismissing(linecode[pn])
-            line[pn] = linecode[pn]
+"returns number of phases implied by a transformer object"
+function _get_implied_nphases(buses::Vector{<:AbstractString}; default::Int=3)
+    nphases = Int[]
+    for bus in buses
+        conds = _get_conductors_ordered(bus; default=collect(1:default), check_length=false)
+        if !isempty(conds)
+            push!(nphases, length(conds))
         end
     end
 
-    return line
+    if !isempty(nphases)
+        return maximum(nphases)
+    else
+        return default
+    end
 end
 
 
-"""
-"""
-function apply_linecodes!(eng::EngineeringModel{T})::EngineeringModel{T} where T <: NetworkModel
-    for line in eng.line
-        if !ismissing(line.linecode)
-            apply_linecode!(line, eng.linecode[line.linecode])
-        end
+"returns number of phases implied by a single-bus (node) object"
+function _get_implied_nphases(bus1::AbstractString; default::Int=3)::Int
+    conds = _get_conductors_ordered(bus1; default=collect(1:default), check_length=false)
+
+    if !isempty(conds)
+        return length(conds)
+    else
+        return default
+    end
+end
+
+
+"Helper function to infer a full property name from a partial one"
+function _infer_partial_property_name(pn::AbstractString, dss_obj::T)::String where T <: DssObject
+    try
+        pn = _dss_short_prop_names_map[typeof(dss_obj)][pn]
+    catch KeyError
     end
 
-    return eng
+    return pn
 end

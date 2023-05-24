@@ -25,37 +25,33 @@ function _get_geometry_data(data_dss::OpenDssDataModel, geometry_id::String)::Ds
 end
 
 
-"gets overhead wire data for line geometry"
-function _get_wire_data(data_dss::OpenDssDataModel, wires::Vector{String})::NamedTuple
-    NamedTuple((Symbol(id), data_dss.tsdata[id]) for id in filter(x->!isempty(x), wires))
-    # wiredata = Dict{String,DssWiredata}(id => data_dss.wiredata[id] for id in filter(x->!isempty(x), wires))
-    # @assert length(wiredata) == length(wires) "Some wiredata is missing, cannot continue"
+"get line spacing data for line or line geometry"
+function _get_spacing_data(data_dss::OpenDssDataModel, spacing_id::String)
+    spacing_obj = data_dss["linespacing"][spacing_id]
+end
 
-    # return wiredata
+
+"gets overhead wire data for line geometry"
+function _get_wire_data(data_dss::OpenDssDataModel, wires::Vector{String})::Dict{String,DssWiredata}
+    wiredata = Dict{String,DssWiredata}(id => data_dss.wiredata[id] for id in filter(x->!isempty(x), wires))
 end
 
 
 "gets concentric neutral cable data for line geometry"
-function _get_cncable_data(data_dss::OpenDssDataModel, cncables::Vector{String})::NamedTuple
-    NamedTuple((Symbol(id), data_dss.tsdata[id]) for id in filter(x->!isempty(x), cncables))
-    # cncabledata = Dict{String,DssCndata}(id => data_dss.cndata[id] for id in filter(x->!isempty(x), cncables))
-    # @assert !isempty(cncabledata) && all(.!(ismissing.(values(cncabledata)))) "Some cndata is missing, cannot continue"
-
-    # return cncabledata
+function _get_cncable_data(data_dss::OpenDssDataModel, cncables::Vector{String})::Dict{String,DssCndata}
+    cncabledata = Dict{String,DssCndata}(id => data_dss.cndata[id] for id in filter(x->!isempty(x), cncables))
 end
 
 
 "gets tape shielded cable data for line geometry"
-function _get_tscable_data(data_dss::OpenDssDataModel, tscables::Vector{String})::NamedTuple
-    NamedTuple((Symbol(id), data_dss.tsdata[id]) for id in filter(x->!isempty(x), tscables))
-    # tscabledata = Dict{String,DssTsdata}(id => data_dss.tsdata[id] for id in filter(x->!isempty(x), tscables))
-    # @assert !isempty(tscabledata) && all(.!(ismissing.(values(tscabledata)))) "Some tsdata is missing, cannot continue"
-
-    # return tscabledata
+function _get_tscable_data(data_dss::OpenDssDataModel, tscables::Vector{String})::Dict{String,DssTsdata}
+    tscabledata = Dict{String,DssTsdata}(id => data_dss.tsdata[id] for id in filter(x->!isempty(x), tscables))
 end
 
 
+"cannot calculate line constants without dss model"
 calculate_line_constants(::Missing, ::DssLine)::Nothing = @info "Dss model missing"
+
 
 """
     calculate_line_constants(data_dss::Dict{String,<:Any}, line_defaults::Dict{String,<:Any})::Tuple{Matrix{Complex},Matrix{Complex}}
@@ -63,7 +59,7 @@ calculate_line_constants(::Missing, ::DssLine)::Nothing = @info "Dss model missi
 Calculates line impedance and shunt admittance matrices for lines with line geometry, line spacing, wiredata, cncable, and/or tscable properties.
 """
 function calculate_line_constants(data_dss::OpenDssDataModel, line_defaults::DssLine)::Tuple{Matrix{Complex},Matrix{Complex}}
-    geometry = !isempty(line_defaults.geometry) ? _get_geometry_data(data_dss, string(line_defaults.geometry)) : missing
+    geometry = !isempty(line_defaults["geometry"]) ? _get_geometry_data(data_dss, string(line_defaults["geometry"])) : missing
 
     cncables = !ismissing(geometry) && !isempty(geometry.cncables) ? filter(x->!isempty(x), geometry.cncables) : !isempty(line_defaults.cncables) ? filter(x->!isempty(x), line_defaults.cncables) : missing
     ncncables = !ismissing(cncables) ? length(cncables) : missing

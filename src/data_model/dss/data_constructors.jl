@@ -1,5 +1,10 @@
 
 """
+    create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssLinecode
+
+Creates a DssLinecode struct containing all of the properties of a Linecode.
+See OpenDSS documentation for valid fields and ways to specify the different
+properties.
 """
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssLinecode
     raw_fields = collect(Symbol(x.first) for x in property_pairs)
@@ -64,6 +69,11 @@ end
 
 
 """
+    create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssLoadshape
+
+Creates a DssLoadshape struct containing all expected properties for a LoadShape
+element. See OpenDSS documentation for valid fields and ways to specify
+different properties.
 """
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssLoadshape
     raw_fields = collect(Symbol(x.first) for x in property_pairs)
@@ -82,7 +92,7 @@ function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}
         loadshape.sinterval = loadshape.interval * 60 * 60
     end
 
-    # loadshape.qmult = :qmult ∉ raw_fields ? loadshape.pmult : loadshape.qmult
+    loadshape.qmult = :qmult ∉ raw_fields ? loadshape.pmult : loadshape.qmult
 
     npts = :npts ∈ raw_fields ? loadshape.npts : length(loadshape.pmult)
     npts = length(loadshape.pmult) == 0 && length(loadshape.qmult) == 0 ? 0 : minimum(Int[length(a) for a in [loadshape.pmult, loadshape.qmult] if length(a) > 0])
@@ -91,22 +101,27 @@ function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}
     if isempty(loadshape.hour)
         loadshape.hour = Float64[i*loadshape.interval for i in 0:(loadshape.npts-1)]
     end
-    # if !isempty(loadshape.pmult)
-    #     loadshape.pmult = loadshape.pmult[1:npts]
-    # end
-    # if !isempty(loadshape.qmult)
-    #     loadshape.qmult = loadshape.qmult[1:npts]
-    # end
+    if !isempty(loadshape.pmult)
+        loadshape.pmult = loadshape.pmult[1:npts]
+    end
+    if !isempty(loadshape.qmult)
+        loadshape.qmult = loadshape.qmult[1:npts]
+    end
 
-    # if !isempty(loadshape.hour)
-    #     loadshape.hour = loadshape.hour[1:npts]
-    # end
+    if !isempty(loadshape.hour)
+        loadshape.hour = loadshape.hour[1:npts]
+    end
 
     return loadshape
 end
 
 
 """
+    create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssXycurve
+
+Creates a DssXycurve struct containing all expected properties for a XYCurve
+object. See OpenDSS documentation for valid fields and ways to specify
+different properties.
 """
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssXycurve
     raw_fields = collect(Symbol(x.first) for x in property_pairs)
@@ -149,6 +164,35 @@ end
 
 
 """
+    create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssLinegeometry
+
+Creates a DssLinegeometry struct containing all of the properties of LineGeometry. See
+OpenDSS documentation for valid fields and ways to specify the different
+properties.
+"""
+function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssLinegeometry
+    linegeometry = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
+
+    linegeometry.x = linegeometry.x * _convert_to_meters[linegeometry.units]
+    linegeometry.h = linegeometry.h * _convert_to_meters[linegeometry.units]
+    linegeometry.units = "m"
+
+    linegeometry.xs = linegeometry.xs .* [_convert_to_meters[u] for u in linegeometry.unitss]
+    linegeometry.hs = linegeometry.hs .* [_convert_to_meters[u] for u in linegeometry.unitss]
+    linegeometry.fx = linegeometry.fx .* [_convert_to_meters[u] for u in linegeometry.unitss]
+    linegeometry.fh = linegeometry.fh .* [_convert_to_meters[u] for u in linegeometry.unitss]
+    linegeometry.unitss = fill("m", linegeometry.nconds)
+
+    return linegeometry
+end
+
+
+"""
+    create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssWiredata
+
+Creates a DssWiredata struct containing all of the properties of WireData. See
+OpenDSS documentation for valid fields and ways to specify the different
+properties.
 """
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssWiredata
     raw_fields = collect(Symbol(x.first) for x in property_pairs)
@@ -214,6 +258,11 @@ end
 
 
 """
+    create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssLinespacing
+
+Creates a DssLinespacing struct containing all of the properties of LineSpacing. See
+OpenDSS documentation for valid fields and ways to specify the different
+properties.
 """
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssLinespacing
     linespacing = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
@@ -231,6 +280,11 @@ end
 
 
 """
+    create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssCndata
+
+Creates a DssCndata struct containing all of the properties of CNData. See
+OpenDSS documentation for valid fields and ways to specify the different
+properties.
 """
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssCndata
     raw_fields = collect(Symbol(x.first) for x in property_pairs)
@@ -313,6 +367,11 @@ end
 
 
 """
+    create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssTsdata
+
+Creates a DssTsdata struct containing all of the properties of TSData. See
+OpenDSS documentation for valid fields and ways to specify the different
+properties.
 """
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssTsdata
     raw_fields = collect(Symbol(x.first) for x in property_pairs)

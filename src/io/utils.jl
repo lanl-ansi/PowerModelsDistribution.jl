@@ -34,7 +34,7 @@ const _dss_supported_components::Vector{String} = String[
 ]
 
 "two number operators for reverse polish notation"
-const _double_operators::Dict{String,Function} = Dict{String,Function}(
+const _double_operators = Dict{String,Function}(
     "+" => +,
     "-" => -,
     "*" => *,
@@ -44,7 +44,7 @@ const _double_operators::Dict{String,Function} = Dict{String,Function}(
 )
 
 "single number operators in reverse polish notation"
-const _single_operators::Dict{String,Function} = Dict{String,Function}(
+const _single_operators = Dict{String,Function}(
     "sqr" => x -> x * x,
     "sqrt" => sqrt,
     "inv" => inv,
@@ -74,7 +74,7 @@ const _dss2pmd_load_model::Dict{Int,LoadModel} = Dict{Int,LoadModel}(
     2 => IMPEDANCE,
     5 => CURRENT,
     4 => EXPONENTIAL,
-    8 => ZIP,  # TODO add official support for ZIP load model
+    8 => ZIP,
 )
 
 "dss to pmd capcontrol type"
@@ -113,7 +113,7 @@ function _isa_rpn(expr::AbstractString)::Bool
 end
 
 
-""
+"helper function to parse reverse polish notation"
 function _parse_rpn(expr::AbstractString)::Union{Float64, Vector{Float64}, AbstractString}
     if _isa_dss_array(expr)
         parse(Vector{Float64}, "(\"24.9 3 sqrt /\" \"10 2 *\")")
@@ -123,10 +123,13 @@ function _parse_rpn(expr::AbstractString)::Union{Float64, Vector{Float64}, Abstr
 end
 
 
+"helper function to parse reverse polish notation vectors"
 function _parse_rpn(::Type{T}, expr::AbstractString)::Union{T,AbstractString} where T <: Vector
     parse(T, expr)
 end
 
+
+"helper function to parse reverse polish notation arrays"
 function _parse_array(::Type{T}, expr::AbstractString)::Union{Vector{T},AbstractString} where T
     parse(Vector{T}, expr)
 end
@@ -177,61 +180,15 @@ function _parse_rpn(::Type{T}, expr::AbstractString)::Union{T,AbstractString} wh
 end
 
 
-"""
-Combines transformers with 'bank' keyword into a single transformer
-"""
-function bank_transformers!(eng::EngineeringDataModel)::Nothing
-    bankable_transformers = Dict{String,Tuple{Vector{String},Vector{EngTransformer}}}()
-    for (id, tr) in eng.transformer
-        if !isempty(tr.bank)
-            bank = tr["bank"]
-            if !haskey(bankable_transformers, bank)
-                bankable_transformers[bank] = (String[], EngTransformer[])
-            end
-
-            push!(bankable_transformers[bank][1], id)
-            push!(bankable_transformers[bank][2], tr)
-        end
-    end
-
-    for (bank, (ids, trs)) in bankable_transformers
-        for tr in trs
-            apply_xfmrcode!(tr, !isempty(tr.xfmrcode) ? eng.xfmrcode[tr.xfmrcode] : missing)
-        end
-
-        # across-phase properties should be the same to be eligible for banking
-        props = ["bus", "noloadloss", "xsc", "rw", "cmag", "vm_nom", "sm_nom", "polarity", "configurations"]
-        btrans = Dict{String, Any}(prop=>getproperty(trs[1], Symbol(prop)) for prop in props)
-        if !all(tr[prop]==btrans[prop] for tr in trs, prop in props)
-            @warn "Not all across-phase properties match among transfomers identified by bank='$bank', aborting attempt to bank"
-            continue
-        end
-        nrw = length(btrans["bus"])
-
-        # only attempt to bank wye-connected transformers
-        if !all(all(conf==WYE for conf in tr["configurations"]) for tr in trs)
-            @warn "Not all configurations 'wye' on transformers identified by bank='$bank', aborting attempt to bank"
-            continue
-        end
-        neutrals = [conns[end] for conns in trs[1]["connections"]]
-        # ensure all windings have the same neutral
-        if !all(all(conns[end]==neutrals[w] for (w, conns) in enumerate(tr["connections"])) for tr in trs)
-            @warn "Not all neutral phases match on transfomers identified by bank='$bank', aborting attempt to bank"
-            continue
-        end
-
-        # this will merge the per-phase properties in such a way that the
-        # f_connections will be sorted from small to large
-        f_phases_loc = Dict(hcat([[(c,(i,p)) for (p, c) in enumerate(tr["connections"][1][1:end-1])] for (i, tr) in enumerate(trs)]...))
-        locs = [f_phases_loc[x] for x in sort(collect(keys(f_phases_loc)))]
-        props_merge = ["connections", "tm_set", "tm_ub", "tm_lb", "tm_step", "tm_fix"]
-        for prop in props_merge
-            btrans[prop] = [[trs[i][prop][w][p] for (i,p) in locs] for w in 1:nrw]
-
-            # for the connections, also prefix the neutral per winding
-            if prop=="connections"
-                for w in 1:nrw
-                    push!(btrans[prop][w], neutrals[w])
+"Combines transformers with 'bank' keyword into a single transformer"
+function _bank_transformers!(data_eng::Dict{String,<:Any})
+    if haskey(data_eng, "transformer")
+        bankable_transformers = Dict()
+        for (id, tr) in data_eng["transformer"]
+            if haskey(tr, "bank")
+                bank = tr["bank"]
+                if !haskey(bankable_transformers, bank)
+                    bankable_transformers[bank] = ([], [])
                 end
             end
         end
@@ -342,59 +299,6 @@ function discover_terminals!(eng::EngineeringDataModel)::Nothing
 end
 
 
-"discovers all phases and neutrals in the network"
-function _discover_phases_neutral!(data_eng::Dict{String,<:Any})
-    bus_neutral = _find_neutrals(data_eng)
-    for (id, bus) in data_eng["bus"]
-        terminals = bus["terminals"]
-        if haskey(bus_neutral, id)
-            bus["neutral"] = bus_neutral[id]
-            phases = setdiff(terminals, bus["neutral"])
-        else
-            phases = terminals
-        end
-        @assert(length(phases)<=3, "At bus $id, we found $(length(phases))>3 phases; aborting discovery, requires manual inspection.")
-    end
-end
-
-
-"Discovers all neutrals in the network"
-function _find_neutrals(data_eng::Dict{String,<:Any})
-    vertices = [(id, t) for (id, bus) in data_eng["bus"] for t in bus["terminals"]]
-    neutrals = []
-    edges = Set([((eng_obj["f_bus"], eng_obj["f_connections"][c]),(eng_obj["t_bus"], eng_obj["t_connections"][c])) for (id, eng_obj) in data_eng["line"] for c in 1:length(eng_obj["f_connections"])])
-
-    bus_neutrals = [(id,bus["neutral"]) for (id,bus) in data_eng["bus"] if haskey(bus, "neutral")]
-    trans_neutrals = []
-    for (_, tr) in data_eng["transformer"]
-        for w in 1:length(tr["connections"])
-            if tr["configuration"][w] == WYE
-                push!(trans_neutrals, (tr["bus"][w], tr["connections"][w][end]))
-            end
-        end
-    end
-    load_neutrals = [(eng_obj["bus"],eng_obj["connections"][end]) for (_,eng_obj) in get(data_eng, "load", Dict{String,Any}()) if eng_obj["configuration"]==WYE]
-    neutrals = Set(vcat(bus_neutrals, trans_neutrals, load_neutrals))
-    neutrals = Set([(bus,t) for (bus,t) in neutrals if t!=0])
-    stack = copy(neutrals)
-    while !isempty(stack)
-        vertex = pop!(stack)
-        candidates_t = [((f,t), t) for (f,t) in edges if f==vertex]
-        candidates_f = [((f,t), f) for (f,t) in edges if t==vertex]
-        for (edge,next) in [candidates_t..., candidates_f...]
-            delete!(edges, edge)
-            push!(stack, next)
-            push!(neutrals, next)
-        end
-    end
-    bus_neutral = Dict{String, Int}()
-    for (bus,t) in neutrals
-        bus_neutral[bus] = t
-    end
-    return bus_neutral
-end
-
-
 "Returns an ordered list of defined conductors. If ground=false, will omit any `0`"
 function _get_conductors_ordered(busname::AbstractString; default::Vector{Int}=Int[], check_length::Bool=true, pad_ground::Bool=false)::Vector{Int}
     parts = split(busname, '.'; limit=2)
@@ -418,6 +322,12 @@ function _get_conductors_ordered(busname::AbstractString; default::Vector{Int}=I
 end
 
 
+"creates a `dss` dict inside `object` that imports all items in `prop_order` from `dss_obj`"
+function _import_all!(object::Dict{String,<:Any}, dss_obj::DssObject)
+    object["dss"] = Dict{String,Any}((key, property) for (key,property) in dss_obj["raw_dss"])
+end
+
+
 """
 Given a vector and a list of elements to find, this method will return a list
 of the positions of the elements in that vector.
@@ -432,6 +342,46 @@ function _get_idxs(vec::Vector{<:Any}, els::Vector{<:Any})::Vector{Int}
         end
     end
     return ret
+end
+
+
+"Discovers all of the buses (not separately defined in OpenDSS), from 'lines'"
+function _discover_buses(data_dss::OpenDssDataModel)::Set
+    buses = Set([])
+    for obj_type in _dss_node_objects
+        for (name, dss_obj) in get(data_dss, obj_type, Dict{String,Any}())
+            push!(buses, split(dss_obj["bus1"], '.'; limit=2)[1])
+        end
+    end
+
+    for obj_type in _dss_edge_objects
+        for (name, dss_obj) in get(data_dss, obj_type, Dict{String,Any}())
+            if obj_type == "transformer"
+                for bus in dss_obj["buses"]
+                    push!(buses, split(bus, '.'; limit=2)[1])
+                end
+            elseif obj_type == "gictransformer"
+                for key in ["bush", "busx", "busnh", "busnx"]
+                    if !isempty(dss_obj[key])
+                        push!(buses, split(dss_obj[key], '.'; limit=2)[1])
+                    end
+                end
+            elseif obj_type == "vsource"
+                push!(buses, split(get(dss_obj, "bus1", "sourcebus"), '.'; limit=2)[1])
+                if !isempty(dss_obj["bus2"])
+                    push!(buses, split(dss_obj["bus2"], '.'; limit=2)[1])
+                end
+            else
+                for key in ["bus1", "bus2"]
+                    if !isempty(dss_obj[key])
+                        push!(buses, split(dss_obj[key], '.'; limit=2)[1])
+                    end
+                end
+            end
+        end
+    end
+
+    return filter(x->!isempty(x), buses)
 end
 
 
@@ -474,12 +424,6 @@ function _parse_bus_id(busname::String)::Tuple{String,Vector{Bool}}
 end
 
 
-"converts Dict{String,Any} to Dict{Symbol,Any} for passing as kwargs"
-function _to_kwargs(data::Dict{String,Any})::Dict{Symbol,Any}
-    return Dict{Symbol,Any}((Symbol(k), v) for (k, v) in data)
-end
-
-
 ""
 function _register_awaiting_ground!(bus::Dict{String,<:Any}, connections::Vector{Int})
     if !haskey(bus, "awaiting_ground")
@@ -490,22 +434,43 @@ function _register_awaiting_ground!(bus::Dict{String,<:Any}, connections::Vector
 end
 
 
+"add engineering data object to engineering data model"
+function _add_eng_obj!(data_eng::Dict{String,<:Any}, eng_obj_type::String, eng_obj_id::Any, eng_obj::Dict{String,<:Any})
+    if !haskey(data_eng, eng_obj_type)
+        data_eng[eng_obj_type] = Dict{String,Any}()
+    end
+
+    if haskey(data_eng[eng_obj_type], eng_obj_id)
+        @warn "id '$eng_obj_id' already exists in $eng_obj_type, renaming to '$(eng_obj["source_id"])'"
+        eng_obj_id = eng_obj["source_id"]
+    end
+
+    data_eng[eng_obj_type][eng_obj_id] = eng_obj
+end
+
+
 "checks if loadshape has both pmult and qmult"
 function _is_loadshape_split(dss_obj::Dict{String,<:Any})
     haskey(dss_obj, "pmult") && haskey(dss_obj, "qmult") && all(dss_obj["pmult"] .!= dss_obj["qmult"])
 end
 
 
+"checks if loadshape has both pmult and qmult"
+function _is_loadshape_split(dss_obj::DssLoadshape)
+    !isempty(dss_obj["pmult"]) && !isempty(dss_obj["qmult"]) && all(dss_obj["pmult"] .!= dss_obj["qmult"])
+end
+
+
 "helper function to properly reference time series variables from opendss"
-function _build_time_series_reference!(eng_obj::Dict{String,<:Any}, dss_obj::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, defaults::Dict{String,<:Any}, time_series::String, active::String, reactive::String)
-    if haskey(dss_obj, time_series) && haskey(data_dss, "loadshape") && haskey(data_dss["loadshape"], defaults[time_series])
+function _build_time_series_reference!(eng_obj::Dict{String,<:Any}, dss_obj::DssTimeSeriesObjects, data_dss::OpenDssDataModel, time_series::String, active::String, reactive::String)
+    if !isempty(dss_obj[time_series]) && !isempty(data_dss["loadshape"]) && haskey(data_dss["loadshape"], dss_obj[time_series])
         eng_obj["time_series"] = get(eng_obj, "time_series", Dict{String,Any}())
-        if _is_loadshape_split(data_dss["loadshape"][defaults[time_series]])
-            eng_obj["time_series"][active] = "$(defaults[time_series])_p"
-            eng_obj["time_series"][reactive] = "$(defaults[time_series])_q"
+        if _is_loadshape_split(data_dss["loadshape"][dss_obj[time_series]])
+            eng_obj["time_series"][active] = "$(dss_obj[time_series])_p"
+            eng_obj["time_series"][reactive] = "$(dss_obj[time_series])_q"
         else
-            eng_obj["time_series"][active] = defaults[time_series]
-            eng_obj["time_series"][reactive] = defaults[time_series]
+            eng_obj["time_series"][active] = dss_obj[time_series]
+            eng_obj["time_series"][reactive] = dss_obj[time_series]
         end
     end
 end

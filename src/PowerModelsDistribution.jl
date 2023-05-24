@@ -54,8 +54,6 @@ module PowerModelsDistribution
 
     include("data_model/base/types.jl")
 
-    include("data_model/base.jl")
-
     include("data_model/dss/structs.jl")
     include("data_model/dss/node_constructors.jl")
     include("data_model/dss/edge_constructors.jl")
@@ -125,6 +123,7 @@ module PowerModelsDistribution
 
     include("data_model/utils.jl")
     include("data_model/checks.jl")
+    include("data_model/components.jl")
     include("data_model/multinetwork.jl")
     include("data_model/transformations/misc.jl")
     include("data_model/transformations/bounds.jl")

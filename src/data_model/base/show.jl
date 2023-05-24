@@ -1,7 +1,7 @@
-""
-function Base.show(@nospecialize(io::IO), @nospecialize(t::T)) where T <: Union{InfrastructureModel,InfrastructureObject}
+"Base.show variant for InfrastructureModel,InfrastructureObject to make them Dict-like"
+function Base.show(@nospecialize(io::IO), @nospecialize(t::T)) where {T<:Union{InfrastructureModel,InfrastructureObject}}
     recur_io = IOContext(io, :SHOWN_SET => t,
-                             :typeinfo => eltype(t))
+        :typeinfo => eltype(t))
 
     limit = get(io, :limit, false)::Bool
     # show in a Julia-syntax-like form: Dict(k=>v, ...)
@@ -14,16 +14,15 @@ function Base.show(@nospecialize(io::IO), @nospecialize(t::T)) where T <: Union{
             first || print(io, ", ")
             first = false
             show(recur_io, pair)
-            n+=1
+            n += 1
             limit && n >= 10 && (print(io, "…"); break)
         end
     end
     print(io, ')')
 end
 
-
-""
-function Base.show(@nospecialize(io::IO), ::MIME"text/plain", @nospecialize(t::T)) where T <: Union{InfrastructureModel,InfrastructureObject}
+"Base.show variant for InfrastructureModel,InfrastructureObject to make them Dict-like"
+function Base.show(@nospecialize(io::IO), ::MIME"text/plain", @nospecialize(t::T)) where {T<:Union{InfrastructureModel,InfrastructureObject}}
     isempty(t) && return show(io, t)
     # show more descriptively, with one line per key/value pair
     recur_io = IOContext(io, :SHOWN_SET => t)
@@ -31,8 +30,8 @@ function Base.show(@nospecialize(io::IO), ::MIME"text/plain", @nospecialize(t::T
     if !haskey(io, :compact)
         recur_io = IOContext(recur_io, :compact => true)
     end
-    recur_io_k = IOContext(recur_io, :typeinfo=>keytype(t))
-    recur_io_v = IOContext(recur_io, :typeinfo=>valtype(t))
+    recur_io_k = IOContext(recur_io, :typeinfo => keytype(t))
+    recur_io_v = IOContext(recur_io, :typeinfo => valtype(t))
 
     summary(io, t)
     isempty(t) && return
@@ -41,8 +40,8 @@ function Base.show(@nospecialize(io::IO), ::MIME"text/plain", @nospecialize(t::T
     if limit
         sz = displaysize(io)
         rows, cols = sz[1] - 3, sz[2]
-        rows < 2   && (print(io, " …"); return)
-        cols < 12  && (cols = 12) # Minimum widths of 2 for key, 4 for value
+        rows < 2 && (print(io, " …"); return)
+        cols < 12 && (cols = 12) # Minimum widths of 2 for key, 4 for value
         cols -= 6 # Subtract the widths of prefix "  " separator " => "
         rows -= 1 # Subtract the summary
 
@@ -73,7 +72,7 @@ function Base.show(@nospecialize(io::IO), ::MIME"text/plain", @nospecialize(t::T
         end
 
         if limit
-            if Base.VERSION >= v"1.9.0-rc3"
+            if Base.VERSION >= v"1.9.0"
                 key = rpad(Base._truncate_at_width_or_chars(false, ks[i], keylen, false, "\r\n"), keylen)
             else
                 key = rpad(Base._truncate_at_width_or_chars(ks[i], keylen), keylen)
@@ -85,10 +84,10 @@ function Base.show(@nospecialize(io::IO), ::MIME"text/plain", @nospecialize(t::T
         print(io, " => ")
 
         if limit
-            if Base.VERSION >= v"1.9-rc3"
+            if Base.VERSION >= v"1.9.0"
                 val = Base._truncate_at_width_or_chars(false, vs[i], cols - keylen, false, "\r\n")
             else
-                val = Base._truncate_at_width_or_chars(vs[i], cols-keylen)
+                val = Base._truncate_at_width_or_chars(vs[i], cols - keylen)
             end
             print(io, val)
         else
@@ -97,5 +96,6 @@ function Base.show(@nospecialize(io::IO), ::MIME"text/plain", @nospecialize(t::T
     end
 end
 
-_show(@nospecialize(io::IO), @nospecialize(t::T)) where T <: Union{InfrastructureModel,InfrastructureObject} = Base.show(io, t)
-_show(@nospecialize(io::IO), m::MIME"text/plain", @nospecialize(t::T)) where T <: Union{InfrastructureModel,InfrastructureObject} = Base.show(io, m, t)
+"Helper functions for Base.show for InfrastructureModel,InfrastructureObject"
+_show(@nospecialize(io::IO), @nospecialize(t::T)) where {T<:Union{InfrastructureModel,InfrastructureObject}} = Base.show(io, t)
+_show(@nospecialize(io::IO), m::MIME"text/plain", @nospecialize(t::T)) where {T<:Union{InfrastructureModel,InfrastructureObject}} = Base.show(io, m, t)
