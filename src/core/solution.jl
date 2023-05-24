@@ -172,5 +172,5 @@ end
 does nothing (no `sol_data_model!` exists for the formulation attempting to be converted)
 """
 function sol_data_model!(pm::AbstractUnbalancedPowerModel, solution::Dict{String,<:Any})
-    @warn "sol_data_model! not defined for power model of type $(typeof(pm))"
+    @info "sol_data_model! not defined for power model of type $(typeof(pm))"
 end
