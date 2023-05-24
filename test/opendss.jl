@@ -221,7 +221,7 @@
     @testset "opendss capcontrol parse" begin
         defaults = filter(x->x.first!="raw_dss",PowerModelsDistribution._convert_model_to_dict(dss["capcontrol"]["c1_ctrl"]))
 
-        @test defaults == Dict{String,Any}(
+        @test isempty(PowerModelsDistribution._check_equal(defaults, Dict{String,Any}(
             "name" => "c1_ctrl",
             "element" => "line.l2",
             "capacitor" => "c1",
@@ -244,13 +244,13 @@
             "pctminkvar" => 50.0,
             "enabled" => ENABLED,
             "like" => "",
-        )
+        )))
     end
 
     @testset "opendss regcontrol parse" begin
         defaults = filter(x->x.first!="raw_dss",PowerModelsDistribution._convert_model_to_dict(dss["regcontrol"]["t1"]))
 
-        @test defaults == Dict{String,Any}(
+        @test isempty(PowerModelsDistribution._check_equal(defaults, Dict{String,Any}(
             "name" => "t1",
             "transformer" => "t1",
             "winding" => 2,
@@ -285,7 +285,7 @@
             "remoteptratio" => 60.0,
             "enabled" => ENABLED,
             "like" => "",
-        )
+        )))
     end
 
     @testset "tabulation parse" begin

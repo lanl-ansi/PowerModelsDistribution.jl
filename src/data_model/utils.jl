@@ -145,58 +145,10 @@ function _init_base_components!(data_math::Dict{String,<:Any})
 end
 
 
-"Initializes the lookup table"
-function _init_lookup!(data_math::Dict{String,<:Any})
-    for key in keys(_1to1_maps)
-        if !haskey(data_math["lookup"], key)
-            data_math["lookup"][key] = Dict{Any,Int}()
-        end
-    end
-end
-
-
 "function for applying a scale to a paramter"
 function _scale(dict::Dict{String,<:Any}, key::String, scale::Real)
     if haskey(dict, key)
         dict[key] *= scale
-    end
-end
-
-
-"_get_ground helper function"
-function _get_new_ground(terminals::Vector{<:Any})
-    if isa(terminals, Vector{Int})
-        return maximum(terminals)+1
-    else
-        nrs = [parse(Int, x[1]) for x in [match(r"n([1-9]{1}[0-9]*)", string(t)) for t in terminals] if x !== nothing]
-        new = isempty(nrs) ? 1 : maximum(nrs)+1
-        if isa(terminals, Vector{Symbol})
-            return Symbol("g$new")
-        else
-            return "g$new"
-        end
-    end
-end
-
-
-"gets the grounding information for a bus"
-function _get_ground!(bus::Dict{String,<:Any})
-    # find perfect groundings (true ground)
-    grounded_perfect = []
-    for i in 1:length(bus["grounded"])
-        if bus["rg"][i]==0 && bus["xg"][i]==0
-            push!(grounded_perfect, bus["grounded"][i])
-        end
-    end
-
-    if !isempty(grounded_perfect)
-        return grounded_perfect[1]
-    else
-        g = _get_new_ground(bus["terminals"])
-        push!(bus["terminals"], g)
-        push!(bus["rg"], 0.0)
-        push!(bus["xg"], 0.0)
-        return g
     end
 end
 
@@ -742,36 +694,6 @@ function _slice_branches!(data_math::Dict{String,<:Any})
                 branch[prop] = branch[prop][1:N,1:N]
             end
         end
-    end
-end
-
-
-"transformations might have introduced buses with four-terminals; crop here"
-function _kron_reduce_buses!(data_math)
-    for (_, bus) in data_math["bus"]
-        for prop in ["vm", "va", "vmax", "vmin"]
-            if haskey(bus, prop) && length(bus[prop])>3
-                bus[prop] = bus[prop][1:3]
-            end
-        end
-    end
-end
-
-
-"generate a new, unique terminal"
-_new_terminal(terms) = maximum([terms[isa.(terms, Int)]..., 3])+1
-
-
-"get a grounded terminal from a bus; if not present, create one"
-function _get_ground_math!(bus; exclude_terminals=[])
-    tgs = setdiff(bus["terminals"][bus["grounded"]], exclude_terminals)
-    if !isempty(tgs)
-        return tgs[1]
-    else
-        n = _new_terminal([bus["terminals"]])
-        push!(bus["terminals"], n)
-        push!(bus["grounded"], true)
-        return n
     end
 end
 
