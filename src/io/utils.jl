@@ -331,59 +331,6 @@ function _discover_terminals!(data_eng::Dict{String,<:Any})
 end
 
 
-"discovers all phases and neutrals in the network"
-function _discover_phases_neutral!(data_eng::Dict{String,<:Any})
-    bus_neutral = _find_neutrals(data_eng)
-    for (id, bus) in data_eng["bus"]
-        terminals = bus["terminals"]
-        if haskey(bus_neutral, id)
-            bus["neutral"] = bus_neutral[id]
-            phases = setdiff(terminals, bus["neutral"])
-        else
-            phases = terminals
-        end
-        @assert(length(phases)<=3, "At bus $id, we found $(length(phases))>3 phases; aborting discovery, requires manual inspection.")
-    end
-end
-
-
-"Discovers all neutrals in the network"
-function _find_neutrals(data_eng::Dict{String,<:Any})
-    vertices = [(id, t) for (id, bus) in data_eng["bus"] for t in bus["terminals"]]
-    neutrals = []
-    edges = Set([((eng_obj["f_bus"], eng_obj["f_connections"][c]),(eng_obj["t_bus"], eng_obj["t_connections"][c])) for (id, eng_obj) in data_eng["line"] for c in 1:length(eng_obj["f_connections"])])
-
-    bus_neutrals = [(id,bus["neutral"]) for (id,bus) in data_eng["bus"] if haskey(bus, "neutral")]
-    trans_neutrals = []
-    for (_, tr) in data_eng["transformer"]
-        for w in 1:length(tr["connections"])
-            if tr["configuration"][w] == WYE
-                push!(trans_neutrals, (tr["bus"][w], tr["connections"][w][end]))
-            end
-        end
-    end
-    load_neutrals = [(eng_obj["bus"],eng_obj["connections"][end]) for (_,eng_obj) in get(data_eng, "load", Dict{String,Any}()) if eng_obj["configuration"]==WYE]
-    neutrals = Set(vcat(bus_neutrals, trans_neutrals, load_neutrals))
-    neutrals = Set([(bus,t) for (bus,t) in neutrals if t!=0])
-    stack = copy(neutrals)
-    while !isempty(stack)
-        vertex = pop!(stack)
-        candidates_t = [((f,t), t) for (f,t) in edges if f==vertex]
-        candidates_f = [((f,t), f) for (f,t) in edges if t==vertex]
-        for (edge,next) in [candidates_t..., candidates_f...]
-            delete!(edges, edge)
-            push!(stack, next)
-            push!(neutrals, next)
-        end
-    end
-    bus_neutral = Dict{String, Int}()
-    for (bus,t) in neutrals
-        bus_neutral[bus] = t
-    end
-    return bus_neutral
-end
-
-
 "Returns an ordered list of defined conductors. If ground=false, will omit any `0`"
 function _get_conductors_ordered(busname::AbstractString; default::Vector{Int}=Int[], check_length::Bool=true, pad_ground::Bool=false)::Vector{Int}
     parts = split(busname, '.'; limit=2)
@@ -509,12 +456,6 @@ function _parse_bus_id(busname::String)::Tuple{String,Vector{Bool}}
 end
 
 
-"converts Dict{String,Any} to Dict{Symbol,Any} for passing as kwargs"
-function _to_kwargs(data::Dict{String,Any})::Dict{Symbol,Any}
-    return Dict{Symbol,Any}((Symbol(k), v) for (k, v) in data)
-end
-
-
 ""
 function _register_awaiting_ground!(bus::Dict{String,<:Any}, connections::Vector{Int})
     if !haskey(bus, "awaiting_ground")
@@ -522,35 +463,6 @@ function _register_awaiting_ground!(bus::Dict{String,<:Any}, connections::Vector
     end
 
     push!(bus["awaiting_ground"], connections)
-end
-
-
-"checks to see if a property is after linecode"
-function _is_after_linecode(prop_order::Vector{String}, property::String)::Bool
-    return _is_after(prop_order, property, "linecode")
-end
-
-
-"checks to see if a property is after xfmrcode"
-function _is_after_xfmrcode(prop_order::Vector{String}, property::String)::Bool
-    return _is_after(prop_order, property, "xfmrcode")
-end
-
-
-"checks to see if property1 is after property2 in the prop_order"
-function _is_after(prop_order::Vector{String}, property1::String, property2::String)::Bool
-    property1_idx = 0
-    property2_idx = 0
-
-    for (i, prop) in enumerate(prop_order)
-        if prop == property1
-            property1_idx = i
-        elseif prop == property2
-            property2_idx = i
-        end
-    end
-
-    return property1_idx > property2_idx
 end
 
 
