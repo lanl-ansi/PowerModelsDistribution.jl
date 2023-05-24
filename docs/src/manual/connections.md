@@ -31,7 +31,7 @@ Edge objects connect two buses (except for generic `transformers`, which can con
 
 ### Lines
 
-A line can have a variable number of conductors, which is implied by the size of the fields `rs`, `xs`, `g_fr`, `b_fr`, `g_to` and `b_to`. The fields `f_connections` and `t_connections` should specify for each conductor, to which terminals it connects. The figure below illustrates this for a line with 2 conuctors,
+A line can have a variable number of conductors, which is implied by the size of the fields `rs`, `xs`, `g_fr`, `b_fr`, `g_to` and `b_to`. The fields `f_connections` and `t_connections` should specify for each conductor, to which terminals it connects. The figure below illustrates this for a line with 2 conductors,
 
 ![line connection example](../assets/line_connection_example.svg).
 
