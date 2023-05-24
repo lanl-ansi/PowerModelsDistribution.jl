@@ -51,14 +51,22 @@ module PowerModelsDistribution
 
     include("core/base.jl")
     include("core/types.jl")
+
+    include("data_model/base/types.jl")
+
     include("data_model/dss/structs.jl")
     include("data_model/dss/node_constructors.jl")
     include("data_model/dss/edge_constructors.jl")
     include("data_model/dss/data_constructors.jl")
 
+    include("data_model/base/interfaces.jl")
+    include("data_model/base/show.jl")
+    include("data_model/base/utils.jl")
+
     include("data_model/transformations/dss2eng.jl")
     include("data_model/transformations/eng2math.jl")
     include("data_model/transformations/math2eng.jl")
+    include("data_model/transformations/utils.jl")
 
     include("core/data.jl")
     include("core/ref.jl")

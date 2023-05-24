@@ -7,6 +7,7 @@ _missing2false(a::Union{Missing,Bool}) = ismissing(a) ? false : a
 Helper function to check is data is ENGINEERING model
 """
 iseng(data::Dict{String,<:Any}) = _missing2false(get(data, "data_model", missing) == ENGINEERING)
+iseng(data::InfrastructureModel) = false
 
 
 """
@@ -15,6 +16,7 @@ iseng(data::Dict{String,<:Any}) = _missing2false(get(data, "data_model", missing
 Helper function to check if data is MATHEMATICAL model
 """
 ismath(data::Dict{String,<:Any}) = _missing2false(get(data, "data_model", missing) == MATHEMATICAL)
+ismath(data::InfrastructureModel) = false
 
 
 """
@@ -108,8 +110,6 @@ function _make_multiconductor!(data::Dict{String,<:Any}, conductors::Real)
         bus["grounded"] = fill(false, conductors)
     end
 end
-
-
 
 
 "initializes the base math object of any type, and copies any one-to-one mappings"
