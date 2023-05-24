@@ -1,11 +1,11 @@
 "Permeability of free space (N/A^2)"
-const μ₀::Float64 = 4π*10^-7
+const μ₀ = 4π*10^-7
 
 "Permittivity of free space (F/m)"
-const ε₀::Float64 = 8.8541878176e-12
+const ε₀ = 8.8541878176e-12
 
 "resistivity of copper tape shield (Ω-m)"
-const ρₜₛ::Float64 = 2.3718e-8
+const ρₜₛ = 2.3718e-8
 
 
 "gets line geometry data for line, including applying line spacing if specified"

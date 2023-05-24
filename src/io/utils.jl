@@ -1,31 +1,31 @@
 "all node types that can help define buses"
-const _dss_node_objects::Vector{String} = String[
+const _dss_node_objects = String[
     "isource", "load", "generator", "indmach012", "storage", "pvsystem"
 ]
 
 "all edge types that can help define buses"
-const _dss_edge_objects::Vector{String} = String[
+const _dss_edge_objects = String[
     "vsource", "fault", "capacitor", "line", "reactor", "transformer", "gictransformer", "gicline"
 ]
 
 "all data holding objects"
-const _dss_data_objects::Vector{String} = String[
+const _dss_data_objects = String[
     "options", "xfmrcode", "linecode", "loadshape", "xycurve", "linegeometry",
     "linespacing", "growthshape", "tcc_curve", "cndata", "tsdata", "wiredata"
 ]
 
 "all objects that define controls"
-const _dss_control_objects::Vector{String} = String[
+const _dss_control_objects = String[
     "capcontrol", "regcontrol", "swtcontrol", "relay", "recloser", "fuse"
 ]
 
 "all objects that provide montoring"
-const _dss_monitor_objects::Vector{String} = String[
+const _dss_monitor_objects = String[
     "energymeter", "monitor"
 ]
 
 "components currently supported for automatic data type parsing"
-const _dss_supported_components::Vector{String} = String[
+const _dss_supported_components = String[
     "line", "linecode", "load", "generator", "capacitor", "reactor",
     "transformer", "pvsystem", "storage", "loadshape", "options",
     "xfmrcode", "vsource", "xycurve", "spectrum", "capcontrol",
@@ -34,7 +34,7 @@ const _dss_supported_components::Vector{String} = String[
 ]
 
 "two number operators for reverse polish notation"
-const _double_operators::Dict{String,Function} = Dict{String,Function}(
+const _double_operators = Dict{String,Function}(
     "+" => +,
     "-" => -,
     "*" => *,
@@ -44,7 +44,7 @@ const _double_operators::Dict{String,Function} = Dict{String,Function}(
 )
 
 "single number operators in reverse polish notation"
-const _single_operators::Dict{String,Function} = Dict{String,Function}(
+const _single_operators = Dict{String,Function}(
     "sqr" => x -> x * x,
     "sqrt" => sqrt,
     "inv" => inv,
@@ -60,16 +60,16 @@ const _single_operators::Dict{String,Function} = Dict{String,Function}(
 )
 
 "different acceptable delimiters for arrays"
-const _array_delimiters::Vector{Char} = Vector{Char}(['\"', '\'', '[', '{', '(', ']', '}', ')'])
+const _array_delimiters = Vector{Char}(['\"', '\'', '[', '{', '(', ']', '}', ')'])
 
 "properties that should be excluded from being overwritten during the application of `like`"
-const _like_exclusions::Dict{String,Vector{Regex}} = Dict{String,Vector{Regex}}(
+const _like_exclusions = Dict{String,Vector{Regex}}(
     "all" => Vector{Regex}([r"name", r"enabled"]),
     "line" => [r"switch"],
 )
 
 "dss to pmd load model"
-const _dss2pmd_load_model::Dict{Int,LoadModel} = Dict{Int,LoadModel}(
+const _dss2pmd_load_model = Dict{Int,LoadModel}(
     1 => POWER,
     2 => IMPEDANCE,
     5 => CURRENT,
@@ -78,7 +78,7 @@ const _dss2pmd_load_model::Dict{Int,LoadModel} = Dict{Int,LoadModel}(
 )
 
 "dss to pmd capcontrol type"
-const _dss2pmd_capcontrol_type::Dict{String,CapControlType} = Dict{String,CapControlType}(
+const _dss2pmd_capcontrol_type = Dict{String,CapControlType}(
     "kvar" => CAP_REACTIVE_POWER,
     "current" => CAP_CURRENT,
     "voltage" => CAP_VOLTAGE,
@@ -87,7 +87,7 @@ const _dss2pmd_capcontrol_type::Dict{String,CapControlType} = Dict{String,CapCon
 )
 
 "conversion factors for units to meters"
-const _convert_to_meters::Dict{String,Float64} = Dict{String,Float64}(
+const _convert_to_meters = Dict{String,Float64}(
     "mi" => 1609.3,
     "km" => 1000.0,
     "kft" => 304.8,

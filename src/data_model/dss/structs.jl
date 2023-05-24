@@ -1332,4 +1332,4 @@ end
 
 
 "const built at import of short property names"
-const _dss_short_prop_names_map::Dict{Type,Dict{String,String}} = _generate_short_property_names()
+const _dss_short_prop_names_map = _generate_short_property_names()
