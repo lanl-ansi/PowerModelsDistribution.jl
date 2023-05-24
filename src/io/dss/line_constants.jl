@@ -1,27 +1,24 @@
 "Permeability of free space (N/A^2)"
-const μ₀ = 4π*10^-7
+const μ₀::Float64 = 4π*10^-7
 
 "Permittivity of free space (F/m)"
-const ε₀ = 8.8541878176e-12
+const ε₀::Float64 = 8.8541878176e-12
 
 "resistivity of copper tape shield (Ω-m)"
-const ρₜₛ = 2.3718e-8
+const ρₜₛ::Float64 = 2.3718e-8
 
 
 "gets line geometry data for line, including applying line spacing if specified"
-function _get_geometry_data(data_dss::Dict{String,<:Any}, geometry_id::String)::Dict{String,Any}
-    geom_obj = data_dss["linegeometry"][geometry_id]
-    _apply_like!(geom_obj, data_dss, "linegeometry")
+function _get_geometry_data(data_dss::OpenDssDataModel, geometry_id::String)::DssLinegeometry
+    geometry = get(data_dss.linegeometry, geometry_id, DssLinegeometry(name=geometry_id))
 
-    geometry = _apply_ordered_properties(_create_linegeometry(geometry_id; _to_kwargs(geom_obj)...), geom_obj)
+    if !isempty(geometry.spacing)
+        spacing = data_dss.linespacing[geometry.spacing]
 
-    if !isempty(get(geometry, "spacing", "")) && !isempty(get(get(data_dss,"linespacing",Dict()), string(geometry["spacing"]), Dict()))
-        spacing = _get_spacing_data(data_dss, string(geometry["spacing"]))
+        @assert geometry.nconds == spacing.nconds "Nconds on linegeometry.$(geometry_id) doesn't match nconds on linespacing.$(geometry.spacing)"
 
-        @assert geometry["nconds"] == spacing["nconds"] "Nconds on linegeometry.$(geometry_id) doesn't match nconds on linespacing.$(geometry["spacing"])"
-
-        geometry["fx"] = spacing["fx"]
-        geometry["fh"] = spacing["fh"]
+        geometry.fx = spacing.fx
+        geometry.fh = spacing.fh
     end
 
     return geometry
@@ -29,45 +26,35 @@ end
 
 
 "get line spacing data for line or line geometry"
-function _get_spacing_data(data_dss::Dict{String,<:Any}, spacing_id::String)
+function _get_spacing_data(data_dss::OpenDssDataModel, spacing_id::String)
     spacing_obj = data_dss["linespacing"][spacing_id]
-    _apply_like!(spacing_obj, data_dss, "linespacing")
-
-    return _apply_ordered_properties(_create_linespacing(spacing_id; _to_kwargs(spacing_obj)...), spacing_obj)
 end
 
 
 "gets overhead wire data for line geometry"
-function _get_wire_data(data_dss::Dict{String,<:Any}, wires::Vector{String})::Dict{String,Any}
-    wiredata = Dict{String,Any}(id => get(get(data_dss,"wiredata",Dict()), id, Dict{String,Any}()) for id in filter(x->!isempty(x), wires))
-    @assert !isempty(wiredata) && all(!isempty(wd) for (_,wd) in wiredata) "Some wiredata is missing, cannot continue"
-
-    return Dict{String,Any}(
-        id => _apply_ordered_properties(_create_wiredata(id; _to_kwargs(wd)...), wd) for (id,wd) in wiredata
-    )
+function _get_wire_data(data_dss::OpenDssDataModel, wires::Vector{String})::Dict{String,DssWiredata}
+    wiredata = Dict{String,DssWiredata}(id => data_dss.wiredata[id] for id in filter(x->!isempty(x), wires))
 end
 
 
 "gets concentric neutral cable data for line geometry"
-function _get_cncable_data(data_dss::Dict{String,<:Any}, cncables::Vector{String})::Dict{String,Any}
-    cncabledata = Dict{String,Any}(id => get(get(data_dss,"cndata",Dict()), id, Dict{String,Any}()) for id in filter(x->!isempty(x), cncables))
-    @assert !isempty(cncabledata) && all(!isempty(cncd) for (_,cncd) in cncabledata) "Some cndata is missing, cannot continue"
-
-    return Dict{String,Any}(
-        id => _apply_ordered_properties(_create_cndata(id; _to_kwargs(cncd)...), cncd) for (id,cncd) in cncabledata
-    )
+function _get_cncable_data(data_dss::OpenDssDataModel, cncables::Vector{String})::Dict{String,DssCndata}
+    cncabledata = Dict{String,DssCndata}(id => data_dss.cndata[id] for id in filter(x->!isempty(x), cncables))
 end
 
 
 "gets tape shielded cable data for line geometry"
-function _get_tscable_data(data_dss::Dict{String,<:Any}, tscables::Vector{String})::Dict{String,Any}
-    tscabledata = Dict{String,Any}(id => get(get(data_dss,"tsdata",Dict()), id, Dict{String,Any}()) for id in filter(x->!isempty(x), tscables))
-    @assert !isempty(tscabledata) && all(!isempty(tscd) for (_,tscd) in tscabledata) "Some tsdata is missing, cannot continue"
+function _get_tscable_data(data_dss::OpenDssDataModel, tscables::Vector{String})::Dict{String,DssTsdata}
+    # NamedTuple((Symbol(id), data_dss.tsdata[id]) for id in filter(x->!isempty(x), tscables))
+    tscabledata = Dict{String,DssTsdata}(id => data_dss.tsdata[id] for id in filter(x->!isempty(x), tscables))
+    # @assert !isempty(tscabledata) && all(.!(ismissing.(values(tscabledata)))) "Some tsdata is missing, cannot continue"
 
-    return Dict{String,Any}(
-        id => _apply_ordered_properties(_create_tsdata(id; _to_kwargs(tscd)...), tscd) for (id,tscd) in tscabledata
-    )
+    return tscabledata
 end
+
+
+"cannot calculate line constants without dss model"
+calculate_line_constants(::Missing, ::DssLine)::Nothing = @info "Dss model missing"
 
 
 """
@@ -75,7 +62,7 @@ end
 
 Calculates line impedance and shunt admittance matrices for lines with line geometry, line spacing, wiredata, cncable, and/or tscable properties.
 """
-function calculate_line_constants(data_dss::Dict{String,<:Any}, line_defaults::Dict{String,<:Any})::Tuple{Matrix{Complex},Matrix{Complex}}
+function calculate_line_constants(data_dss::OpenDssDataModel, line_defaults::DssLine)::Tuple{Matrix{Complex},Matrix{Complex}}
     geometry = !isempty(line_defaults["geometry"]) ? _get_geometry_data(data_dss, string(line_defaults["geometry"])) : missing
 
     cncables = !ismissing(geometry) && !isempty(geometry["cncables"]) ? filter(x->!isempty(x), geometry["cncables"]) : !isempty(line_defaults["cncables"]) ? filter(x->!isempty(x), line_defaults["cncables"]) : missing
@@ -551,7 +538,7 @@ Calculates the earth return path impedance
 - Nasser Tleis, Power Systems Modelling and Fault Analysis (Second Edition), Academic Press, 2019, ISBN 9780128151174.
 - A. Deri, G. Tevan, A. Semlyen, A. Castanheira, The Complex Ground Return Plane – A Simplified Model for Homogeneous and Multi-Layer Earth Return, IEEE Transactions on Power Apparatus and Systems, Vol. PAS-100, No. 8, pp. 3686-3693, August 1981.
 """
-function calc_earth_return_path_impedance(i::Int, j::Int, x::Vector{<:Real}, y::Vector{<:Real}, ρₑ::Real, earth_model::String, ω::Real, ω₀::Real)
+function calc_earth_return_path_impedance(i::Int, j::Int, x::Vector{<:Real}, y::Vector{<:Real}, ρₑ::Real, earth_model::String, ω::Real, ω₀::Real)::Complex
     # Tleis Eq 3.7c
     δ = 503.292*sqrt(ρₑ/(ω₀/2π))
 
@@ -628,7 +615,7 @@ Calculates the internal impedance of the conductor
 
 - Nasser Tleis, Power Systems Modelling and Fault Analysis (Second Edition), Academic Press, 2019, ISBN 9780128151174.
 """
-function calc_internal_impedance(R_ac::Real, R_dc::Real, earth_model::String, ω::Real)
+function calc_internal_impedance(R_ac::Real, R_dc::Real, earth_model::String, ω::Real)::Complex
     if occursin("carson", earth_model)
         L_i = μ₀/8π  # internal inductance
         Z_int = R_ac + 1im * ω*L_i
