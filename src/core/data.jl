@@ -250,6 +250,62 @@ function count_nodes(data::Dict{String,<:Any})::Int
 end
 
 """
+    count_nodes(data::Dict{String,<:Any})::Int
+
+Counts number of nodes in network
+"""
+function count_nodes(data::DssModel)::Int
+    n_nodes = 0
+
+    all_nodes = Dict()
+    for root_prop in propertynames(data)
+        for (id, object) in getproperty(data, root_prop)
+            if isa(object, DssTransformer)
+                for busname in values(object["buses"])
+                    name, nodes = _parse_bus_id(busname)
+
+                    if !isempty(name)
+                        if !haskey(all_nodes, name)
+                            all_nodes[name] = Set([])
+                        end
+
+                        for (n, node) in enumerate(nodes[1:3])
+                            if node
+                                push!(all_nodes[name], n)
+                            end
+                        end
+                    end
+                end
+            elseif isa(object, DssNodeObject) || isa(object, DssEdgeObject)
+                for prop in propertynames(object)
+                    if startswith("$prop", "bus") && "$prop" != "buses"
+                        name, nodes = _parse_bus_id(getproperty(object, prop))
+                        if !isempty(name)
+                            if !haskey(all_nodes, name)
+                                all_nodes[name] = Set([])
+                            end
+
+                            for (n, node) in enumerate(nodes[1:3])
+                                if node
+                                    push!(all_nodes[name], n)
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    for (name, phases) in all_nodes
+        n_nodes += length(phases)
+    end
+
+    return n_nodes
+end
+
+
+"""
     count_active_connections(data::Dict{String,<:Any})
 
 Counts active ungrounded connections on edge components

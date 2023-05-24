@@ -1,31 +1,31 @@
 "all node types that can help define buses"
-const _dss_node_objects = String[
+const _dss_node_objects::Vector{String} = String[
     "isource", "load", "generator", "indmach012", "storage", "pvsystem"
 ]
 
 "all edge types that can help define buses"
-const _dss_edge_objects = String[
+const _dss_edge_objects::Vector{String} = String[
     "vsource", "fault", "capacitor", "line", "reactor", "transformer", "gictransformer", "gicline"
 ]
 
 "all data holding objects"
-const _dss_data_objects = String[
+const _dss_data_objects::Vector{String} = String[
     "options", "xfmrcode", "linecode", "loadshape", "xycurve", "linegeometry",
     "linespacing", "growthshape", "tcc_curve", "cndata", "tsdata", "wiredata"
 ]
 
 "all objects that define controls"
-const _dss_control_objects = String[
+const _dss_control_objects::Vector{String} = String[
     "capcontrol", "regcontrol", "swtcontrol", "relay", "recloser", "fuse"
 ]
 
 "all objects that provide montoring"
-const _dss_monitor_objects = String[
+const _dss_monitor_objects::Vector{String} = String[
     "energymeter", "monitor"
 ]
 
 "components currently supported for automatic data type parsing"
-const _dss_supported_components = String[
+const _dss_supported_components::Vector{String} = String[
     "line", "linecode", "load", "generator", "capacitor", "reactor",
     "transformer", "pvsystem", "storage", "loadshape", "options",
     "xfmrcode", "vsource", "xycurve", "spectrum", "capcontrol",
@@ -34,7 +34,7 @@ const _dss_supported_components = String[
 ]
 
 "two number operators for reverse polish notation"
-const _double_operators = Dict{String,Any}(
+const _double_operators::Dict{String,Function} = Dict{String,Function}(
     "+" => +,
     "-" => -,
     "*" => *,
@@ -44,7 +44,7 @@ const _double_operators = Dict{String,Any}(
 )
 
 "single number operators in reverse polish notation"
-const _single_operators = Dict{String,Any}(
+const _single_operators::Dict{String,Function} = Dict{String,Function}(
     "sqr" => x -> x * x,
     "sqrt" => sqrt,
     "inv" => inv,
@@ -60,34 +60,25 @@ const _single_operators = Dict{String,Any}(
 )
 
 "different acceptable delimiters for arrays"
-const _array_delimiters = Vector{Char}(['\"', '\'', '[', '{', '(', ']', '}', ')'])
+const _array_delimiters::Vector{Char} = Vector{Char}(['\"', '\'', '[', '{', '(', ']', '}', ')'])
 
 "properties that should be excluded from being overwritten during the application of `like`"
-const _like_exclusions = Dict{String,Vector{Regex}}(
+const _like_exclusions::Dict{String,Vector{Regex}} = Dict{String,Vector{Regex}}(
     "all" => Vector{Regex}([r"name", r"enabled"]),
     "line" => [r"switch"],
 )
 
-"Regexes for determining data types"
-const _dtype_regex = Dict{Regex, Type}(
-    r"^[+-]{0,1}\d*\.{0,1}\d*[eE]{0,1}[+-]{0,1}\d*[+-]\d*\.{0,1}\d*[eE]{0,1}[+-]{0,1}\d*[ij]$" => ComplexF64,
-    r"^[+-]{0,1}\d*\.{0,1}\d*[eE]{0,1}[+-]{0,1}\d*$" => Float64,
-    r"^\d+$" => Int,
-)
-
-
 "dss to pmd load model"
-const _dss2pmd_load_model = Dict{Int,LoadModel}(
+const _dss2pmd_load_model::Dict{Int,LoadModel} = Dict{Int,LoadModel}(
     1 => POWER,
     2 => IMPEDANCE,
     5 => CURRENT,
     4 => EXPONENTIAL,
-    8 => ZIP,  # TODO add official support for ZIP load model
+    8 => ZIP,
 )
 
-
 "dss to pmd capcontrol type"
-const _dss2pmd_capcontrol_type = Dict{String,CapControlType}(
+const _dss2pmd_capcontrol_type::Dict{String,CapControlType} = Dict{String,CapControlType}(
     "kvar" => CAP_REACTIVE_POWER,
     "current" => CAP_CURRENT,
     "voltage" => CAP_VOLTAGE,
@@ -95,9 +86,8 @@ const _dss2pmd_capcontrol_type = Dict{String,CapControlType}(
     "time"=>CAP_TIME,
 )
 
-
 "conversion factors for units to meters"
-const _convert_to_meters = Dict{String,Float64}(
+const _convert_to_meters::Dict{String,Float64} = Dict{String,Float64}(
     "mi" => 1609.3,
     "km" => 1000.0,
     "kft" => 304.8,
@@ -123,8 +113,30 @@ function _isa_rpn(expr::AbstractString)::Bool
 end
 
 
+"helper function to parse reverse polish notation"
+function _parse_rpn(expr::AbstractString)::Union{Float64, Vector{Float64}, AbstractString}
+    if _isa_dss_array(expr)
+        parse(Vector{Float64}, "(\"24.9 3 sqrt /\" \"10 2 *\")")
+    else
+        _parse_rpn(Float64, expr)
+    end
+end
+
+
+"helper function to parse reverse polish notation vectors"
+function _parse_rpn(::Type{T}, expr::AbstractString)::Union{T,AbstractString} where T <: Vector
+    parse(T, expr)
+end
+
+
+"helper function to parse reverse polish notation arrays"
+function _parse_array(::Type{T}, expr::AbstractString)::Union{Vector{T},AbstractString} where T
+    parse(Vector{T}, expr)
+end
+
+
 "parses Reverse Polish Notation `expr`"
-function _parse_rpn(expr::AbstractString, dtype::Type=Float64)
+function _parse_rpn(::Type{T}, expr::AbstractString)::Union{T,AbstractString} where T
     clean_expr = strip(expr, _array_delimiters)
 
     if occursin("rollup", clean_expr) || occursin("rolldn", clean_expr) || occursin("swap", clean_expr)
@@ -147,7 +159,7 @@ function _parse_rpn(expr::AbstractString, dtype::Type=Float64)
                 if item == "pi"
                     push!(stack, pi)
                 else
-                    push!(stack, parse(dtype, item))
+                    push!(stack, parse(T, item))
                 end
             end
         catch error
@@ -165,158 +177,6 @@ function _parse_rpn(expr::AbstractString, dtype::Type=Float64)
     else
         return stack[1]
     end
-end
-
-
-"checks is a string is a connection by checking the values"
-function _isa_conn(expr::AbstractString)::Bool
-    if expr in ["wye", "y", "ln", "delta", "ll"]
-        return true
-    else
-        return false
-    end
-end
-
-
-"parses connection 'conn' specification reducing to wye or delta"
-function _parse_conn(conn::AbstractString)::ConnConfig
-    if conn in ["wye", "y", "ln"]
-        return WYE
-    elseif conn in ["delta", "ll"]
-        return DELTA
-    else
-        @warn "Unsupported connection $conn, defaulting to WYE"
-        return WYE
-    end
-end
-
-
-"checks if `data` is an opendss-style matrix string"
-function _isa_matrix(data::AbstractString)::Bool
-    if occursin("|", data)
-        return true
-    else
-        return false
-    end
-end
-
-
-"""
-Parses a OpenDSS style triangular matrix string `data` into a two dimensional
-array of type `dtype`. Matrix strings are capped by either parenthesis or
-brackets, rows are separated by "|", and columns are separated by spaces.
-"""
-function _parse_matrix(dtype::Type, data::AbstractString)::Matrix{dtype}
-    rows = []
-    for line in split(strip(strip(data, _array_delimiters)), '|')
-        cols = []
-        for item in split(strip(line), r"\s*,\s*|\s+")
-            push!(cols, parse(dtype, item))
-        end
-        push!(rows, cols)
-    end
-
-    nphases = maximum([length(row) for row in rows])
-
-    if dtype == AbstractString || dtype == String
-        matrix = fill("", nphases, nphases)
-    elseif dtype == Char
-        matrix = fill(' ', nphases, nphases)
-    else
-        matrix = zeros(dtype, nphases, nphases)
-    end
-
-    if length(rows) == 1
-        for i in 1:nphases
-            matrix[i, i] = rows[1][1]
-        end
-    elseif all([length(row) for row in rows] .== [i for i in 1:nphases])
-        for (i, row) in enumerate(rows)
-            for (j, col) in enumerate(row)
-                matrix[i, j] = matrix[j, i] = col
-            end
-        end
-    elseif all([length(row) for row in rows] .== nphases)
-        for (i, row) in enumerate(rows)
-            for (j, col) in enumerate(row)
-                matrix[i, j] = col
-            end
-        end
-    end
-
-    return matrix
-end
-
-
-"checks if `data` is an opendss-style array string"
-function _isa_array(data::AbstractString)::Bool
-    clean_data = strip(data)
-    if !occursin("|", clean_data)
-        if occursin(",", clean_data) ||
-            (startswith(clean_data, "[") && endswith(clean_data, "]")) ||
-            (startswith(clean_data, "\"") && endswith(clean_data, "\"")) ||
-            (startswith(clean_data, "\'") && endswith(clean_data, "\'")) ||
-            (startswith(clean_data, "(") && endswith(clean_data, ")")) ||
-            (startswith(clean_data, "{") && endswith(clean_data, "}"))
-            return true
-        else
-            return false
-        end
-    else
-        return false
-    end
-end
-
-
-"""
-Parses a OpenDSS style array string `data` into a one dimensional array of type
-`dtype`. Array strings are capped by either brackets, single quotes, or double
-quotes, and elements are separated by spaces.
-"""
-function _parse_array(dtype::Type, data::AbstractString)::Vector{dtype}
-    if _isa_rpn(data)
-        matches = collect((m.match for m = eachmatch(Regex(string("[",join(_array_delimiters, '\\'),"]")), data, overlap=false)))
-        if length(matches) == 2
-            if dtype == String
-                return data
-            else
-                return _parse_rpn(data, dtype)
-            end
-
-        else
-            elements = _parse_properties(data[2:end-1])
-        end
-    else
-        for delim in _array_delimiters
-            data = replace(data, delim => "")
-        end
-        elements = split(strip(data), r"\s*,\s*|\s+")
-        elements = [strip(el) for el in elements if strip(el) != ""]
-    end
-
-    if all(_isa_conn(el) for el in elements)
-        array = ConnConfig[]
-        for el in elements
-            a = _parse_conn(el)
-            push!(array, a)
-        end
-    elseif dtype == String || dtype == AbstractString || dtype == Char
-        array = String[]
-        for el in elements
-            push!(array, el)
-        end
-    else
-        array = Vector{dtype}(undef, length(elements))
-        for (i, el) in enumerate(elements)
-            if _isa_rpn(data)
-                array[i] = _parse_rpn(el, dtype)
-            else
-                array[i] = parse(dtype, el)
-            end
-        end
-    end
-
-    return array
 end
 
 
@@ -505,7 +365,7 @@ function _find_neutrals(data_eng::Dict{String,<:Any})
     load_neutrals = [(eng_obj["bus"],eng_obj["connections"][end]) for (_,eng_obj) in get(data_eng, "load", Dict{String,Any}()) if eng_obj["configuration"]==WYE]
     neutrals = Set(vcat(bus_neutrals, trans_neutrals, load_neutrals))
     neutrals = Set([(bus,t) for (bus,t) in neutrals if t!=0])
-    stack = deepcopy(neutrals)
+    stack = copy(neutrals)
     while !isempty(stack)
         vertex = pop!(stack)
         candidates_t = [((f,t), t) for (f,t) in edges if f==vertex]
@@ -548,8 +408,8 @@ end
 
 
 "creates a `dss` dict inside `object` that imports all items in `prop_order` from `dss_obj`"
-function _import_all!(object::Dict{String,<:Any}, dss_obj::Dict{String,<:Any})
-    object["dss"] = Dict{String,Any}((key, dss_obj[key]) for key in dss_obj["prop_order"])
+function _import_all!(object::Dict{String,<:Any}, dss_obj::DssObject)
+    object["dss"] = Dict{String,Any}((key, property) for (key,property) in dss_obj["raw_dss"])
 end
 
 
@@ -571,37 +431,34 @@ end
 
 
 "Discovers all of the buses (not separately defined in OpenDSS), from 'lines'"
-function _discover_buses(data_dss::Dict{String,<:Any})::Set
+function _discover_buses(data_dss::OpenDssDataModel)::Set
     buses = Set([])
     for obj_type in _dss_node_objects
         for (name, dss_obj) in get(data_dss, obj_type, Dict{String,Any}())
-            _apply_like!(dss_obj, data_dss, obj_type)
             push!(buses, split(dss_obj["bus1"], '.'; limit=2)[1])
         end
     end
 
     for obj_type in _dss_edge_objects
         for (name, dss_obj) in get(data_dss, obj_type, Dict{String,Any}())
-            _apply_like!(dss_obj, data_dss, obj_type)
             if obj_type == "transformer"
-                transformer = _create_transformer(name; _to_kwargs(dss_obj)...)
-                for bus in transformer["buses"]
+                for bus in dss_obj["buses"]
                     push!(buses, split(bus, '.'; limit=2)[1])
                 end
             elseif obj_type == "gictransformer"
                 for key in ["bush", "busx", "busnh", "busnx"]
-                    if haskey(dss_obj, key)
+                    if !isempty(dss_obj[key])
                         push!(buses, split(dss_obj[key], '.'; limit=2)[1])
                     end
                 end
             elseif obj_type == "vsource"
                 push!(buses, split(get(dss_obj, "bus1", "sourcebus"), '.'; limit=2)[1])
-                if haskey(dss_obj, "bus2")
+                if !isempty(dss_obj["bus2"])
                     push!(buses, split(dss_obj["bus2"], '.'; limit=2)[1])
                 end
             else
                 for key in ["bus1", "bus2"]
-                    if haskey(dss_obj, key)
+                    if !isempty(dss_obj[key])
                         push!(buses, split(dss_obj[key], '.'; limit=2)[1])
                     end
                 end
@@ -609,7 +466,7 @@ function _discover_buses(data_dss::Dict{String,<:Any})::Set
         end
     end
 
-    return buses
+    return filter(x->!isempty(x), buses)
 end
 
 
@@ -627,7 +484,7 @@ end
 
 
 "Parses busnames as defined in OpenDSS, e.g. 'primary.1.2.3.0'"
-function _parse_bus_id(busname::AbstractString)::Tuple{String,Vector{Bool}}
+function _parse_bus_id(busname::String)::Tuple{String,Vector{Bool}}
     parts = split(busname, '.'; limit=2)
     name = parts[1]
     elements = "1.2.3"
@@ -655,155 +512,6 @@ end
 "converts Dict{String,Any} to Dict{Symbol,Any} for passing as kwargs"
 function _to_kwargs(data::Dict{String,Any})::Dict{Symbol,Any}
     return Dict{Symbol,Any}((Symbol(k), v) for (k, v) in data)
-end
-
-
-"apply properties in the order that they are given"
-function _apply_ordered_properties(defaults::Dict{String,<:Any}, raw_dss::Dict{String,<:Any}; code_dict::Dict{String,<:Any}=Dict{String,Any}())::Dict{String,Any}
-    _defaults = deepcopy(defaults)
-
-    for prop in filter(p->p!="like", raw_dss["prop_order"])
-        if prop in ["linecode", "loadshape"]
-            merge!(defaults, code_dict)
-        else
-            if haskey(_defaults, prop)
-                defaults[prop] = _defaults[prop]
-            end
-        end
-    end
-
-    return defaults
-end
-
-
-"applies `like` to component"
-function _apply_like!(raw_dss::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, comp_type::String)
-    links = ["like"]
-    if any(link in raw_dss["prop_order"] for link in links)
-        new_prop_order = String[]
-        raw_dss_copy = deepcopy(raw_dss)
-
-        for prop in raw_dss["prop_order"]
-            push!(new_prop_order, prop)
-
-            if any(match(key, prop) !== nothing for key in [get(_like_exclusions, comp_type, [])..., _like_exclusions["all"]...])
-                continue
-            end
-
-            if prop in links
-                linked_dss = get(get(data_dss, comp_type, Dict{String,Any}()), raw_dss[prop], Dict{String,Any}())
-                if isempty(linked_dss)
-                    @warn "$comp_type.$(raw_dss["name"]): $prop=$(raw_dss[prop]) cannot be found"
-                else
-                    for linked_prop in linked_dss["prop_order"]
-                        if linked_prop in get(_like_exclusions, comp_type, []) || linked_prop in _like_exclusions["all"]
-                            continue
-                        end
-
-                        push!(new_prop_order, linked_prop)
-                        if linked_prop in links
-                            _apply_like!(linked_dss, data_dss, comp_type)
-                        else
-                            raw_dss[linked_prop] = deepcopy(linked_dss[linked_prop])
-                        end
-                    end
-                end
-            else
-                raw_dss[prop] = deepcopy(raw_dss_copy[prop])
-            end
-        end
-
-        final_prop_order = String[]
-        while !isempty(new_prop_order)
-            prop = popfirst!(new_prop_order)
-            if !(prop in new_prop_order)
-                push!(final_prop_order, prop)
-            end
-        end
-        raw_dss["prop_order"] = final_prop_order
-    end
-end
-
-
-"""
-Parses the data in keys defined by `to_parse` in `data_dss` using types given by
-the default properties from the `get_prop_default` function.
-"""
-function _parse_dss_with_dtypes!(data_dss::Dict{String,<:Any}, to_parse::Vector{String}=_dss_supported_components)
-    for obj_type in to_parse
-        if haskey(data_dss, obj_type)
-            dtypes = _dss_parameter_data_types[obj_type]
-            if obj_type == "options"
-                _parse_obj_dtypes!(obj_type, data_dss[obj_type], dtypes)
-            else
-                for object in values(data_dss[obj_type])
-                    _parse_obj_dtypes!(obj_type, object, dtypes)
-                end
-            end
-        end
-    end
-end
-
-
-"parses the raw dss values into their expected data types"
-function _parse_element_with_dtype(dtype::Type, element::AbstractString)
-    if _isa_rpn(element)
-        out = _parse_rpn(element, dtype)
-    elseif _isa_matrix(element)
-        out = _parse_matrix(eltype(dtype), element)
-    elseif _isa_array(element)
-        out = _parse_array(eltype(dtype), element)
-    elseif dtype <: Bool
-        if element in ["n", "no"]
-            element = "false"
-        elseif element in ["y", "yes"]
-            element = "true"
-        end
-        out = parse(dtype, element)
-    elseif _isa_rpn(element)
-        out = _parse_rpn(element)
-    elseif dtype == String
-        out = element
-    else
-        if _isa_conn(element)
-            out = _parse_conn(element)
-        else
-            try
-                out = parse(dtype, element)
-            catch
-                @warn "cannot parse $element as $dtype, leaving as String."
-                out = element
-            end
-        end
-    end
-
-    return out
-end
-
-
-"parses data type of properties of objects"
-function _parse_obj_dtypes!(obj_type::String, object::Dict{String,Any}, dtypes::Dict{String,Type})
-    for (k, v) in object
-        if isa(v, Vector) && eltype(v) == Any || isa(eltype(v), AbstractString)
-            _dtype = get(dtypes, k, _guess_dtype("[$(join(v, ","))]"))
-            for i in 1:length(v)
-                if isa(v[i], AbstractString)
-                    v[i] = _parse_element_with_dtype(_dtype, v[i])
-                end
-            end
-        elseif isa(v, Matrix) && eltype(v) == Any || isa(eltype(v), AbstractString)
-            _dtype = get(dtypes, k, _guess_dtype("$(join(collect(Base.Iterators.flatten(v)), " "))"))
-            for i in 1:size(v)[1]
-                for j in 1:size(v)[2]
-                    if isa(v[i,j], AbstractString)
-                        v[i,j] = _parse_element_with_dtype(_dtype, v[i,j])
-                    end
-                end
-            end
-        elseif isa(v, AbstractString)
-            object[k] = _parse_element_with_dtype(get(dtypes, k, _guess_dtype(v)), v)
-        end
-    end
 end
 
 
@@ -861,141 +569,28 @@ function _add_eng_obj!(data_eng::Dict{String,<:Any}, eng_obj_type::String, eng_o
 end
 
 
-"guesses the data type of a value using regex, returning Float64, Int, ComplexF64, or String (if number type cannot be determined)"
-function _guess_dtype(value::AbstractString)::Type
-    if _isa_matrix(value) || _isa_array(value) || _isa_rpn(value)
-        for delim in [keys(_double_operators)..., keys(_single_operators)..., _array_delimiters..., "|", ","]
-            value = replace(value, delim => " ")
-        end
-        _dtypes = unique([_guess_dtype(v) for v in split(value)])
-        if length(_dtypes) == 1
-            return _dtypes[1]
-        elseif all(v <: Int for v in _dtypes)
-            return Int
-        elseif any(v <: Complex for v in _dtypes)
-            return ComplexF64
-        elseif any(v <: Float64 for v in _dtypes)
-            return Float64
-        else
-            return String
-        end
-    else
-        for (re, typ) in _dtype_regex
-            if occursin(re, value)
-                return typ
-            end
-        end
-
-        return String
-    end
-end
-
-
-"converts dss load model to supported PowerModelsDistribution LoadModel enum"
-function _parse_dss_load_model!(eng_obj::Dict{String,<:Any}, id::Any)
-    model = eng_obj["model"]
-
-    if model in [3, 4, 7]
-        @warn "$id: dss load model $model not supported. Treating as constant POWER model"
-        model = 1
-    elseif model == 6
-        @warn "$id: dss load model $model identical to model 1 in current feature set. Treating as constant POWER model"
-        model = 1
-    end
-
-    eng_obj["model"] = _dss2pmd_load_model[model]
-end
-
-
-"""
-    _parse_dss_capcontrol_type!(type::SubString{String}, id::Any)
-
-Converts dss capcontrol type to supported PowerModelsDistribution CapControlType enum.
-"""
-function _parse_dss_capcontrol_type!(type::SubString{String}, id::Any)
-
-    if isempty([get(_dss2pmd_capcontrol_type, "$type", Dict{String,Any}())])
-        @warn "$id: dss capcontrol type $type not supported. Treating as voltage control"
-        type = "voltage"
-    end
-
-    return _dss2pmd_capcontrol_type[type]
-end
-
-
 "checks if loadshape has both pmult and qmult"
 function _is_loadshape_split(dss_obj::Dict{String,<:Any})
     haskey(dss_obj, "pmult") && haskey(dss_obj, "qmult") && all(dss_obj["pmult"] .!= dss_obj["qmult"])
 end
 
 
-""
-function _parse_dss_xycurve(dss_obj::Dict{String,<:Any}, id::Any, data_dss::Dict{String,<:Any})::Array{Vector{Real},2}
-    _apply_like!(dss_obj, data_dss, "xycurve")
-    defaults = _apply_ordered_properties(_create_xycurve(id; _to_kwargs(dss_obj)...), dss_obj)
-
-    xarray = defaults["xarray"] .* defaults["xscale"] .+ defaults["xshift"]
-    yarray = defaults["yarray"] .* defaults["yscale"] .+ defaults["yshift"]
-
-    @assert length(xarray) >= 2 && length(yarray) >= 2 "XYCurve data must have two or more points"
-
-    return Array{Vector{Real},2}([xarray, yarray])
+"checks if loadshape has both pmult and qmult"
+function _is_loadshape_split(dss_obj::DssLoadshape)
+    !isempty(dss_obj["pmult"]) && !isempty(dss_obj["qmult"]) && all(dss_obj["pmult"] .!= dss_obj["qmult"])
 end
 
 
 "helper function to properly reference time series variables from opendss"
-function _build_time_series_reference!(eng_obj::Dict{String,<:Any}, dss_obj::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, defaults::Dict{String,<:Any}, time_series::String, active::String, reactive::String)
-    if haskey(dss_obj, time_series) && haskey(data_dss, "loadshape") && haskey(data_dss["loadshape"], defaults[time_series])
+function _build_time_series_reference!(eng_obj::Dict{String,<:Any}, dss_obj::DssTimeSeriesObjects, data_dss::OpenDssDataModel, time_series::String, active::String, reactive::String)
+    if !isempty(dss_obj[time_series]) && !isempty(data_dss["loadshape"]) && haskey(data_dss["loadshape"], dss_obj[time_series])
         eng_obj["time_series"] = get(eng_obj, "time_series", Dict{String,Any}())
-        if _is_loadshape_split(data_dss["loadshape"][defaults[time_series]])
-            eng_obj["time_series"][active] = "$(defaults[time_series])_p"
-            eng_obj["time_series"][reactive] = "$(defaults[time_series])_q"
+        if _is_loadshape_split(data_dss["loadshape"][dss_obj[time_series]])
+            eng_obj["time_series"][active] = "$(dss_obj[time_series])_p"
+            eng_obj["time_series"][reactive] = "$(dss_obj[time_series])_q"
         else
-            eng_obj["time_series"][active] = defaults[time_series]
-            eng_obj["time_series"][reactive] = defaults[time_series]
+            eng_obj["time_series"][active] = dss_obj[time_series]
+            eng_obj["time_series"][reactive] = dss_obj[time_series]
         end
-    end
-end
-
-
-"returns number of phases implied by a two-bus (edge) object"
-function _get_implied_nphases(bus1::AbstractString, bus2::AbstractString; default::Int=3)
-    f_conds = _get_conductors_ordered(bus1; default=collect(1:default), check_length=false)
-    t_conds = _get_conductors_ordered(bus2; default=collect(1:default), check_length=false)
-
-    if !isempty(f_conds) || !isempty(t_conds)
-        return maximum([length(f_conds), length(t_conds)])
-    else
-        return default
-    end
-end
-
-
-"returns number of phases implied by a transformer object"
-function _get_implied_nphases(buses::Vector{<:AbstractString}; default::Int=3)
-    nphases = Int[]
-    for bus in buses
-        conds = _get_conductors_ordered(bus; default=collect(1:default), check_length=false)
-        if !isempty(conds)
-            push!(nphases, length(conds))
-        end
-    end
-
-    if !isempty(nphases)
-        return maximum(nphases)
-    else
-        return default
-    end
-end
-
-
-"returns number of phases implied by a single-bus (node) object"
-function _get_implied_nphases(bus1::AbstractString; default::Int=3)
-    conds = _get_conductors_ordered(bus1; default=collect(1:default), check_length=false)
-
-    if !isempty(conds)
-        return length(conds)
-    else
-        return default
     end
 end

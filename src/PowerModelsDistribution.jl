@@ -60,9 +60,11 @@ module PowerModelsDistribution
     include("data_model/dss/data_constructors.jl")
 
     include("data_model/base/interfaces.jl")
+    include("data_model/base/parse.jl")
     include("data_model/base/show.jl")
     include("data_model/base/utils.jl")
 
+    include("data_model/transformations/rawdss2dss.jl")
     include("data_model/transformations/dss2eng.jl")
     include("data_model/transformations/eng2math.jl")
     include("data_model/transformations/math2eng.jl")
@@ -103,6 +105,7 @@ module PowerModelsDistribution
 
     include("io/utils.jl")
     include("io/dss/line_constants.jl")
+    include("io/dss/constants.jl")
     include("io/dss/parse.jl")
     include("io/json/json.jl")
     include("io/common.jl")
