@@ -2,6 +2,10 @@
 
 ## staged
 
+- none
+
+## v0.14.9
+
 - Fixed failing unit test `capcontrol_fotr` on `Julia 1 - macOS-latest - x64`
 - Add native power flow solver by using `compute_mc_pf(data_math)`
 - Fixed bug in `build_mc_pf` where `constraint_mc_storage_power_setpoint_real` was being applied to all storage objects, and not just ones on PV buses
