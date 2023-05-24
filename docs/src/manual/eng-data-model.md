@@ -30,7 +30,7 @@ Each edge or node component (_i.e._ all those that are not data objects or buses
 
 Parameter values on components are expected to be specified in SI units by default (where applicable) in the engineering data model. Relevant expected units are noted in the sections below. It is possible for the user to select universal scalar factors for power and voltages. For example, if `power_scalar_factor` and `voltage_scalar_factor` are their default values given below, where units is listed as watt or var, real units will be kW and kvar. Where units are listed as volt, real units will be kV (multiplied by `vm_nom`, where that value exists).
 
-The Used column describes the situtations where certain parameters are used. "always" indicates those values are used in all contexts, `opf`, `mld`, or any other problem name abbreviation indicate they are used in particular for those problems. "solution" indicates that those parameters are outputs from the solvers. "multinetwork" indicates these values are only used to build multinetwork problems.
+The Used column describes the situations where certain parameters are used. "always" indicates those values are used in all contexts, `opf`, `mld`, or any other problem name abbreviation indicate they are used in particular for those problems. "solution" indicates that those parameters are outputs from the solvers. "multinetwork" indicates these values are only used to build multinetwork problems.
 
 Those parameters that have a default may be omitted by the user from the data model, they will be populated by the specified default values.
 
@@ -259,7 +259,7 @@ Special case of the shunt capacitors, which is part of the `shunt` object, and e
 
 | Name           | Default | Type             | Units | Used | Description                                                                                                                                                                                       |
 | -------------- | ------- | ---------------- | ----- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `type`         |         | `Vector{String}` |       | capc | Control type, default is `current` for controlled phase, ` ` for uncontrolled phase,`size=1`for`kvar`type, otherwise`size=(nphases)`                                                              |
+| `type`         |         | `Vector{String}` |       | capc | Control type, default is `current` for controlled phase, `` for uncontrolled phase,`size=1`for`kvar`type, otherwise`size=(nphases)`                                                              |
 | `element`      |         | `String`         |       | capc | `source_id` of element (typically line or transformer) to which CapControl is connected                                                                                                           |
 | `terminal`     |         | `Vector{Int}`    |       | capc | Number of the terminal of circuit element to which CapControl is connected, default is `1` for controlled phase, `0` for uncontrolled phase, `size=1` for `kvar` type, otherwise `size=(nphases)` |
 | `onsetting`    |         | `Vector{Real}`   |       | capc | Value at which the CapControl switches the capacitor on, default is `300.0` for controlled phase, `0.0` for uncontrolled phase, `size=1` for `kvar` type, otherwise `size=(nphases)`              |
@@ -400,7 +400,7 @@ A storage object is a flexible component that can represent a variety of energy 
 | `sm_ub`                |           | `Real`                | watt    | opf          | Power rating,                                                                        |
 | `cm_ub`                |           | `Real`                | amp     | opf          | Current rating,                                                                      |
 | `charge_efficiency`    |           | `Real`                | percent | always       | charging efficiency (losses)                                                         |
-| `discharge_efficiency` |           | `Real`                | percent | always       | disharging efficiency (losses)                                                       |
+| `discharge_efficiency` |           | `Real`                | percent | always       | discharging efficiency (losses)                                                       |
 | `qs_ub`                |           | `Real`                |         | opf          | Maximum reactive power injection,                                                    |
 | `qs_lb`                |           | `Real`                |         | opf          | Minimum reactive power injection,                                                    |
 | `rs`                   |           | `Real`                | ohm     | always       | converter resistance                                                                 |
@@ -466,7 +466,7 @@ Transformer codes are easy ways to specify properties common to multiple transfo
 
 Time series objects are used to specify time series for _e.g._ load or generation forecasts.
 
-Some parameters for components specified in this document can support a time series by inserting a referece to a `time_series` object into the `time_series` dictionary inside a component under the relevant parameter name. For example, for a `load`, if `pd_nom` is supposed to be a time series, the user would specify `"time_series" => Dict("pd_nom" => time_series_id)` where `time_series_id` is the `id` of an object in `time_series`, and has type `Any`.
+Some parameters for components specified in this document can support a time series by inserting a reference to a `time_series` object into the `time_series` dictionary inside a component under the relevant parameter name. For example, for a `load`, if `pd_nom` is supposed to be a time series, the user would specify `"time_series" => Dict("pd_nom" => time_series_id)` where `time_series_id` is the `id` of an object in `time_series`, and has type `Any`.
 
 | Name      | Default | Type                                 | Units | Used   | Description                                                                                                   |
 | --------- | ------- | ------------------------------------ | ----- | ------ | ------------------------------------------------------------------------------------------------------------- |
