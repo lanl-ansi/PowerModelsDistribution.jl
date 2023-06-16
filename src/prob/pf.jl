@@ -37,13 +37,16 @@ function build_mc_pf(pm::AbstractUnbalancedPowerModel)
         constraint_mc_power_balance(pm, i)
 
         # PV Bus Constraints
-        if length(ref(pm, :bus_gens, i)) > 0 && !(i in ids(pm,:ref_buses))
+        if (length(ref(pm, :bus_gens, i)) > 0 || length(ref(pm, :bus_storages, i)) > 0) && !(i in ids(pm,:ref_buses))
             # this assumes inactive generators are filtered out of bus_gens
             @assert bus["bus_type"] == 2
 
             constraint_mc_voltage_magnitude_only(pm, i)
             for j in ref(pm, :bus_gens, i)
                 constraint_mc_gen_power_setpoint_real(pm, j)
+            end
+            for j in ref(pm, :bus_storages, i)
+                constraint_mc_storage_power_setpoint_real(pm, j)
             end
         end
     end
@@ -53,7 +56,6 @@ function build_mc_pf(pm::AbstractUnbalancedPowerModel)
         constraint_storage_complementarity_nl(pm, i)
         constraint_mc_storage_losses(pm, i)
         constraint_mc_storage_thermal_limit(pm, i)
-        constraint_mc_storage_power_setpoint_real(pm, i)
     end
 
     for i in ids(pm, :branch)
@@ -165,13 +167,16 @@ function build_mc_pf(pm::AbstractUBFModels)
         constraint_mc_power_balance(pm, i)
 
         # PV Bus Constraints
-        if length(ref(pm, :bus_gens, i)) > 0 && !(i in ids(pm,:ref_buses))
+        if (length(ref(pm, :bus_gens, i)) > 0 || length(ref(pm, :bus_storages, i)) > 0) && !(i in ids(pm,:ref_buses))
             # this assumes inactive generators are filtered out of bus_gens
             @assert bus["bus_type"] == 2
 
             constraint_mc_voltage_magnitude_only(pm, i)
             for j in ref(pm, :bus_gens, i)
                 constraint_mc_gen_power_setpoint_real(pm, j)
+            end
+            for j in ref(pm, :bus_storages, i)
+                constraint_mc_storage_power_setpoint_real(pm, j)
             end
         end
     end
@@ -181,7 +186,6 @@ function build_mc_pf(pm::AbstractUBFModels)
         constraint_storage_complementarity_nl(pm, i)
         constraint_mc_storage_losses(pm, i)
         constraint_mc_storage_thermal_limit(pm, i)
-        constraint_mc_storage_power_setpoint_real(pm, i)
     end
 
     for i in ids(pm, :branch)

@@ -39,6 +39,7 @@ makedocs(
             "Basics" => "tutorials/basic.md",
             "Extending PowerModelsDistribution" => "tutorials/Extension Tutorial.md",
             "Explicit Neutral Models" => "tutorials/Explicit Neutral Models.md",
+            "Native Power Flow Solver" => "tutorials/Native Power Flow.md",
         ],
         "API Reference" => [
             "Base" => "reference/base.md",

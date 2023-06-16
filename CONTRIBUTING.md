@@ -4,12 +4,12 @@ In this guide we aim to communicate the various code standards expected for Powe
 
 ## Documentation
 
-Documentation should be included for all new publically exported additions to the code base
+Documentation should be included for all new publicly exported additions to the code base
 
 - All new formulation should have their hierarchies be documented in `/docs/src/formulations.md`
 - All new formulations should be summarized in `/docs/src/formulation-details.md`
 - Additions to the `ENGINEERING` data model should be added to `/docs/src/eng-data-model.md`
-- All new constaints should have their mathematical form in their associated docstring
+- All new constraints should have their mathematical form in their associated docstring
 - The usage details for all new exported functions should be documented via an associated docstring, with the exception of constraint and variable creation functions, which should contain mathematical details in their docstring
 - _Summaries_ of the purpose of new _unexported_ functions should be documented via an associated docstring
 
@@ -27,7 +27,7 @@ Function additions should meeting the following criteria:
 
 - All functions should be clearly named, without abbreviations, and with underscores between words, _e.g._ `parse_file` or `constraint_bus_voltage_magnitude`; in Python this is known as [`lower_case_with_underscores`](https://legacy.python.org/dev/peps/pep-0008/#descriptive-naming-styles). The exception to the abbreviate rule is cases where abbreviations would be expected in the modeling of power systems.
 - All functions that are not prepended by an underscore `_` will be exported by default (_i.e._ when a user uses `using PowerModelsDistribution`). Public functions should have a detailed docstring instructing on usage
-- All functions that modify data in place should end with an exclamation point `!` and the function input that is being modified should be the first argument (or first arguments in the case where multiple inputs are being modified in place). The exceptions to this rule are constraint and variable creation functions (_i.e._ those functions related to JuMP model creation), which do not include the exclaimation point
+- All functions that modify data in place should end with an exclamation point `!` and the function input that is being modified should be the first argument (or first arguments in the case where multiple inputs are being modified in place). The exceptions to this rule are constraint and variable creation functions (_i.e._ those functions related to JuMP model creation), which do not include the exclamation point
 - All function arguments, including keyword arguments, should have their types specified.
 - Private functions, _i.e._ those intended to be for internal use only, should follow the same descriptive naming conventions as functions exported by default, and should always include docstrings to describe their purpose.
 - Functions should be separated by two blank lines
@@ -49,7 +49,7 @@ When specifying types, _i.e._ when specifying the type of a function argument, o
 
 ### Constants
 
-Whenever possible, `const` should be used to eliminate unnecesary re-evaluations of code, and every `const` should have a docstring, whether internal or public.
+Whenever possible, `const` should be used to eliminate unnecessary re-evaluations of code, and every `const` should have a docstring, whether internal or public.
 
 ### JuMP Variables and Constraints
 

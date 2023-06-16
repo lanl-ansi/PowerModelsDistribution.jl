@@ -54,8 +54,9 @@ Community-driven development and enhancement of PowerModelsDistribution are welc
 
 This code has been developed as part of the Advanced Network Science Initiative at Los Alamos National Laboratory.  The primary developers are David Fobes(@pseudocubic) and Carleton Coffrin(@ccoffrin) with support from the following contributors:
 
-- Sander Claeys (@sanderclaeys) KU Leuven, transformer models and ACR formulation
-- Frederik Geth (@frederikgeth) CSIRO, Distribution modeling advise
+- Sander Claeys (@sanderclaeys) KU Leuven, transformer models and ACR formulation, native power flow solver
+- Frederik Geth (@frederikgeth) CSIRO, Distribution modeling advise, native power flow solver
+- Rahmat Heidari (@hei06j) CSIRO, native power flow solver
 
 ## Citing PowerModelsDistribution
 

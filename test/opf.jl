@@ -284,6 +284,36 @@
         @test result["termination_status"] == LOCALLY_SOLVED
     end
 
+    @testset "3-bus unbalanced test w/ gen nl costs above quadratic" begin
+        data = transform_data_model(case3_unbalanced)
+
+        #add a single-phase generator and assign a single-phase start value to it
+        data["gen"]["2"] = Dict{String, Any}(
+                            "pg_start"      => [-0.012],
+                            "qg_start"      => [-0.006],
+                            "model"         => 2,
+                            "connections"   => [2],
+                            "shutdown"      => 0.0,
+                            "startup"       => 0.0,
+                            "configuration" => WYE,
+                            "name"          => "single_ph_generator",
+                            "gen_bus"       => 3,
+                            "pmax"          => [Inf],
+                            "vbase"         => 0.23094,
+                            "index"         => 2,
+                            "cost"          => [0.2, 0.5, 1.1, 1.4, 1.0],
+                            "gen_status"    => 1,
+                            "qmax"          => [Inf],
+                            "qmin"          => [-Inf],
+                            "pmin"          => [-Inf],
+                            "ncost"         => 5
+                            )
+        result = solve_mc_opf(data, ACPUPowerModel, ipopt_solver)
+
+        @test result["termination_status"] == LOCALLY_SOLVED
+        @test isapprox(result["objective"], 0.9666; atol = 1e-4)
+    end
+
     @testset "3-bus unbalanced fotp opf with yy transformer" begin
         result = solve_mc_opf(ut_trans_2w_yy, FOTPUPowerModel, ipopt_solver)
 

@@ -2,6 +2,21 @@
 
 ## staged
 
+- Rewrite of dss parser for increased robustness and to avoid edge cases. Instead of parsing raw dss into Dicts, we use vectors of string pairs to preserve the order of commands. This more closely replicates proper dss parsing (**breaking**)
+- Rewrite of `dss2eng` transformation function to support new dss data model (**breaking**)
+- Added new `struct`s and `abstract type`s for data models to support dss parser rewrite, including interfaces so that these new objects can be interacted with similarly to Dicts, to aid in transition to new dss data model
+
+## v0.14.9
+
+- Fixed failing unit test `capcontrol_fotr` on `Julia 1 - macOS-latest - x64`
+- Add native power flow solver by using `compute_mc_pf(data_math)`
+- Fixed bug in `build_mc_pf` where `constraint_mc_storage_power_setpoint_real` was being applied to all storage objects, and not just ones on PV buses
+- Fixed implementation of polynomial nonlinear (nl) costs above quadratic in `objective.jl`
+
+## v0.14.8
+
+- Fixed bug in `_map_eng2math_voltage_source!` where `pg` and `qg` were getting set to zero instead trying to `get` them from the `eng_obj` first
+- Fixed bug in LPUBFDiagModel `constraint_mc_load_power` where the format of the constraint would lead to infeasibilities
 - Fixed bug in dss parser that did not recognize `//` as token for inline comments
 
 ## v0.14.7
@@ -109,7 +124,7 @@
 - Added missing `temperature` on pvsystem
 - Added `configuration=WYE` to voltage sources
 - Fixed bug in voltage angle variable start values
-- Fixed bug with case sensitve filenames by using `Glob.glob` with `Glob.FilenameMatch`
+- Fixed bug with case sensitive filenames by using `Glob.glob` with `Glob.FilenameMatch`
 - Fixed bug in `constraint_mc_switch_current_limit` where voltage variables being used were wrong
 - Moved all `import` statements to root `PowerModelsDistribution`
 - Fixed bug in `_calc_transformer_current_max_frto` where `sm_ub` should have been divided by `vmin`, NOT `vmax`
@@ -125,7 +140,7 @@
 - Added multinetwork versions of data model transformation functions using `apply_pmd!`
 - Added `propagate_network_topology!`, a helper function to propagate the status of buses to connected components
 - Updated Documentation on Storage data model
-- Added LPUBFDiag version of `constraint_mc_storage_thermal_limit` using PolyhedralRelaxations to relax the quadradic constraints
+- Added LPUBFDiag version of `constraint_mc_storage_thermal_limit` using PolyhedralRelaxations to relax the quadratic constraints
 - Fixed bug in reporting duals (typo in ampacity constraint functions) (#367)
 - Changed multiconductor storage model parsing from opendss to be single values (instead of creating some multiconductor values, making assumptions about split between phases)
 - Fixed `vm`, `va` variable starts in `ACRU` and `ACPU` forms

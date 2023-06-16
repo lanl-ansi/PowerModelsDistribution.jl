@@ -30,7 +30,7 @@ Each edge or node component (_i.e._ all those that are not data objects or buses
 
 Parameter values on components are expected to be specified in SI units by default (where applicable) in the engineering data model. Relevant expected units are noted in the sections below. It is possible for the user to select universal scalar factors for power and voltages. For example, if `power_scalar_factor` and `voltage_scalar_factor` are their default values given below, where units is listed as watt or var, real units will be kW and kvar. Where units are listed as volt, real units will be kV (multiplied by `vm_nom`, where that value exists).
 
-The Used column describes the situtations where certain parameters are used. "always" indicates those values are used in all contexts, `opf`, `mld`, or any other problem name abbreviation indicate they are used in particular for those problems. "solution" indicates that those parameters are outputs from the solvers. "multinetwork" indicates these values are only used to build multinetwork problems.
+The Used column describes the situations where certain parameters are used. "always" indicates those values are used in all contexts, `opf`, `mld`, or any other problem name abbreviation indicate they are used in particular for those problems. "solution" indicates that those parameters are outputs from the solvers. "multinetwork" indicates these values are only used to build multinetwork problems.
 
 Those parameters that have a default may be omitted by the user from the data model, they will be populated by the specified default values.
 
@@ -50,13 +50,13 @@ At the root level of the data structure, the following fields can be found.
 
 At the root-level of the data model a `settings` dictionary object is expected, containing the following fields.
 
-| Name                   | Default | Type               | Units | Used   | Description                                                                  |
-| ---------------------- | ------- | ------------------ | ----- | ------ | ---------------------------------------------------------------------------- |
-| `voltage_scale_factor` | `1e3`   | `Real`             |       | always | Scalar multiplier for voltage values                                         |
-| `power_scale_factor`   | `1e3`   | `Real`             |       | always | Scalar multiplier for power values                                           |
-| `vbases_default`       |         | `Dict{<:Any,Real}` |       | always | Instruction to set the vbase at a number of buses for non-dimensionalization |
-| `sbase_default`        |         | `Real`             |       | always | Instruction to set the power base for non-dimensionalization                 |
-| `base_frequency`       | `60.0`  | `Real`             | Hz    | always | Frequency base, _i.e._ the base frequency of the whole circuit               |
+| Name                   | Default | Type                | Units | Used   | Description                                                                  |
+| ---------------------- | ------- | ------------------- | ----- | ------ | ---------------------------------------------------------------------------- |
+| `voltage_scale_factor` | `1e3`   | `Real`              |       | always | Scalar multiplier for voltage values                                         |
+| `power_scale_factor`   | `1e3`   | `Real`              |       | always | Scalar multiplier for power values                                           |
+| `vbases_default`       |         | `Dict{String,Real}` |       | always | Instruction to set the vbase at a number of buses for non-dimensionalization |
+| `sbase_default`        |         | `Real`              |       | always | Instruction to set the power base for non-dimensionalization                 |
+| `base_frequency`       | `60.0`  | `Real`              | Hz    | always | Frequency base, _i.e._ the base frequency of the whole circuit               |
 
 The parameters `voltage_scale_factor` and `power_scale_factor`determine the base
 for all voltage and power parameters in this data model. For example,
@@ -76,20 +76,20 @@ The data model below allows us to include buses of arbitrary many terminals (_i.
 - underground lines with multiple neutrals which are not joined at every bus;
 - distribution lines that carry several conventional lines in parallel (see for example the quad circuits in NEVTestCase).
 
-| Name          | Default     | Type               | Units  | Used         | Description                                                                                                                                                                           |
-| ------------- | ----------- | ------------------ | ------ | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `terminals`   | `[1,2,3,4]` | `Vector{Int}`      |        | always       | Terminals for which the bus has active connections; **NOTE**: type can be either `Vector{Int}` or `Vector{String}`, but has to be consistent across all fields referring to terminals |
-| `vm_lb`       |             | `Vector{Real}`     | volt   | opf          | Minimum conductor-to-ground voltage magnitude, `size=nphases`                                                                                                                         |
-| `vm_ub`       |             | `Vector{Real}`     | volt   | opf          | Maximum conductor-to-ground voltage magnitude, `size=nphases`                                                                                                                         |
-| `vm_pair_ub`  |             | `Vector{Tuple}`    |        | opf          | _e.g._ `[(1,2,210)]` means \|U1-U2\|>210                                                                                                                                              |
-| `vm_pair_lb`  |             | `Vector{Tuple}`    |        | opf          | _e.g._ `[(1,2,230)]` means \|U1-U2\|<230                                                                                                                                              |
-| `grounded`    | `[]`        | `Vector{Int}`      |        | always       | List of terminals which are grounded                                                                                                                                                  |
-| `rg`          | `[]`        | `Vector{Real}`     |        | always       | Resistance of each defined grounding, `size=length(grounded)`                                                                                                                         |
-| `xg`          | `[]`        | `Vector{Real}`     |        | always       | Reactance of each defined grounding, `size=length(grounded)`                                                                                                                          |
-| `vm`          |             | `Vector{Real}`     | volt   | always       | Voltage magnitude at bus. If set, voltage magnitude at bus is fixed                                                                                                                   |
-| `va`          |             | `Vector{Real}`     | degree | always       | Voltage angle at bus. If set, voltage angle at bus is fixed                                                                                                                           |
-| `status`      | `ENABLED`   | `Status`           |        | always       | `ENABLED` or `DISABLED`. Indicates if component is enabled or disabled, respectively                                                                                                  |
-| `time_series` |             | `Dict{String,Any}` |        | multinetwork | Dictionary containing time series parameters.                                                                                                                                         |
+| Name          | Default     | Type                  | Units  | Used         | Description                                                                          |
+| ------------- | ----------- | --------------------- | ------ | ------------ | ------------------------------------------------------------------------------------ |
+| `terminals`   | `[1,2,3,4]` | `Vector{Int}`         |        | always       | Terminals for which the bus has active connections                                   |
+| `vm_lb`       |             | `Vector{Real}`        | volt   | opf          | Minimum conductor-to-ground voltage magnitude, `size=nphases`                        |
+| `vm_ub`       |             | `Vector{Real}`        | volt   | opf          | Maximum conductor-to-ground voltage magnitude, `size=nphases`                        |
+| `vm_pair_ub`  |             | `Vector{Tuple}`       |        | opf          | _e.g._ `[(1,2,210)]` means \|U1-U2\|>210                                             |
+| `vm_pair_lb`  |             | `Vector{Tuple}`       |        | opf          | _e.g._ `[(1,2,230)]` means \|U1-U2\|<230                                             |
+| `grounded`    | `[]`        | `Vector{Int}`         |        | always       | List of terminals which are grounded                                                 |
+| `rg`          | `[]`        | `Vector{Real}`        |        | always       | Resistance of each defined grounding, `size=length(grounded)`                        |
+| `xg`          | `[]`        | `Vector{Real}`        |        | always       | Reactance of each defined grounding, `size=length(grounded)`                         |
+| `vm`          |             | `Vector{Real}`        | volt   | always       | Voltage magnitude at bus. If set, voltage magnitude at bus is fixed                  |
+| `va`          |             | `Vector{Real}`        | degree | always       | Voltage angle at bus. If set, voltage angle at bus is fixed                          |
+| `status`      | `ENABLED`   | `Status`              |        | always       | `ENABLED` or `DISABLED`. Indicates if component is enabled or disabled, respectively |
+| `time_series` |             | `Dict{String,String}` |        | multinetwork | Dictionary containing time series parameters.                                        |
 
 Each terminal `c` of the bus has an associated complex voltage phasor `v[c]`. There are two types of voltage magnitude bounds. The first type bounds the voltage magnitude of each `v[c]` individually,
 
@@ -143,11 +143,11 @@ This is a pi-model branch. When a `linecode` is given, and any of `rs`, `xs`, `b
 
 | Name            | Default                           | Type           | Units            | Used   | Description                                                                          |
 | --------------- | --------------------------------- | -------------- | ---------------- | ------ | ------------------------------------------------------------------------------------ |
-| `f_bus`         |                                   | `Any`          |                  | always | id of from-side bus connection                                                       |
-| `t_bus`         |                                   | `Any`          |                  | always | id of to-side bus connection                                                         |
+| `f_bus`         |                                   | `String`       |                  | always | id of from-side bus connection                                                       |
+| `t_bus`         |                                   | `String`       |                  | always | id of to-side bus connection                                                         |
 | `f_connections` |                                   | `Vector{Int}`  |                  | always | Indicates for each conductor, to which terminal of the `f_bus` it connects           |
 | `t_connections` |                                   | `Vector{Int}`  |                  | always | Indicates for each conductor, to which terminal of the `t_bus` it connects           |
-| `linecode`      |                                   | `Any`          |                  | always | id of an associated linecode                                                         |
+| `linecode`      |                                   | `String`       |                  | always | id of an associated linecode                                                         |
 | `rs`            |                                   | `Matrix{Real}` | ohm/meter        | always | Series resistance matrix, `size=(nconductors,nconductors)`                           |
 | `xs`            |                                   | `Matrix{Real}` | ohm/meter        | always | Series reactance matrix, `size=(nconductors,nconductors)`                            |
 | `g_fr`          | `zeros(nconductors, nconductors)` | `Matrix{Real}` | siemens/meter/Hz | always | From-side conductance, `size=(nconductors,nconductors)`                              |
@@ -167,10 +167,10 @@ These are n-winding (`nwinding`), n-phase (`nphase`), lossy transformers. Note t
 
 | Name             | Default                              | Type                   | Units       | Used   | Description                                                                                                                                                    |
 | ---------------- | ------------------------------------ | ---------------------- | ----------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `bus`            |                                      | `Vector{Any}`          |             | always | List of bus for each winding, `size=nwindings`                                                                                                                 |
+| `bus`            |                                      | `Vector{String}`       |             | always | List of bus for each winding, `size=nwindings`                                                                                                                 |
 | `connections`    |                                      | `Vector{Vector{Int}}`  |             | always | List of connection for each winding, `size=((nconductors),nwindings)`                                                                                          |
 | `configurations` | `fill(WYE, nwindings)`               | `Vector{ConnConfig}`   |             | always | `WYE` or `DELTA`. List of configuration for each winding, `size=nwindings`                                                                                     |
-| `xfmrcode`       |                                      | `Any`                  |             | always | id of                                                                                                                                                          |
+| `xfmrcode`       |                                      | `String`               |             | always | id of                                                                                                                                                          |
 | `xsc`            | `zeros(nwindings*(nwindings-1)/2)`   | `Vector{Real}`         | `sm_nom[1]` | always | List of short-circuit reactances between each pair of windings, relative to the VA rating of the first winding; enter as a list of the upper-triangle elements |
 | `rw`             | `zeros(nwindings)`                   | `Vector{Real}`         | `sm_nom[1]` | always | Active power lost due to resistance of each winding, relative to the VA rating of each winding winding                                                         |
 | `cmag`           | `0.0`                                | `Real`                 | `sm_nom[1]` | always | Total no-load reactive power drawn by the transformer, relative to VA rating of the first winding (magnetizing current)                                        |
@@ -192,8 +192,8 @@ Special case of the Generic transformer, which is still a `transformer` object, 
 
 | Name            | Default              | Type           | Units | Used   | Description                                                                                                 |
 | --------------- | -------------------- | -------------- | ----- | ------ | ----------------------------------------------------------------------------------------------------------- |
-| `f_bus`         |                      | `Any`          |       | always | Alternative way to specify `buses`, requires both `f_bus` and `t_bus`                                       |
-| `t_bus`         |                      | `Any`          |       | always | Alternative way to specify `buses`, requires both `f_bus` and `t_bus`                                       |
+| `f_bus`         |                      | `String`       |       | always | Alternative way to specify `buses`, requires both `f_bus` and `t_bus`                                       |
+| `t_bus`         |                      | `String`       |       | always | Alternative way to specify `buses`, requires both `f_bus` and `t_bus`                                       |
 | `f_connections` |                      | `Vector{Int}`  |       | always | Alternative way to specify `connections`, requires both `f_connections` and `t_connections`, `size=nphases` |
 | `t_connections` |                      | `Vector{Int}`  |       | always | Alternative way to specify `connections`, requires both `f_connections` and `t_connections`, `size=nphases` |
 | `configuration` | `WYE`                | `ConnConfig`   |       | always | `WYE` or `DELTA`. Alternative way to specify the from-side configuration, to-side is always `WYE`           |
@@ -223,13 +223,13 @@ Switches without `rs`, `xs` or a linecode (conductance/susceptance not considere
 
 | Name            | Default                  | Type           | Units | Used   | Description                                                                                      |
 | --------------- | ------------------------ | -------------- | ----- | ------ | ------------------------------------------------------------------------------------------------ |
-| `f_bus`         |                          | `Any`          |       | always | id of from-side bus connection                                                                   |
-| `t_bus`         |                          | `Any`          |       | always | id of to-side bus connection                                                                     |
+| `f_bus`         |                          | `String`       |       | always | id of from-side bus connection                                                                   |
+| `t_bus`         |                          | `String`       |       | always | id of to-side bus connection                                                                     |
 | `f_connections` |                          | `Vector{Int}`  |       | always | Indicates for each conductor, to which terminal of the `f_bus` it connects                       |
 | `t_connections` |                          | `Vector{Int}`  |       | always | Indicates for each conductor, to which terminal of the `t_bus` it connects                       |
 | `cm_ub`         |                          | `Vector{Real}` | amp   | opf    | Symmetrically applicable current rating                                                          |
 | `sm_ub`         |                          | `Vector{Real}` | watt  | opf    | Symmetrically applicable power rating                                                            |
-| `linecode`      |                          | `Any`          |       | always | id of an associated linecode, does not take into account conductance/susceptance                 |
+| `linecode`      |                          | `String`       |       | always | id of an associated linecode, does not take into account conductance/susceptance                 |
 | `rs`            | `zeros(nphases,nphases)` | `Matrix{Real}` | ohm   | always | Series resistance matrix, `size=(nphases,nphases)`                                               |
 | `xs`            | `zeros(nphases,nphases)` | `Matrix{Real}` | ohm   | always | Series reactance matrix, `size=(nphases,nphases)`                                                |
 | `dispatchable`  | `NO`                     | `Dispatchable` |       |        | `NO` or `YES`, indicates whether switch state can be changed in a switching optimization problem |
@@ -244,7 +244,7 @@ These are objects that have single bus connections. Every object will have at le
 
 | Name           | Default   | Type               | Units   | Used         | Description                                                                                                               |
 | -------------- | --------- | ------------------ | ------- | ------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| `bus`          |           | `Any`              |         | always       | id of bus connection                                                                                                      |
+| `bus`          |           | `String`           |         | always       | id of bus connection                                                                                                      |
 | `connections`  |           | `Vector{Int}`      |         | always       | Ordered list of connected conductors, `size=nconductors`                                                                  |
 | `gs`           |           | `Matrix{Real}`     | siemens | always       | Conductance, `size=(nconductors,nconductors)`                                                                             |
 | `bs`           |           | `Matrix{Real}`     | siemens | always       | Susceptance, `size=(nconductors,nconductors)`                                                                             |
@@ -259,8 +259,8 @@ Special case of the shunt capacitors, which is part of the `shunt` object, and e
 
 | Name           | Default | Type             | Units | Used | Description                                                                                                                                                                                       |
 | -------------- | ------- | ---------------- | ----- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `type`         |         | `Vector{String}` |       | capc | Control type, default is `current` for controlled phase, ``for uncontrolled phase,`size=1`for`kvar`type, otherwise`size=(nphases)`                                                                |
-| `element`      | ``      | `String`         |       | capc | `source_id` of element (typically line or transformer) to which CapControl is connected                                                                                                           |
+| `type`         |         | `Vector{String}` |       | capc | Control type, default is `current` for controlled phase, `` for uncontrolled phase,`size=1`for`kvar`type, otherwise`size=(nphases)`                                                              |
+| `element`      |         | `String`         |       | capc | `source_id` of element (typically line or transformer) to which CapControl is connected                                                                                                           |
 | `terminal`     |         | `Vector{Int}`    |       | capc | Number of the terminal of circuit element to which CapControl is connected, default is `1` for controlled phase, `0` for uncontrolled phase, `size=1` for `kvar` type, otherwise `size=(nphases)` |
 | `onsetting`    |         | `Vector{Real}`   |       | capc | Value at which the CapControl switches the capacitor on, default is `300.0` for controlled phase, `0.0` for uncontrolled phase, `size=1` for `kvar` type, otherwise `size=(nphases)`              |
 | `offsetting`   |         | `Vector{Real}`   |       | capc | Value at which the CapControl switches the capacitor off, default is `200.0` for controlled phase, `0.0` for uncontrolled phase, `size=1` for `kvar` type, otherwise `size=(nphases)`             |
@@ -272,28 +272,28 @@ Special case of the shunt capacitors, which is part of the `shunt` object, and e
 
 ### Loads (`load`)
 
-| Name            | Default   | Type               | Units | Used           | Description                                                                                        |
-| --------------- | --------- | ------------------ | ----- | -------------- | -------------------------------------------------------------------------------------------------- |
-| `bus`           |           | `Any`              |       | always         | id of bus connection                                                                               |
-| `connections`   |           | `Vector{Int}`      |       | always         | Ordered list of connected conductors, `size=nconductors`                                           |
-| `configuration` | `WYE`     | `ConnConfig`       |       | always         | `WYE` or `DELTA`. If `WYE`, `connections[end]=neutral`                                             |
-| `model`         | `POWER`   | `LoadModel`        |       | always         | `POWER`, `IMPEDANCE`, `CURRENT`, `EXPONENTIAL`, or `ZIP`. Indicates the type of voltage-dependency |
-| `pd_nom`        |           | `Vector{Real}`     | watt  | always         | Nominal active load, with respect to `vm_nom`, `size=nphases`                                      |
-| `qd_nom`        |           | `Vector{Real}`     | var   | always         | Nominal reactive load, with respect to `vm_nom`, `size=nphases`                                    |
-| `vm_nom`        |           | `Real`             | volt  | `model!=POWER` | Nominal voltage (multiplier)                                                                       |
-| `dispatchable`  | `NO`      | `Dispatchable`     |       | mld            | `NO` or `YES`, indicates whether a load can be shed                                                |
-| `status`        | `ENABLED` | `Status`           |       | always         | `ENABLED` or `DISABLED`. Indicates if component is enabled or disabled, respectively               |
-| `time_series`   |           | `Dict{String,Any}` |       | multinetwork   | Dictionary containing time series parameters.                                                      |
+| Name            | Default   | Type                  | Units | Used           | Description                                                                                        |
+| --------------- | --------- | --------------------- | ----- | -------------- | -------------------------------------------------------------------------------------------------- |
+| `bus`           |           | `String`              |       | always         | id of bus connection                                                                               |
+| `connections`   |           | `Vector{Int}`         |       | always         | Ordered list of connected conductors, `size=nconductors`                                           |
+| `configuration` | `WYE`     | `ConnConfig`          |       | always         | `WYE` or `DELTA`. If `WYE`, `connections[end]=neutral`                                             |
+| `model`         | `POWER`   | `LoadModel`           |       | always         | `POWER`, `IMPEDANCE`, `CURRENT`, `EXPONENTIAL`, or `ZIP`. Indicates the type of voltage-dependency |
+| `pd_nom`        |           | `Vector{Real}`        | watt  | always         | Nominal active load, with respect to `vm_nom`, `size=nphases`                                      |
+| `qd_nom`        |           | `Vector{Real}`        | var   | always         | Nominal reactive load, with respect to `vm_nom`, `size=nphases`                                    |
+| `vm_nom`        |           | `Real`                | volt  | `model!=POWER` | Nominal voltage (multiplier)                                                                       |
+| `dispatchable`  | `NO`      | `Dispatchable`        |       | mld            | `NO` or `YES`, indicates whether a load can be shed                                                |
+| `status`        | `ENABLED` | `Status`              |       | always         | `ENABLED` or `DISABLED`. Indicates if component is enabled or disabled, respectively               |
+| `time_series`   |           | `Dict{String,String}` |       | multinetwork   | Dictionary containing time series parameters.                                                      |
 
 Multi-phase loads define a number of individual loads connected between two terminals each. How they are connected, is defined both by `configuration` and `connections`. The table below indicates the value of `configuration` and lengths of the other properties for a consistent definition,
 
-| `configuration` | `   | connections | `   | `   | pd_nom | =   | qd_nom | =   | pd_exp | =...` |
-| --------------- | --- | ----------- | --- | --- | ------ | --- | ------ | --- | ------ | ----- |
-| `DELTA`         | `2` | `1`         |
-| `DELTA`         | `3` | `3`         |
-| `WYE`           | `2` | `1`         |
-| `WYE`           | `3` | `2`         |
-| `WYE`           | `N` | `N-1`       |
+| `configuration` | `connections` | `pd_nom \| qd_nom \| pd_exp` |
+| --------------- | ------------- | ---------------------------- |
+| `DELTA`         | `2`           | `1`                          |
+| `DELTA`         | `3`           | `3`                          |
+| `WYE`           | `2`           | `1`                          |
+| `WYE`           | `3`           | `2`                          |
+| `WYE`           | `N`           | `N-1`                        |
 
 Note that for delta loads, only 2 and 3 connections are allowed. Each individual load `i` is connected between two terminals, exposed to a voltage magnitude `v[i]`, which leads to a consumption `pd[i]+j*qd[i]`. The `model` then defines the relationship between these quantities,
 
@@ -328,21 +328,21 @@ ZIP load models are split into `IMPEDANCE`, `CURRENT`, `POWER` models.
 
 ### Generators (`generator`)
 
-| Name            | Default              | Type               | Units | Used                        | Description                                                                          |
-| --------------- | -------------------- | ------------------ | ----- | --------------------------- | ------------------------------------------------------------------------------------ |
-| `bus`           |                      | `Any`              |       | always                      | id of bus connection                                                                 |
-| `connections`   |                      | `Vector{Int}`      |       | always                      | Ordered list of connected conductors, `size=nconductors`                             |
-| `configuration` | `WYE`                | `ConnConfig`       |       | always                      | `WYE` or `DELTA`. If `WYE`, `connections[end]=neutral`                               |
-| `vg`            |                      | `Vector{Real}`     | volt  | `control_mode==ISOCHRONOUS` | Voltage magnitude setpoint                                                           |
-| `pg_lb`         | `zeros(nphases)`     | `Vector{Real}`     | watt  | opf                         | Lower bound on active power generation per phase, `size=nphases`                     |
-| `pg_ub`         | `fill(Inf, nphases)` | `Vector{Real}`     | watt  | opf                         | Upper bound on active power generation per phase, `size=nphases`                     |
-| `qg_lb`         | `-pg_ub`             | `Vector{Real}`     | var   | opf                         | Lower bound on reactive power generation per phase, `size=nphases`                   |
-| `qg_ub`         | `pg_ub`              | `Vector{Real}`     | var   | opf                         | Upper bound on reactive power generation per phase, `size=nphases`                   |
-| `pg`            |                      | `Vector{Real}`     | watt  | solution                    | Present active power generation per phase, `size=nphases`                            |
-| `qg`            |                      | `Vector{Real}`     | var   | solution                    | Present reactive power generation per phase, `size=nphases`                          |
-| `control_mode`  | `FREQUENCYDROOP`     | `ControlMode`      |       |                             | `FREQUENCYDROOP` or `ISOCHRONOUS`                                                    |
-| `status`        | `ENABLED`            | `Status`           |       | always                      | `ENABLED` or `DISABLED`. Indicates if component is enabled or disabled, respectively |
-| `time_series`   |                      | `Dict{String,Any}` |       | multinetwork                | Dictionary containing time series parameters.                                        |
+| Name            | Default              | Type                  | Units | Used                        | Description                                                                          |
+| --------------- | -------------------- | --------------------- | ----- | --------------------------- | ------------------------------------------------------------------------------------ |
+| `bus`           |                      | `String`              |       | always                      | id of bus connection                                                                 |
+| `connections`   |                      | `Vector{Int}`         |       | always                      | Ordered list of connected conductors, `size=nconductors`                             |
+| `configuration` | `WYE`                | `ConnConfig`          |       | always                      | `WYE` or `DELTA`. If `WYE`, `connections[end]=neutral`                               |
+| `vg`            |                      | `Vector{Real}`        | volt  | `control_mode==ISOCHRONOUS` | Voltage magnitude setpoint                                                           |
+| `pg_lb`         | `zeros(nphases)`     | `Vector{Real}`        | watt  | opf                         | Lower bound on active power generation per phase, `size=nphases`                     |
+| `pg_ub`         | `fill(Inf, nphases)` | `Vector{Real}`        | watt  | opf                         | Upper bound on active power generation per phase, `size=nphases`                     |
+| `qg_lb`         | `-pg_ub`             | `Vector{Real}`        | var   | opf                         | Lower bound on reactive power generation per phase, `size=nphases`                   |
+| `qg_ub`         | `pg_ub`              | `Vector{Real}`        | var   | opf                         | Upper bound on reactive power generation per phase, `size=nphases`                   |
+| `pg`            |                      | `Vector{Real}`        | watt  | solution                    | Present active power generation per phase, `size=nphases`                            |
+| `qg`            |                      | `Vector{Real}`        | var   | solution                    | Present reactive power generation per phase, `size=nphases`                          |
+| `control_mode`  | `FREQUENCYDROOP`     | `ControlMode`         |       |                             | `FREQUENCYDROOP` or `ISOCHRONOUS`                                                    |
+| `status`        | `ENABLED`            | `Status`              |       | always                      | `ENABLED` or `DISABLED`. Indicates if component is enabled or disabled, respectively |
+| `time_series`   |                      | `Dict{String,String}` |       | multinetwork                | Dictionary containing time series parameters.                                        |
 
 #### `generator` Cost Model
 
@@ -355,19 +355,19 @@ The generator cost model is currently specified by the following fields.
 
 ### Photovoltaic Systems (`solar`)
 
-| Name            | Default   | Type               | Units | Used         | Description                                                                          |
-| --------------- | --------- | ------------------ | ----- | ------------ | ------------------------------------------------------------------------------------ |
-| `bus`           |           | `Any`              |       | always       | id of bus connection                                                                 |
-| `connections`   |           | `Vector{Int}`      |       | always       | Ordered list of connected conductors, `size=nconductors`                             |
-| `configuration` | `WYE`     | `ConnConfig`       |       | always       | `WYE` or `DELTA`. If `WYE`, `connections[end]=neutral`                               |
-| `pg_lb`         |           | `Vector{Real}`     | watt  | opf          | Lower bound on active power generation per phase, `size=nphases`                     |
-| `pg_ub`         |           | `Vector{Real}`     | watt  | opf          | Upper bound on active power generation per phase, `size=nphases`                     |
-| `qg_lb`         |           | `Vector{Real}`     | var   | opf          | Lower bound on reactive power generation per phase, `size=nphases`                   |
-| `qg_ub`         |           | `Vector{Real}`     | var   | opf          | Upper bound on reactive power generation per phase, `size=nphases`                   |
-| `pg`            |           | `Vector{Real}`     | watt  | solution     | Present active power generation per phase, `size=nphases`                            |
-| `qg`            |           | `Vector{Real}`     | var   | solution     | Present reactive power generation per phase, `size=nphases`                          |
-| `status`        | `ENABLED` | `Status`           |       | always       | `ENABLED` or `DISABLED`. Indicates if component is enabled or disabled, respectively |
-| `time_series`   |           | `Dict{String,Any}` |       | multinetwork | Dictionary containing time series parameters.                                        |
+| Name            | Default   | Type                  | Units | Used         | Description                                                                          |
+| --------------- | --------- | --------------------- | ----- | ------------ | ------------------------------------------------------------------------------------ |
+| `bus`           |           | `String`              |       | always       | id of bus connection                                                                 |
+| `connections`   |           | `Vector{Int}`         |       | always       | Ordered list of connected conductors, `size=nconductors`                             |
+| `configuration` | `WYE`     | `ConnConfig`          |       | always       | `WYE` or `DELTA`. If `WYE`, `connections[end]=neutral`                               |
+| `pg_lb`         |           | `Vector{Real}`        | watt  | opf          | Lower bound on active power generation per phase, `size=nphases`                     |
+| `pg_ub`         |           | `Vector{Real}`        | watt  | opf          | Upper bound on active power generation per phase, `size=nphases`                     |
+| `qg_lb`         |           | `Vector{Real}`        | var   | opf          | Lower bound on reactive power generation per phase, `size=nphases`                   |
+| `qg_ub`         |           | `Vector{Real}`        | var   | opf          | Upper bound on reactive power generation per phase, `size=nphases`                   |
+| `pg`            |           | `Vector{Real}`        | watt  | solution     | Present active power generation per phase, `size=nphases`                            |
+| `qg`            |           | `Vector{Real}`        | var   | solution     | Present reactive power generation per phase, `size=nphases`                          |
+| `status`        | `ENABLED` | `Status`              |       | always       | `ENABLED` or `DISABLED`. Indicates if component is enabled or disabled, respectively |
+| `time_series`   |           | `Dict{String,String}` |       | multinetwork | Dictionary containing time series parameters.                                        |
 
 #### `solar` Cost Model
 
@@ -388,45 +388,45 @@ A storage object is a flexible component that can represent a variety of energy 
 
 - How to include the inverter model for this? Similar issue as for a PV generator
 
-| Name                   | Default   | Type               | Units   | Used         | Description                                                                          |
-| ---------------------- | --------- | ------------------ | ------- | ------------ | ------------------------------------------------------------------------------------ |
-| `bus`                  |           | `Any`              |         | always       | id of bus connection                                                                 |
-| `connections`          |           | `Vector{Int}`      |         | always       | Ordered list of connected conductors, `size=nconductors`                             |
-| `configuration`        | `WYE`     | `ConnConfig`       |         | always       | `WYE` or `DELTA`. If `WYE`, `connections[end]=neutral`                               |
-| `energy`               |           | `Real`             | watt-hr | always       | Stored energy                                                                        |
-| `energy_ub`            |           | `Real`             |         | opf          | maximum energy rating                                                                |
-| `charge_ub`            |           | `Real`             |         | opf          | maximum charge rating                                                                |
-| `discharge_ub`         |           | `Real`             |         | opf          | maximum discharge rating                                                             |
-| `sm_ub`                |           | `Real`             | watt    | opf          | Power rating,                                                                        |
-| `cm_ub`                |           | `Real`             | amp     | opf          | Current rating,                                                                      |
-| `charge_efficiency`    |           | `Real`             | percent | always       | charging efficiency (losses)                                                         |
-| `discharge_efficiency` |           | `Real`             | percent | always       | disharging efficiency (losses)                                                       |
-| `qs_ub`                |           | `Real`             |         | opf          | Maximum reactive power injection,                                                    |
-| `qs_lb`                |           | `Real`             |         | opf          | Minimum reactive power injection,                                                    |
-| `rs`                   |           | `Real`             | ohm     | always       | converter resistance                                                                 |
-| `xs`                   |           | `Real`             | ohm     | always       | converter reactance                                                                  |
-| `pex`                  |           | `Real`             |         | always       | Total active power standby exogenous flow (loss)                                     |
-| `qex`                  |           | `Real`             |         | always       | Total reactive power standby exogenous flow (loss)                                   |
-| `ps`                   |           | `Vector{Real}`     | watt    | solution     | Present active power injection                                                       |
-| `qs`                   |           | `Vector{Real}`     | var     | solution     | Present reactive power injection                                                     |
-| `status`               | `ENABLED` | `Status`           |         | always       | `ENABLED` or `DISABLED`. Indicates if component is enabled or disabled, respectively |
-| `time_series`          |           | `Dict{String,Any}` |         | multinetwork | Dictionary containing time series parameters.                                        |
+| Name                   | Default   | Type                  | Units   | Used         | Description                                                                          |
+| ---------------------- | --------- | --------------------- | ------- | ------------ | ------------------------------------------------------------------------------------ |
+| `bus`                  |           | `String`              |         | always       | id of bus connection                                                                 |
+| `connections`          |           | `Vector{Int}`         |         | always       | Ordered list of connected conductors, `size=nconductors`                             |
+| `configuration`        | `WYE`     | `ConnConfig`          |         | always       | `WYE` or `DELTA`. If `WYE`, `connections[end]=neutral`                               |
+| `energy`               |           | `Real`                | watt-hr | always       | Stored energy                                                                        |
+| `energy_ub`            |           | `Real`                |         | opf          | maximum energy rating                                                                |
+| `charge_ub`            |           | `Real`                |         | opf          | maximum charge rating                                                                |
+| `discharge_ub`         |           | `Real`                |         | opf          | maximum discharge rating                                                             |
+| `sm_ub`                |           | `Real`                | watt    | opf          | Power rating,                                                                        |
+| `cm_ub`                |           | `Real`                | amp     | opf          | Current rating,                                                                      |
+| `charge_efficiency`    |           | `Real`                | percent | always       | charging efficiency (losses)                                                         |
+| `discharge_efficiency` |           | `Real`                | percent | always       | discharging efficiency (losses)                                                       |
+| `qs_ub`                |           | `Real`                |         | opf          | Maximum reactive power injection,                                                    |
+| `qs_lb`                |           | `Real`                |         | opf          | Minimum reactive power injection,                                                    |
+| `rs`                   |           | `Real`                | ohm     | always       | converter resistance                                                                 |
+| `xs`                   |           | `Real`                | ohm     | always       | converter reactance                                                                  |
+| `pex`                  |           | `Real`                |         | always       | Total active power standby exogenous flow (loss)                                     |
+| `qex`                  |           | `Real`                |         | always       | Total reactive power standby exogenous flow (loss)                                   |
+| `ps`                   |           | `Vector{Real}`        | watt    | solution     | Present active power injection                                                       |
+| `qs`                   |           | `Vector{Real}`        | var     | solution     | Present reactive power injection                                                     |
+| `status`               | `ENABLED` | `Status`              |         | always       | `ENABLED` or `DISABLED`. Indicates if component is enabled or disabled, respectively |
+| `time_series`          |           | `Dict{String,String}` |         | multinetwork | Dictionary containing time series parameters.                                        |
 
 ### Voltage Sources (`voltage_source`)
 
 A voltage source is a source of power at a set voltage magnitude and angle connected to a slack bus. If `rs` or `xs` are not specified, the voltage source is assumed to be lossless, otherwise virtual `branch` and `bus` will be created in the mathematical model to represent the internal losses of the voltage source.
 
-| Name            | Default                          | Type               | Units  | Used         | Description                                                                          |
-| --------------- | -------------------------------- | ------------------ | ------ | ------------ | ------------------------------------------------------------------------------------ |
-| `bus`           |                                  | `Any`              |        | always       | id of bus connection                                                                 |
-| `connections`   |                                  | `Vector{Int}`      |        | always       | Ordered list of connected conductors, `size=nconductors`                             |
-| `configuration` | `WYE`                            | `ConnConfig`       |        | always       | `WYE` or `DELTA`. If `WYE`, `connections[end]=neutral`                               |
-| `vm`            | `ones(nphases)`                  | `Vector{Real}`     | volt   | always       | Voltage magnitude set at slack bus, `size=nphases`                                   |
-| `va`            | `zeros(nphases)`                 | `Real`             | degree | always       | Voltage angle offsets at slack bus, applies symmetrically to each phase angle        |
-| `rs`            | `zeros(nconductors,nconductors)` | `Matrix{Real}`     | ohm    | always       | Internal series resistance of voltage source, `size=(nconductors,nconductors)`       |
-| `xs`            | `zeros(nconductors,nconductors)` | `Matrix{Real}`     | ohm    | always       | Internal series reactance of voltage soure, `size=(nconductors,nconductors)`         |
-| `status`        | `ENABLED`                        | `Status`           |        | always       | `ENABLED` or `DISABLED`. Indicates if component is enabled or disabled, respectively |
-| `time_series`   |                                  | `Dict{String,Any}` |        | multinetwork | Dictionary containing time series parameters.                                        |
+| Name            | Default                          | Type                  | Units  | Used         | Description                                                                          |
+| --------------- | -------------------------------- | --------------------- | ------ | ------------ | ------------------------------------------------------------------------------------ |
+| `bus`           |                                  | `String`              |        | always       | id of bus connection                                                                 |
+| `connections`   |                                  | `Vector{Int}`         |        | always       | Ordered list of connected conductors, `size=nconductors`                             |
+| `configuration` | `WYE`                            | `ConnConfig`          |        | always       | `WYE` or `DELTA`. If `WYE`, `connections[end]=neutral`                               |
+| `vm`            | `ones(nphases)`                  | `Vector{Real}`        | volt   | always       | Voltage magnitude set at slack bus, `size=nphases`                                   |
+| `va`            | `zeros(nphases)`                 | `Real`                | degree | always       | Voltage angle offsets at slack bus, applies symmetrically to each phase angle        |
+| `rs`            | `zeros(nconductors,nconductors)` | `Matrix{Real}`        | ohm    | always       | Internal series resistance of voltage source, `size=(nconductors,nconductors)`       |
+| `xs`            | `zeros(nconductors,nconductors)` | `Matrix{Real}`        | ohm    | always       | Internal series reactance of voltage soure, `size=(nconductors,nconductors)`         |
+| `status`        | `ENABLED`                        | `Status`              |        | always       | `ENABLED` or `DISABLED`. Indicates if component is enabled or disabled, respectively |
+| `time_series`   |                                  | `Dict{String,String}` |        | multinetwork | Dictionary containing time series parameters.                                        |
 
 ## Data Objects (codes, time series, etc.)
 
@@ -466,14 +466,14 @@ Transformer codes are easy ways to specify properties common to multiple transfo
 
 Time series objects are used to specify time series for _e.g._ load or generation forecasts.
 
-Some parameters for components specified in this document can support a time series by inserting a referece to a `time_series` object into the `time_series` dictionary inside a component under the relevant parameter name. For example, for a `load`, if `pd_nom` is supposed to be a time series, the user would specify `"time_series" => Dict("pd_nom" => time_series_id)` where `time_series_id` is the `id` of an object in `time_series`, and has type `Any`.
+Some parameters for components specified in this document can support a time series by inserting a reference to a `time_series` object into the `time_series` dictionary inside a component under the relevant parameter name. For example, for a `load`, if `pd_nom` is supposed to be a time series, the user would specify `"time_series" => Dict("pd_nom" => time_series_id)` where `time_series_id` is the `id` of an object in `time_series`, and has type `Any`.
 
-| Name      | Default | Type                         | Units | Used   | Description                                                                                                   |
-| --------- | ------- | ---------------------------- | ----- | ------ | ------------------------------------------------------------------------------------------------------------- |
-| `time`    |         | `Vector{Union{Real,String}}` | hour  | always | Time points at which values are specified. If time is specified in String, units not required to be in hours. |
-| `values`  |         | `Vector{Real}`               |       | always | Multipers at each time step given in `time`                                                                   |
-| `offset`  | `0`     | `Real`                       | hour  | always | Start time offset                                                                                             |
-| `replace` | `true`  | `Bool`                       |       | always | Indicates to replace with data, instead of multiply. Will only work on non-Array data                         |
+| Name      | Default | Type                                 | Units | Used   | Description                                                                                                   |
+| --------- | ------- | ------------------------------------ | ----- | ------ | ------------------------------------------------------------------------------------------------------------- |
+| `time`    |         | `Union{Vector{Real},Vector{String}}` | hour  | always | Time points at which values are specified. If time is specified in String, units not required to be in hours. |
+| `values`  |         | `Vector{Real}`                       |       | always | Multipers at each time step given in `time`                                                                   |
+| `offset`  | `0`     | `Real`                               | hour  | always | Start time offset                                                                                             |
+| `replace` | `true`  | `Bool`                               |       | always | Indicates to replace with data, instead of multiply. Will only work on non-Array data                         |
 
 ### Fuses (`fuse`)
 
@@ -482,7 +482,7 @@ Fuses can be defined on any terminal of any physical component
 | Name                    | Default | Type                    | Units | Used | Description                                          |
 | ----------------------- | ------- | ----------------------- | ----- | ---- | ---------------------------------------------------- |
 | `component_type`        |         | `String`                |       |      |                                                      |
-| `component_id`          |         | `Any`                   |       |      |                                                      |
+| `component_id`          |         | `String`                |       |      |                                                      |
 | `terminals`             |         | `Vector{Int}`           |       |      |                                                      |
 | `fuse_curve`            |         | `Array{Vector{Real},2}` |       |      | specifies the fuse blowing condition                 |
 | `minimum_melting_curve` |         | `Array{Vector{Real},2}` |       |      | specifies the minimum melting conditions of the fuse |

@@ -403,11 +403,11 @@ function constraint_mc_load_power(pm::LPUBFDiagModel, load_id::Int; nw::Int=nw_i
         # in this case, :pd has a JuMP variable
         else
             w = var(pm, nw, :w)[bus_id][[c for c in connections]]
-            pd = var(pm, nw, :pd)[load_id]
-            qd = var(pm, nw, :qd)[load_id]
+            pd = var(pm, nw, :pd, load_id)
+            qd = var(pm, nw, :qd, load_id)
             for (idx,c) in enumerate(connections)
-                JuMP.@constraint(pm.model, pd[c]==1/2*a[idx]*(w[c]+1))
-                JuMP.@constraint(pm.model, qd[c]==1/2*b[idx]*(w[c]+1))
+                JuMP.@constraint(pm.model, pd[c] == 1/2*a[idx]*(w[c]+1))
+                JuMP.@constraint(pm.model, qd[c] == 1/2*b[idx]*(w[c]+1))
             end
         end
         # :pd_bus is identical to :pd now
@@ -439,10 +439,9 @@ function constraint_mc_load_power(pm::LPUBFDiagModel, load_id::Int; nw::Int=nw_i
                 JuMP.@constraint(pm.model, Xdi[:,idx] .== 0)
             end
         end
-        pd_bus = JuMP.Containers.DenseAxisArray(pd_bus, conn_bus)
-        qd_bus = JuMP.Containers.DenseAxisArray(qd_bus, conn_bus)
-        var(pm, nw, :pd_bus)[load_id] = pd_bus
-        var(pm, nw, :qd_bus)[load_id] = qd_bus
+
+        var(pm, nw, :pd_bus)[load_id] = pd_bus = JuMP.Containers.DenseAxisArray(pd_bus, conn_bus)
+        var(pm, nw, :qd_bus)[load_id] = qd_bus = JuMP.Containers.DenseAxisArray(qd_bus, conn_bus)
         var(pm, nw, :pd)[load_id] = pd
         var(pm, nw, :qd)[load_id] = qd
         if load["model"]==POWER

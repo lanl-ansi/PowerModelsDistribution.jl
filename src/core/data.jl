@@ -38,6 +38,9 @@ const pmd_math_component_status_inactive = Dict{String,Int}(
     "transformer" => 0,
 )
 
+"maps neutral conductor index"
+const neutral_idx = 4
+
 
 """
     apply_pmd!(func!::Function, data::Dict{String,<:Any}; apply_to_subnetworks::Bool=true, kwargs...)
@@ -130,10 +133,6 @@ function _nan2zero(b, a; val=0)
 end
 
 
-"Replaces NaN values with zeros"
-_replace_nan(v) = map(x -> isnan(x) ? zero(x) : x, v)
-
-
 "wraps angles in degrees to 180"
 function _wrap_to_180(degrees)
     return degrees - 360*floor.((degrees .+ 180)/360)
@@ -146,23 +145,6 @@ function _wrap_to_pi(radians)
 end
 
 
-"rolls a 1d array left or right by idx"
-function _roll(array::Array{T, 1}, idx::Int; right::Bool=true) where T <: Number
-    out = Array{T}(undef, size(array))
-    pos = idx % length(out)
-
-    if right
-        out[1+pos:end] = array[1:end-pos]
-        out[1:pos] = array[end-(pos-1):end]
-    else
-        out[1:end-pos] = array[1+pos:end]
-        out[end-(pos-1):end] = array[1:pos]
-    end
-
-    return out
-end
-
-
 """
     count_nodes(data::Dict{String,<:Any})::Int
 
@@ -171,52 +153,7 @@ Counts number of nodes in network
 function count_nodes(data::Dict{String,<:Any})::Int
     n_nodes = 0
 
-    if !ismissing(get(data, "data_model", missing)) && data["data_model"] == DSS
-        all_nodes = Dict()
-        for obj_type in values(data)
-            if isa(obj_type, Dict)
-                for object in values(obj_type)
-                    if isa(object, Dict)
-                        if haskey(object, "buses")
-                            for busname in values(object["buses"])
-                                name, nodes = _parse_bus_id(busname)
-
-                                if !haskey(all_nodes, name)
-                                    all_nodes[name] = Set([])
-                                end
-
-                                for (n, node) in enumerate(nodes[1:3])
-                                    if node
-                                        push!(all_nodes[name], n)
-                                    end
-                                end
-                            end
-                        else
-                            for (prop, val) in object
-                                if startswith(prop, "bus") && prop != "buses"
-                                    name, nodes = _parse_bus_id(val)
-
-                                    if !haskey(all_nodes, name)
-                                        all_nodes[name] = Set([])
-                                    end
-
-                                    for (n, node) in enumerate(nodes[1:3])
-                                        if node
-                                            push!(all_nodes[name], n)
-                                        end
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-        end
-
-        for (name, phases) in all_nodes
-            n_nodes += length(phases)
-        end
-    elseif !ismissing(get(data, "data_model", missing)) && data["data_model"] in [MATHEMATICAL, ENGINEERING] || (haskey(data, "source_type") && data["source_type"] == "matlab")
+    if !ismissing(get(data, "data_model", missing)) && data["data_model"] in [MATHEMATICAL, ENGINEERING] || (haskey(data, "source_type") && data["source_type"] == "matlab")
         n_nodes = 0
         for (name, bus) in data["bus"]
             if get(data, "data_model", missing) == MATPOWER || (haskey(data, "source_type") && data["source_type"] == "matlab")
@@ -245,6 +182,62 @@ function count_nodes(data::Dict{String,<:Any})::Int
 
     return n_nodes
 end
+
+"""
+    count_nodes(data::Dict{String,<:Any})::Int
+
+Counts number of nodes in network
+"""
+function count_nodes(data::DssModel)::Int
+    n_nodes = 0
+
+    all_nodes = Dict()
+    for root_prop in propertynames(data)
+        for (id, object) in getproperty(data, root_prop)
+            if isa(object, DssTransformer)
+                for busname in values(object["buses"])
+                    name, nodes = _parse_bus_id(busname)
+
+                    if !isempty(name)
+                        if !haskey(all_nodes, name)
+                            all_nodes[name] = Set([])
+                        end
+
+                        for (n, node) in enumerate(nodes[1:3])
+                            if node
+                                push!(all_nodes[name], n)
+                            end
+                        end
+                    end
+                end
+            elseif isa(object, DssNodeObject) || isa(object, DssEdgeObject)
+                for prop in propertynames(object)
+                    if startswith("$prop", "bus") && "$prop" != "buses"
+                        name, nodes = _parse_bus_id(getproperty(object, prop))
+                        if !isempty(name)
+                            if !haskey(all_nodes, name)
+                                all_nodes[name] = Set([])
+                            end
+
+                            for (n, node) in enumerate(nodes[1:3])
+                                if node
+                                    push!(all_nodes[name], n)
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    for (name, phases) in all_nodes
+        n_nodes += length(phases)
+    end
+
+    return n_nodes
+end
+
 
 """
     count_active_connections(data::Dict{String,<:Any})
