@@ -33,7 +33,7 @@
             data = deepcopy(case3_unbalanced_delta_loads)
             apply_voltage_bounds!(data; vm_lb=0.95, vm_ub=1.05)
 
-            result = solve_mc_opf(data, LPUBFDiagPowerModel, ipopt_solver; solution_processors=[sol_data_model!])
+            result = solve_mc_opf(data, LPUBFDiagPowerModel, optimizer_with_attributes(Ipopt.Optimizer, "sb"=>"yes", "print_level"=>0, "warm_start_init_point"=>"yes", "start_with_resto"=>"yes", "mu_strategy"=>"adaptive"); solution_processors=[sol_data_model!])
 
             @test result["termination_status"] == LOCALLY_SOLVED
 

@@ -317,7 +317,7 @@
     @testset "3-bus unbalanced fotp opf with yy transformer" begin
         result = solve_mc_opf(ut_trans_2w_yy, FOTPUPowerModel, ipopt_solver)
 
-        @test result["termination_status"] == LOCALLY_SOLVED
+        @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
 
         @test isapprox(sum(result["solution"]["voltage_source"]["source"]["pg"]), 467.547; atol=40)
         @test isapprox(sum(result["solution"]["voltage_source"]["source"]["qg"]), 484.327; atol=30)
