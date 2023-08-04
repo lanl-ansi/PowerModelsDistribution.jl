@@ -28,5 +28,15 @@
             @test isapprox(sum(result["solution"]["voltage_source"]["source"]["pg"]), 21.4812; atol=1e-2)
             @test isapprox(sum(result["solution"]["voltage_source"]["source"]["qg"]), 9.27263; atol=1e-2)
         end
+
+        @testset "ivr opf power variable expressions" begin
+            math = transform_data_model(IEEE13_Assets)
+
+            pm = instantiate_mc_model(IEEE13_Assets, IVRUPowerModel, build_mc_opf)
+
+            @test length(var(pm, :p)) == length(math["branch"])*2 && length(var(pm, :q)) == length(math["branch"])*2
+            @test length(var(pm, :pt)) == length(math["transformer"])*2 && length(var(pm, :qt)) == length(math["transformer"])*2
+            @test length(var(pm, :psw)) == length(math["switch"])*2 && length(var(pm, :qsw)) == length(math["switch"])*2
+        end
     end
 end
