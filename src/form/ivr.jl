@@ -69,8 +69,8 @@ function variable_mc_transformer_current(pm::AbstractUnbalancedIVRModel; nw::Int
         q[(l,j,i)] = vi_to.*cr_to  - vr_to.*ci_to
     end
 
-    var(pm, nw)[:p] = p
-    var(pm, nw)[:q] = q
+    var(pm, nw)[:pt] = p
+    var(pm, nw)[:qt] = q
     report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :pf, :pt, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), p)
     report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :qf, :qt, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), q)
 end
@@ -104,8 +104,8 @@ function variable_mc_switch_current(pm::AbstractUnbalancedIVRModel; nw::Int=nw_i
         q[(l,j,i)] = vi_to.*cr_to  - vr_to.*ci_to
     end
 
-    var(pm, nw)[:p] = p
-    var(pm, nw)[:q] = q
+    var(pm, nw)[:psw] = p
+    var(pm, nw)[:qsw] = q
 
     report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :psw_fr, :psw_to, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), p)
     report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :qsw_fr, :qsw_to, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), q)

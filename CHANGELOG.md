@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed bug where `var(pm, :p)` and `var(pm, :q)` in the `IVRUPowerModel` formulation were being overwritten by transformer and switch variable functions
 - Rewrite of dss parser for increased robustness and to avoid edge cases. Instead of parsing raw dss into Dicts, we use vectors of string pairs to preserve the order of commands. This more closely replicates proper dss parsing (**breaking**)
 - Rewrite of `dss2eng` transformation function to support new dss data model (**breaking**)
 - Added new `struct`s and `abstract type`s for data models to support dss parser rewrite, including interfaces so that these new objects can be interacted with similarly to Dicts, to aid in transition to new dss data model
