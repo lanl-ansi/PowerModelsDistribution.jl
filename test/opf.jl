@@ -279,7 +279,7 @@
                             "pmin"          => [-Inf],
                             "ncost"         => 2
                             )
-        result = solve_mc_opf(data, ACPUPowerModel, ipopt_solver)
+        result = solve_mc_opf(data, ACPUPowerModel, optimizer_with_attributes(Ipopt.Optimizer, "sb"=>"yes","print_level"=>0))
 
         @test result["termination_status"] == LOCALLY_SOLVED
     end

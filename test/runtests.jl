@@ -16,8 +16,8 @@ using LinearAlgebra
 
 pmd_path = joinpath(dirname(pathof(PowerModelsDistribution)), "..")
 
-ipopt_solver = optimizer_with_attributes(Ipopt.Optimizer, "print_level"=>0, "sb"=>"yes")
-ipopt_solver_adaptive = optimizer_with_attributes(Ipopt.Optimizer, "print_level"=>0, "mu_strategy"=>"adaptive", "sb"=>"yes")
+ipopt_solver = optimizer_with_attributes(Ipopt.Optimizer, "print_level"=>0, "sb"=>"yes","warm_start_init_point"=>"yes")
+ipopt_solver_adaptive = optimizer_with_attributes(Ipopt.Optimizer, "print_level"=>0, "mu_strategy"=>"adaptive", "sb"=>"yes","warm_start_init_point"=>"yes")
 scs_solver = optimizer_with_attributes(SCS.Optimizer, "verbose"=>0)
 
 include("common.jl")
