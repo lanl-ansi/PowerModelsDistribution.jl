@@ -57,6 +57,11 @@
     eng = parse_file("../test/data/opendss/test2_master.dss", import_all=true)
     math = parse_file("../test/data/opendss/test2_master.dss"; data_model=MATHEMATICAL, import_all=true)
 
+    @testset "dss . characters in name" begin
+        @test haskey(eng["linecode"], "random_.001-test-name")
+        @test eng["line"]["test_.002"]["linecode"] == "random_.001-test-name"
+    end
+
     @testset "dss edit command" begin
         @test all(eng["transformer"]["t5"][k] == v for (k,v) in eng["transformer"]["t4"] if !(k in ["name", "bus", "source_id", "rw", "tm_set", "dss", "controls", "tm_nom"]))
         @test all(eng["transformer"]["t5"]["rw"] .== [0.0074, 0.0076])
@@ -92,7 +97,7 @@
         @test length(math) == 18
         @test length([p for p in propertynames(raw_dss) if !isempty(getproperty(raw_dss, p))]) == 23
 
-        for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "transformer", "storage", "switch"], [34, 4, 5, 28, 5, 10, 1, 1])
+        for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "transformer", "storage", "switch"], [34, 4, 5, 29, 5, 10, 1, 1])
             @test haskey(math, key)
             @test length(math[key]) == len
         end
