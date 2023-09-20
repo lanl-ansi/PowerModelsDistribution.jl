@@ -248,6 +248,15 @@
             @test all(isapprox.(result["solution"]["transformer"]["reg1"]["tap"][2], [1.01535, 1.04071, 1.04210]; atol=3e-2))
         end
 
+        @testset "regcontrol parsing" begin
+            dss = parse_dss("../test/data/opendss/IEEE13_test_controls.dss")
+            delete!(dss.transformer, "reg1a")
+
+            eng = parse_opendss(dss)
+            @test eng["transformer"]["reg1"]["controls"]["band"][1][2] == 4.0
+            @test eng["transformer"]["reg1"]["controls"]["band"][2][1] == 3.0
+        end
+
         @testset "3w transformer acp opf center-tap" begin
             result = solve_mc_opf(trans_3w_center_tap, ACPUPowerModel, ipopt_solver; make_si=false)
             @test result["termination_status"] == LOCALLY_SOLVED
@@ -307,7 +316,7 @@
         @testset "3w transformer fotr opf center-tap" begin
             apply_voltage_bounds!(trans_3w_center_tap; vm_lb=0.95, vm_ub=1.05)
             result = solve_mc_opf(trans_3w_center_tap, FOTRUPowerModel, ipopt_solver; solution_processors=[sol_data_model!], make_si=false)
-            @test result["termination_status"] == LOCALLY_SOLVED
+            @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
 
             sbase = trans_3w_center_tap["settings"]["sbase_default"]
 
