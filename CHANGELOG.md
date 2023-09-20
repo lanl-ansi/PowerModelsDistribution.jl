@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed bug where `.` chars in dss object names would cause part of the name of the object to get dropped
 - Fixed bug where `var(pm, :p)` and `var(pm, :q)` in the `IVRUPowerModel` formulation were being overwritten by transformer and switch variable functions
 - Rewrite of dss parser for increased robustness and to avoid edge cases. Instead of parsing raw dss into Dicts, we use vectors of string pairs to preserve the order of commands. This more closely replicates proper dss parsing (**breaking**)
 - Rewrite of `dss2eng` transformation function to support new dss data model (**breaking**)

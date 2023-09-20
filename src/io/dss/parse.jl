@@ -56,7 +56,7 @@ end
 
 ""
 function _parse_dss_obj_type_name(dss_obj_type_name::AbstractString)::Vector{String}
-    obj_type_name = string.(split(replace(replace(dss_obj_type_name, "\""=>""), "\'"=>""), '.'))
+    obj_type_name = string.(split(replace(replace(dss_obj_type_name, "\""=>""), "\'"=>""), '.'; limit=2))
 end
 
 
