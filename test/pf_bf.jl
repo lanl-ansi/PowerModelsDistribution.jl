@@ -24,7 +24,7 @@
         data = deepcopy(case3_unbalanced)
         apply_voltage_bounds!(data; vm_lb=0.9, vm_ub=1.1)
 
-        data["settings"]["sbase_default"] = 1.0
+        data["settings"]["sbase_default"] = 100.0
 
         merge!(data["voltage_source"]["source"], Dict{String,Any}(
             "cost_pg_parameters" => [0.0, 1000.0, 0.0],
