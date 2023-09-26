@@ -28,6 +28,7 @@ New Load.L1 phases=1  loadbus.1.0   ( 0.4 3 sqrt / )   kW=9   kvar=3  model=1
 New Load.L2 phases=1  loadbus.2.0   ( 0.4 3 sqrt / )   kW=6   kvar=3  model=1
 New Load.L3 phases=1  loadbus.3.0   ( 0.4 3 sqrt / )   kW=6   kvar=3  model=1
 
+New Loadshape.pv_ts pmult=(file=pv_profile_8days.csv)
 
 Set voltagebases=[0.4]
 Set tolerance=0.000001

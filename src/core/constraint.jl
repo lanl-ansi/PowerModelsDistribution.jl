@@ -155,6 +155,13 @@ function constraint_mc_storage_thermal_limit(pm::AbstractUnbalancedPowerModel, n
     JuMP.@constraint(pm.model, sum(ps.^2 .+ qs.^2) <= rating^2)
 end
 
+""
+function constraint_mc_storage_thermal_limit_ne(pm::AbstractUnbalancedPowerModel, nw::Int, i::Int, connections::Vector{Int}, rating::Real)
+    ps = [var(pm, nw, :ps_ne, i)[c] for c in connections]
+    qs = [var(pm, nw, :qs_ne, i)[c] for c in connections]
+
+    JuMP.@constraint(pm.model, sum(ps.^2 .+ qs.^2) <= rating^2)
+end
 
 ""
 function constraint_mc_switch_state_open(pm::AbstractUnbalancedPowerModel, nw::Int, f_idx::Tuple{Int,Int,Int})::Nothing

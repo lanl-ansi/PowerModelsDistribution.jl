@@ -1225,6 +1225,33 @@ function variable_mc_storage_power_control_imaginary(pm::AbstractUnbalancedPower
     report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :qsc, ids(pm, nw, :storage), qsc)
 end
 
+"""
+a reactive power slack variable that enables the expansion storage device to inject or
+consume reactive power at its connecting bus, subject to the injection limits
+of the device.
+"""
+function variable_mc_storage_power_control_imaginary_ne(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    qsc = var(pm, nw)[:qsc_ne] = JuMP.@variable(pm.model,
+        [i in ids(pm, nw, :storage_ne)], base_name="$(nw)_qsc_ne_$(i)",
+        start = comp_start_value(ref(pm, nw, :storage_ne, i), "qsc_start")
+    )
+
+    if bounded
+        inj_lb, inj_ub = ref_calc_storage_injection_bounds(ref(pm, nw, :storage_ne), ref(pm, nw, :bus))
+        for (i,storage) in ref(pm, nw, :storage_ne)
+            if !isinf(sum(inj_lb[i])) || haskey(storage, "qmin")
+                set_lower_bound(qsc[i], max(sum(inj_lb[i]), sum(get(storage, "qmin", -Inf))))
+            end
+            if !isinf(sum(inj_ub[i])) || haskey(storage, "qmax")
+                set_upper_bound(qsc[i], min(sum(inj_ub[i]), sum(get(storage, "qmax",  Inf))))
+            end
+        end
+    end
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage_ne, :qsc_ne, ids(pm, nw, :storage_ne), qsc)
+end
+
+
 
 """
     variable_mc_storage_power_mi(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, relax::Bool=false, bounded::Bool=true, report::Bool=true)

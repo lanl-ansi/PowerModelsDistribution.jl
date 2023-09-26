@@ -217,6 +217,7 @@ function build_mn_mc_mld_multi_scenario(pm::AbstractUnbalancedPowerModel)
         variable_mc_shunt_indicator(pm; nw=n, relax=true)
         variable_mc_storage_power_mi(pm; nw=n, relax=true)
         variable_mc_storage_power_mi_on_off_ne(pm; nw=n)
+        variable_mc_storage_power_control_imaginary_ne(pm; nw=n)
         variable_mc_generator_indicator_ne(pm; nw=n, relax=false)
     end
 
@@ -236,7 +237,7 @@ function build_mn_mc_mld_multi_scenario(pm::AbstractUnbalancedPowerModel)
         end
 
         for i in ids(pm, n, :bus)
-            constraint_mc_power_balance_shed(pm, i; nw=n)
+            constraint_mc_power_balance_shed_ne(pm, i; nw=n)
         end
 
         for i in ids(pm, n, :load)

@@ -279,6 +279,89 @@ function constraint_mc_power_balance_shed(pm::AbstractUnbalancedACPModel, nw::In
     end
 end
 
+""
+function constraint_mc_power_balance_shed_ne(pm::AbstractUnbalancedACPModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_gens_ne::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_storage_ne::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
+    vm       = var(pm, nw, :vm, i)
+    va       = var(pm, nw, :va, i)
+    p        = get(var(pm, nw),    :p, Dict()); _check_var_keys(p, bus_arcs, "active power", "branch")
+    q        = get(var(pm, nw),    :q, Dict()); _check_var_keys(q, bus_arcs, "reactive power", "branch")
+    pg       = get(var(pm, nw),   :pg, Dict()); _check_var_keys(pg, bus_gens, "active power", "generator")
+    qg       = get(var(pm, nw),   :qg, Dict()); _check_var_keys(qg, bus_gens, "reactive power", "generator")
+    pg_ne    = get(var(pm, nw),:pg_ne, Dict()); _check_var_keys(pg_ne, bus_gens_ne, "active power", "generator_ne")
+    qg_ne    = get(var(pm, nw),:qg_ne, Dict()); _check_var_keys(qg_ne, bus_gens_ne, "reactive power", "generator_ne")
+    ps       = get(var(pm, nw),   :ps, Dict()); _check_var_keys(ps, bus_storage, "active power", "storage")
+    qs       = get(var(pm, nw),   :qs, Dict()); _check_var_keys(qs, bus_storage, "reactive power", "storage")
+    psw      = get(var(pm, nw),  :psw, Dict()); _check_var_keys(psw, bus_arcs_sw, "active power", "switch")
+    qsw      = get(var(pm, nw),  :qsw, Dict()); _check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
+    pt       = get(var(pm, nw),   :pt, Dict()); _check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
+    qt       = get(var(pm, nw),   :qt, Dict()); _check_var_keys(qt, bus_arcs_trans, "reactive power", "transformer")
+    ps_ne    = get(var(pm, nw), :ps_ne, Dict()); _check_var_keys(ps_ne, bus_storage_ne, "active power", "storage_ne")
+    qs_ne    = get(var(pm, nw), :qs_ne, Dict()); _check_var_keys(qs_ne, bus_storage_ne, "reactive power", "storage_ne")
+
+    z_demand = var(pm, nw, :z_demand)
+    z_gen = haskey(var(pm, nw), :z_gen) ? var(pm, nw, :z_gen) : Dict(i => 1.0 for i in ids(pm, nw, :gen))
+    z_gen_ne = haskey(var(pm, nw), :z_gen_ne) ? var(pm, nw, :z_gen_ne) : Dict(i => 1.0 for i in ids(pm, nw, :gen_ne))
+    z_storage = haskey(var(pm, nw), :z_storage) ? var(pm, nw, :z_storage) : Dict(i => 1.0 for i in ids(pm, nw, :storage))
+    z_shunt  = haskey(var(pm, nw), :z_shunt) ? var(pm, nw, :z_shunt) : Dict(i => 1.0 for i in ids(pm, nw, :shunt))
+    z_storage_ne = haskey(var(pm, nw), :z_storage_ne) ? var(pm, nw, :z_storage_ne) : Dict(i => 1.0 for i in ids(pm, nw, :storage_ne))
+
+
+    cstr_p = []
+    cstr_q = []
+
+    ungrounded_terminals = [(idx,t) for (idx,t) in enumerate(terminals) if !grounded[idx]]
+
+    for (idx,t) in ungrounded_terminals
+        cp = JuMP.@NLconstraint(pm.model,
+              sum(     p[a][t] for (a, conns) in bus_arcs if t in conns)
+            + sum(psw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
+            + sum(  pt[a_t][t] for (a_t, conns) in bus_arcs_trans if t in conns)
+            - sum(pg[g][t]*z_gen[g] for (g, conns) in bus_gens if t in conns)
+            - sum(pg_ne[g][t]*z_gen_ne[g] for (g, conns) in bus_gens_ne if t in conns)
+            + sum(ps[s][t]*z_storage[s] for (s, conns) in bus_storage if t in conns)
+            + sum(ps_ne[s][t]*z_storage_ne[s] for (s, conns) in bus_storage_ne if t in conns)
+            + sum(ref(pm, nw, :load, d, "pd")[findfirst(isequal(t), conns)]*z_demand[d] for (d, conns) in bus_loads if t in conns)
+            + sum(z_shunt[s] *
+                (ref(pm, nw, :shunt, s)["gs"][findfirst(isequal(t), conns), findfirst(isequal(t), conns)] * vm[t]^2
+                +sum( ref(pm, nw, :shunt, s)["gs"][findfirst(isequal(t), conns), findfirst(isequal(u), conns)] * vm[t]*vm[u] * cos(va[t]-va[u])
+                     +ref(pm, nw, :shunt, s)["bs"][findfirst(isequal(t), conns), findfirst(isequal(u), conns)] * vm[t]*vm[u] * sin(va[t]-va[u])
+                for (jdx, u) in ungrounded_terminals if idx != jdx ) )
+            for (s, conns) in bus_shunts if t in conns )
+            ==
+            0.0
+        )
+        push!(cstr_p, cp)
+
+        cq = JuMP.@NLconstraint(pm.model,
+              sum(     q[a][t] for (a, conns) in bus_arcs if t in conns)
+            + sum(qsw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
+            + sum(  qt[a_t][t] for (a_t, conns) in bus_arcs_trans if t in conns)
+            - sum(    qg[g][t]*z_gen[g] for (g, conns) in bus_gens if t in conns)
+            - sum(    qg_ne[g][t]*z_gen_ne[g] for (g, conns) in bus_gens_ne if t in conns)
+            + sum(    qs[s][t]*z_storage[s] for (s, conns) in bus_storage if t in conns)
+            + sum(    qs_ne[s][t]*z_storage_ne[s] for (s, conns) in bus_storage_ne if t in conns)
+            + sum(ref(pm, nw, :load, l, "qd")[findfirst(isequal(t), conns)]*z_demand[l] for (l, conns) in bus_loads if t in conns)
+            + sum(z_shunt[sh] *
+                (-ref(pm, nw, :shunt, sh)["bs"][findfirst(isequal(t), conns), findfirst(isequal(t), conns)] * vm[t]^2
+                 -sum( ref(pm, nw, :shunt, sh)["bs"][findfirst(isequal(t), conns), findfirst(isequal(u), conns)] * vm[t]*vm[u] * cos(va[t]-va[u])
+                      -ref(pm, nw, :shunt, sh)["gs"][findfirst(isequal(t), conns), findfirst(isequal(u), conns)] * vm[t]*vm[u] * sin(va[t]-va[u])
+                for (jdx, u) in ungrounded_terminals if idx != jdx ) )
+            for (sh, conns) in bus_shunts if t in conns )
+            ==
+            0.0
+        )
+        push!(cstr_q, cq)
+    end
+
+    con(pm, nw, :lam_kcl_r)[i] = cstr_p
+    con(pm, nw, :lam_kcl_i)[i] = cstr_q
+
+    if _IM.report_duals(pm)
+        sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
+        sol(pm, nw, :bus, i)[:lam_kcl_i] = cstr_q
+    end
+end
+
 
 ""
 function constraint_mc_power_balance_simple(pm::AbstractUnbalancedACPModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
@@ -1250,6 +1333,55 @@ function constraint_mc_generator_power_delta(pm::AbstractUnbalancedACPModel, nw:
     end
 end
 
+""
+function constraint_mc_generator_power_delta_ne(pm::AbstractUnbalancedACPModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
+    vm = var(pm, nw, :vm, bus_id)
+    va = var(pm, nw, :va, bus_id)
+    pg = var(pm, nw, :pg_ne, id)
+    qg = var(pm, nw, :qg_ne, id)
+
+    nph = length(connections)
+    prev = Dict(c=>connections[(idx+nph-2)%nph+1] for (idx,c) in enumerate(connections))
+    next = Dict(c=>connections[idx%nph+1] for (idx,c) in enumerate(connections))
+
+    vrg = Dict()
+    vig = Dict()
+    for c in connections
+        vrg[c] = JuMP.@NLexpression(pm.model, vm[c]*cos(va[c])-vm[next[c]]*cos(va[next[c]]))
+        vig[c] = JuMP.@NLexpression(pm.model, vm[c]*sin(va[c])-vm[next[c]]*sin(va[next[c]]))
+    end
+
+    crg = Dict()
+    cig = Dict()
+    for c in connections
+        crg[c] = JuMP.@NLexpression(pm.model, (pg[c]*vrg[c]+qg[c]*vig[c])/(vrg[c]^2+vig[c]^2) )
+        cig[c] = JuMP.@NLexpression(pm.model, (pg[c]*vig[c]-qg[c]*vrg[c])/(vrg[c]^2+vig[c]^2) )
+    end
+
+    crg_bus = Dict()
+    cig_bus = Dict()
+    for c in connections
+        crg_bus[c] = JuMP.@NLexpression(pm.model, crg[c]-crg[prev[c]])
+        cig_bus[c] = JuMP.@NLexpression(pm.model, cig[c]-cig[prev[c]])
+    end
+
+    pg_bus = Vector{JuMP.NonlinearExpression}([])
+    qg_bus = Vector{JuMP.NonlinearExpression}([])
+    for c in connections
+        push!(pg_bus, JuMP.@NLexpression(pm.model,  vm[c]*cos(va[c])*crg_bus[c]+vm[c]*sin(va[c])*cig_bus[c]))
+        push!(qg_bus, JuMP.@NLexpression(pm.model, -vm[c]*cos(va[c])*cig_bus[c]+vm[c]*sin(va[c])*crg_bus[c]))
+    end
+    pd_bus = JuMP.Containers.DenseAxisArray(pg_bus, connections)
+    qd_bus = JuMP.Containers.DenseAxisArray(qg_bus, connections)
+
+    var(pm, nw, :pg_bus)[id] = pg_bus
+    var(pm, nw, :qg_bus)[id] = qg_bus
+
+    if report
+        sol(pm, nw, :gen_ne, id)[:pg_bus] = pg_bus
+        sol(pm, nw, :gen_ne, id)[:qg_bus] = qg_bus
+    end
+end
 
 ""
 function constraint_mc_storage_losses(pm::AbstractUnbalancedACPModel, n::Int, i::Int, bus::Int, connections::Vector{Int}, r::Real, x::Real, p_loss::Real, q_loss::Real)
@@ -1273,6 +1405,28 @@ function constraint_mc_storage_losses(pm::AbstractUnbalancedACPModel, n::Int, i:
     )
 end
 
+
+""
+function constraint_mc_storage_losses_ne(pm::AbstractUnbalancedACPModel, n::Int, i::Int, bus::Int, connections::Vector{Int}, r::Real, x::Real, p_loss::Real, q_loss::Real)
+    vm = var(pm, n, :vm, bus)
+    ps = var(pm, n, :ps_ne, i)
+    qs = var(pm, n, :qs_ne, i)
+    sc = var(pm, n, :sc_ne, i)
+    sd = var(pm, n, :sd_ne, i)
+    qsc = var(pm, n, :qsc_ne, i)
+
+    JuMP.@NLconstraint(pm.model,
+        sum(ps[c] for c in connections) + (sd - sc)
+        ==
+        p_loss + r * sum((ps[c]^2 + qs[c]^2)/vm[c]^2 for c in connections)
+    )
+
+    JuMP.@NLconstraint(pm.model,
+        sum(qs[c] for c in connections)
+        ==
+        qsc + q_loss + x * sum((ps[c]^2 + qs[c]^2)/vm[c]^2 for c in connections)
+    )
+end
 
 @doc raw"""
     constraint_mc_ampacity_from(pm::AbstractUnbalancedACPModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, c_rating::Vector{<:Real})::Nothing

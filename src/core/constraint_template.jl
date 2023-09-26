@@ -349,6 +349,35 @@ end
 
 
 """
+    constraint_mc_power_balance_shed(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for KCL constraints for load shed problem
+"""
+function constraint_mc_power_balance_shed_ne(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+    bus = ref(pm, nw, :bus, i)
+    bus_arcs = ref(pm, nw, :bus_arcs_conns_branch, i)
+    bus_arcs_sw = ref(pm, nw, :bus_arcs_conns_switch, i)
+    bus_arcs_trans = ref(pm, nw, :bus_arcs_conns_transformer, i)
+    bus_gens = ref(pm, nw, :bus_conns_gen, i)
+    bus_gens_ne = ref(pm, nw, :bus_conns_gen_ne, i)
+    bus_storage = ref(pm, nw, :bus_conns_storage, i)
+    bus_storage_ne = ref(pm, nw, :bus_conns_storage_ne, i)
+    bus_loads = ref(pm, nw, :bus_conns_load, i)
+    bus_shunts = ref(pm, nw, :bus_conns_shunt, i)
+
+    if !haskey(con(pm, nw), :lam_kcl_r)
+        con(pm, nw)[:lam_kcl_r] = Dict{Int,Array{JuMP.ConstraintRef}}()
+    end
+
+    if !haskey(con(pm, nw), :lam_kcl_i)
+        con(pm, nw)[:lam_kcl_i] = Dict{Int,Array{JuMP.ConstraintRef}}()
+    end
+
+    constraint_mc_power_balance_shed_ne(pm, nw, i, bus["terminals"], bus["grounded"], bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_gens_ne, bus_storage, bus_storage_ne, bus_loads, bus_shunts)
+    nothing
+end
+
+"""
     constraint_mc_power_balance_capc(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
 
 Template function for KCL constraints with capacitor control variables.
@@ -847,7 +876,7 @@ end
 
 function constraint_mc_generator_power_ne(pm::AbstractUnbalancedPowerModel, id::Int; nw::Int=nw_id_default, report::Bool=true, bounded::Bool=true)::Nothing
     generator = ref(pm, nw, :gen_ne, id)
-    bus = ref(pm, nw,:bus_ne, generator["gen_ne_bus"])
+    bus = ref(pm, nw,:gen_ne, generator["gen_ne_bus"])
 
     N = length(generator["connections"])
     pmin = get(generator, "pmin", fill(-Inf, N))
@@ -856,9 +885,9 @@ function constraint_mc_generator_power_ne(pm::AbstractUnbalancedPowerModel, id::
     qmax = get(generator, "qmax", fill( Inf, N))
 
     if get(generator, "configuration", WYE) == WYE
-        constraint_mc_generator_power_wye(pm, nw, id, bus["index"], generator["connections"], pmin, pmax, qmin, qmax; report=report, bounded=bounded)
+        constraint_mc_generator_power_wye_ne(pm, nw, id, bus["index"], generator["connections"], pmin, pmax, qmin, qmax; report=report, bounded=bounded)
     else
-        constraint_mc_generator_power_delta(pm, nw, id, bus["index"], generator["connections"], pmin, pmax, qmin, qmax; report=report, bounded=bounded)
+        constraint_mc_generator_power_delta_ne(pm, nw, id, bus["index"], generator["connections"], pmin, pmax, qmin, qmax; report=report, bounded=bounded)
     end
     nothing
 end
