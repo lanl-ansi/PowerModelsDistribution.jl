@@ -1,0 +1,151 @@
+{
+
+    "storage_ne": {
+        "s_ne1": {
+            "connections": [
+                1,
+                2,
+                3,
+                4
+            ],
+            "energy": 1.0,
+            "xs": 0.0,
+            "fixed_cost": 35000.0,
+            "bus": "loadbus",
+            "charge_ub": 0.1,
+            "configuration": 0,
+            "energy_ub": 1.75,
+            "qs": -0.0,
+            "status": 1,
+            "qex": 0.0,
+            "sm_ub": 0.5,
+            "source_id": "storage.s_ne1",
+            "qs_lb": -0.1,
+            "pex": 0.0,
+            "charge_efficiency": 98.0,
+            "discharge_ub": 0.1,
+            "ps": -0.1,
+            "rs": 0.0,
+            "discharge_efficiency": 96.0,
+            "qs_ub": 0.1
+        },
+        "s_ne2": {
+            "connections": [
+                1,
+                2,
+                3,
+                4
+            ],
+            "energy": 1.0,
+            "xs": 0.0,
+            "fixed_cost": 20000.0,
+            "bus": "loadbus",
+            "charge_ub": 0.1,
+            "configuration": 0,
+            "energy_ub": 1.75,
+            "qs": -0.0,
+            "status": 1,
+            "qex": 0.0,
+            "sm_ub": 0.5,
+            "source_id": "storage.s_ne2",
+            "qs_lb": -0.1,
+            "pex": 0.0,
+            "charge_efficiency": 98.0,
+            "discharge_ub": 0.1,
+            "ps": -0.1,
+            "rs": 0.0,
+            "discharge_efficiency": 96.0,
+            "qs_ub": 0.1
+        },
+        "s_ne3": {
+            "connections": [
+                1,
+                2,
+                3,
+                4
+            ],
+            "energy": 1.0,
+            "xs": 0.0,
+            "fixed_cost": 25000.0,
+            "bus": "loadbus",
+            "charge_ub": 0.1,
+            "configuration": 0,
+            "energy_ub": 1.75,
+            "qs": -0.0,
+            "status": 1,
+            "qex": 0.0,
+            "sm_ub": 0.5,
+            "source_id": "storage.s_ne3",
+            "qs_lb": -0.1,
+            "pex": 0.0,
+            "charge_efficiency": 98.0,
+            "discharge_ub": 0.1,
+            "ps": -0.1,
+            "rs": 0.0,
+            "discharge_efficiency": 96.0,
+            "qs_ub": 0.1
+        }
+    },
+    "solar_ne": {
+        "pv1": {
+            "connections": [
+                1,
+                2,
+                3
+            ],
+            "bus": "loadbus",
+            "configuration": 0,
+            "pg_lb": [0.00, 0.00, 0.00],
+            "pg_ub": [1.00, 1.00, 1.00],
+            "qg_lb": [0.00, 0.00, 0.00],
+            "qg_ub": [0.50, 0.50, 0.50],
+            "pg": [0.0, 0.0, 0.0],
+            "qg": [0.0, 0.0, 0.0],
+            "status": 1,
+            "time_series": {
+                "pg_ub": "pv_ts",
+                "qg_ub": "pv_ts"},
+            "fixed_cost": 30000
+        },
+        "pv2": {
+            "connections": [
+                1,
+                2,
+                3
+            ],
+            "bus": "loadbus",
+            "configuration": 0,
+            "pg_lb": [0.00, 0.00, 0.00],
+            "pg_ub": [1.20, 1.20, 1.20],
+            "qg_lb": [0.00, 0.00, 0.00],
+            "qg_ub": [0.60, 0.60, 0.60],
+            "pg": [0.0, 0.0, 0.0],
+            "qg": [0.0, 0.0, 0.0],
+            "status": 1,
+            "time_series": {
+                "pg_ub": "pv_ts",
+                "qg_ub": "pv_ts"},
+            "fixed_cost": 36000
+        },
+        "pv3": {
+            "connections": [
+                1,
+                2,
+                3
+            ],
+            "bus": "loadbus",
+            "configuration": 0,
+            "pg_lb": [0.00, 0.00, 0.00],
+            "pg_ub": [0.90, 0.90, 0.90],
+            "qg_lb": [0.00, 0.00, 0.00],
+            "qg_ub": [0.45, 0.45, 0.45],
+            "pg": [0.0, 0.0, 0.0],
+            "qg": [0.0, 0.0, 0.0],
+            "status": 1,
+            "time_series": {
+                "pg_ub": "pv_ts",
+                "qg_ub": "pv_ts"},
+            "fixed_cost": 27000
+        }
+    }
+}
