@@ -1023,7 +1023,7 @@ function parse_opendss(
         data_eng["settings"]["base_frequency"] = data_dss.options.defaultbasefrequency
 
         # collect turns the Set into Array, making it serializable
-        data_eng["files"] = []#collect(data_dss["filename"])
+        data_eng["files"] = collect(data_dss["filename"])
     else
         error("Circuit not defined, not a valid circuit!")
     end

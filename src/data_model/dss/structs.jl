@@ -1249,6 +1249,7 @@ end
 
 "Parsed OpenDSS model struct"
 Base.@kwdef mutable struct OpenDssDataModel <: DssModel
+    filename::Vector{String} = Vector{String}()
     options::DssOptions = DssOptions()
     circuit::Dict{String,DssCircuit} = Dict{String,DssCircuit}()
     linecode::Dict{String,DssLinecode} = Dict{String,DssLinecode}()

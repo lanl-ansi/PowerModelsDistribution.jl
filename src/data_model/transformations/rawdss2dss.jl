@@ -2,7 +2,8 @@
 """
 function transform_data_model(::Type{DssModel}, raw_dss::OpenDssRawDataModel)::OpenDssDataModel
     dss = OpenDssDataModel(;
-        options = create_dss_object(DssOptions, raw_dss.options)
+        options = create_dss_object(DssOptions, raw_dss.options),
+        filename = raw_dss.filename
     )
 
     for (pn, property) in raw_dss
