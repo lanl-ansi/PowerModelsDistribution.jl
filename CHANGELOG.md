@@ -2,6 +2,10 @@
 
 ## staged
 
+- none
+
+## v0.15.0
+
 - Fixed bug where filename vector was not being passed through from raw dss to eng data structs
 - Fixed bug where controls for transformer banks with phases not starting with `1` would throw a parsing error due to the wrong conductor identifier `c`
 - Fixed bug where `.` chars in dss object names would cause part of the name of the object to get dropped
