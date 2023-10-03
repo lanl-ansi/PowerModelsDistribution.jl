@@ -4,7 +4,6 @@ import Ipopt
 import Pkg
 
 using DataFrames
-using Xpress
 using Revise
 using Printf
 using Juniper
@@ -37,7 +36,6 @@ JuMP.@constraint(pm.model, expand_cost <= 100000)
 objective_mc_min_fuel_cost(pm)
 
 ipopt_solver = optimizer_with_attributes(() -> Ipopt.Optimizer())
-xpress_solver = optimizer_with_attributes(() -> Xpress.Optimizer(DEFAULTALG=2, PRESOLVE=0, logfile = "output.log"))
 juniper_optimizer = optimizer_with_attributes(Juniper.Optimizer, "nl_solver"=>ipopt_solver, "time_limit"=>600)
 scip_optimizer = optimizer_with_attributes(SCIP.Optimizer, "limits/gap"=>0.05)
 

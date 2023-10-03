@@ -190,23 +190,20 @@ end
 
 add voltage bounds to all buses based on per-unit upper (`vm_ub`) and lower (`vm_lb`)
 """
-function _apply_voltage_bounds_math!(data_math::Dict{String,<:Any}; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1, exclude::Vector{String}=!isempty(get(data_eng, "voltage_source", Dict())) ? String[x.second["bus"] for x in data_eng["voltage_source"]] : String[])
+function _apply_voltage_bounds_math!(data::Dict{String,<:Any}; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1, exclude::Vector{String}=!isempty(get(data, "voltage_source", Dict())) ? String[x.second["bus"] for x in data["voltage_source"]] : String[])
     # (bus_vbases, edge_vbases) = calc_voltage_bases(data_math, data_eng["settings"]["vbases_default"])
-    data = data_math["nw"]
-    for network in data
-        for (id, bus) in filter(x->!(x.first in exclude), get(network, "bus", Dict{String,Any}()))
+        for (id, bus) in filter(x->!(x.first in exclude), get(data, "bus", Dict{String,Any}()))
             # vbase = bus_vbases[id]
             if !ismissing(vm_lb)
-                network["bus"][id]["vm_lb"] = fill(vm_lb, length(bus["terminals"]))
-                network["bus"][id]["vm_lb"][any.(bus["grounded"] .== t for t in bus["terminals"])] .= 0.0
+                data["bus"][id]["vm_lb"] = fill(vm_lb, length(bus["terminals"]))
+                data["bus"][id]["vm_lb"][any.(bus["grounded"] .== t for t in bus["terminals"])] .= 0.0
             end
 
             if !ismissing(vm_ub)
-                network["bus"][id]["vm_ub"] = fill(vm_ub, length(bus["terminals"]))
-                network["bus"][id]["vm_ub"][any.(bus["grounded"] .== t for t in bus["terminals"])] .= Inf
+                data["bus"][id]["vm_ub"] = fill(vm_ub, length(bus["terminals"]))
+                data["bus"][id]["vm_ub"][any.(bus["grounded"] .== t for t in bus["terminals"])] .= Inf
             end
         end
-    end
 end
 
 """
