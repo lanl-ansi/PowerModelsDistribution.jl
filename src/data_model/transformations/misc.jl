@@ -784,3 +784,102 @@ function join_lines!(data_eng::Dict{String,Any})
 
     return data_eng
 end
+
+
+"""
+    remove_dist_transformers!(data_eng::Dict{String,<:Any})
+
+Removes distribution transformers and replaces them with lines. The current version only
+supports distribution transformers supplying loads i.e. no lines between transformer and load.
+"""
+function remove_dist_transformers!(data_eng::Dict{String,<:Any})
+    if haskey(data_eng, "transformer")
+        for (_, transformer) in data_eng["transformer"]
+            buses = transformer["bus"]
+            line_connections = [0 for i = 1:length(buses)]
+            for (_, load) in data_eng["load"]
+                if load["bus"] in buses
+                    indxs = findall(x->x==load["bus"], buses)
+                    for indx in indxs
+                        indx != 0 ? line_connections[indx] = 1 : nothing
+                    end
+                end
+            end
+            for (_, line) in data_eng["line"]
+                if line["f_bus"] in buses
+                    indxs = findall(x->x==line["f_bus"], buses)
+                    for indx in indxs
+                        indx != 0 ? line_connections[indx] = 0 : nothing
+                    end
+                end
+                if line["t_bus"] in buses
+                    indxs = findall(x->x==line["t_bus"], buses)
+                    for indx in indxs
+                        indx != 0 ? line_connections[indx] = 0 : nothing
+                    end
+                end
+            end
+            if sum(line_connections) > 0
+                if length(buses) == 3 
+                     _equivalance_center_tap!(transformer, data_eng)
+                elseif length(buses) == 2
+                    nothing 
+                end
+            end  
+        end
+    end
+end
+
+
+"""
+    _equivalance_center_tap!(transformer::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
+
+Removes center tap trasnformers based on Eq (1) from Kersting's paper
+'Center-Tapped Transformers and 120/240-V Secondary Models'
+Z0 = 0.5*r_t + j0.8*x_t
+"""
+function _equivalance_center_tap!(transformer, data_eng)
+    name = string("_virtual.", transformer["name"])
+    xs = transformer["xsc"][1]/.8
+    rw = transformer["rw"][1]/.5
+    data_eng["line"][name] = Dict(
+        "status" => deepcopy(transformer["status"]),
+        "length" => 1,
+        "units" => "ft",
+        "source_id" => transformer["source_id"],
+        "t_connections" => transformer["connections"][1],
+        "f_connections" => transformer["connections"][1],
+        "f_bus" => transformer["bus"][1],
+        "t_bus" => transformer["bus"][2],
+        "name" => name,
+        "rs" => [rw;;],
+        "xs" => [xs;;],
+        "g_fr" => [0.0;;],
+        "g_to" => [0.0;;],
+        "b_fr" => [0.0;;],
+        "b_to" => [0.0;;],
+    )
+    buses = Dict()
+    for bus in transformer["bus"]
+        buses[bus] = Dict("name" => string("_virtual.", bus), "replace" => false)
+    end
+    for (id, load) in data_eng["load"]
+        if load["bus"] in keys(buses)
+            buses[load["bus"]]["replace"] = true
+            _virtual_load = deepcopy(load)
+            _virtual_load["connections"] = transformer["connections"][1]
+            _virtual_load["vm_nom"] = transformer["vm_nom"][1]
+            _virtual_load["configuration"] = WYE
+            _virtual_load["pd_nom"] = [sum(_virtual_load["pd_nom"])]
+            _virtual_load["qd_nom"] = [sum(_virtual_load["qd_nom"])]
+            data_eng["load"][string("_virtual.", id)] = _virtual_load
+            load["status"] = DISABLED
+        end
+    end
+    for (id, bus) in buses
+        if bus["replace"]
+            data_eng["bus"][id]["terminals"] = transformer["connections"][1] 
+        end
+    end
+    data_eng["transformer"][transformer["name"]]["status"] = DISABLED
+end
