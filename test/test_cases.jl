@@ -61,3 +61,6 @@ test_gen_3ph_wye = parse_file("../test/data/en_validation_case_data/test_gen_3ph
 test_switch = parse_file("../test/data/en_validation_case_data/test_switch.dss", transformations=[remove_all_bounds!])
 test_gen_1ph_wye = parse_file("../test/data/en_validation_case_data/test_gen_1ph_wye.dss", transformations=[remove_all_bounds!])
 test_trans_dy = parse_file("../test/data/en_validation_case_data/test_trans_dy.dss", transformations=[remove_all_bounds!, transform_loops!])
+
+# distribution transformer equivalent cases
+dist_transformer = parse_file("../test/data/opendss/dist_transformer.dss")
