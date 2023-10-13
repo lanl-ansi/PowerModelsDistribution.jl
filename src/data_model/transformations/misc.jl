@@ -787,12 +787,12 @@ end
 
 
 """
-    remove_dist_transformers!(data_eng::Dict{String,<:Any})
+    remove_distribution_transformers!(data_eng::Dict{String,<:Any})
 
 Removes distribution transformers and replaces them with lines. The current version only
 supports distribution transformers supplying loads i.e. no lines between transformer and load.
 """
-function remove_dist_transformers!(data_eng::Dict{String,<:Any})
+function remove_distribution_transformers!(data_eng::Dict{String,<:Any})
     if haskey(data_eng, "transformer")
         for (_, transformer) in data_eng["transformer"]
             buses = transformer["bus"]
@@ -820,12 +820,12 @@ function remove_dist_transformers!(data_eng::Dict{String,<:Any})
                 end
             end
             if sum(line_connections) > 0
-                if length(buses) == 3 
-                     _equivalance_center_tap!(transformer, data_eng)
+                if length(buses) == 3
+                    _equivalance_center_tap!(transformer, data_eng)
                 elseif length(buses) == 2
-                    nothing 
+                    nothing
                 end
-            end  
+            end
         end
     end
 end
@@ -834,17 +834,17 @@ end
 """
     _equivalance_center_tap!(transformer::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
 
-Removes center tap trasnformers based on Eq (1) from Kersting's paper
+Removes center tap transformers based on Eq. (1) from Kersting's paper
 'Center-Tapped Transformers and 120/240-V Secondary Models'
 Z0 = 0.5*r_t + j0.8*x_t
 """
 function _equivalance_center_tap!(transformer, data_eng)
     name = string("_virtual.", transformer["name"])
-    xs = transformer["xsc"][1]/.8
-    rw = transformer["rw"][1]/.5
-    data_eng["line"][name] = Dict(
+    xs = transformer["xsc"][1] / 0.8
+    rw = transformer["rw"][1] / 0.5
+    data_eng["line"][name] = Dict{String,Any}(
         "status" => deepcopy(transformer["status"]),
-        "length" => 1,
+        "length" => 1.0,
         "units" => "ft",
         "source_id" => transformer["source_id"],
         "t_connections" => transformer["connections"][1],
@@ -852,12 +852,12 @@ function _equivalance_center_tap!(transformer, data_eng)
         "f_bus" => transformer["bus"][1],
         "t_bus" => transformer["bus"][2],
         "name" => name,
-        "rs" => [rw;;],
-        "xs" => [xs;;],
-        "g_fr" => [0.0;;],
-        "g_to" => [0.0;;],
-        "b_fr" => [0.0;;],
-        "b_to" => [0.0;;],
+        "rs" => fill(rw, 1, 1),
+        "xs" => fill(xs, 1, 1),
+        "g_fr" => fill(0.0, 1, 1),
+        "g_to" => fill(0.0, 1, 1),
+        "b_fr" => fill(0.0, 1, 1),
+        "b_to" => fill(0.0, 1, 1),
     )
     buses = Dict()
     for bus in transformer["bus"]
@@ -878,7 +878,7 @@ function _equivalance_center_tap!(transformer, data_eng)
     end
     for (id, bus) in buses
         if bus["replace"]
-            data_eng["bus"][id]["terminals"] = transformer["connections"][1] 
+            data_eng["bus"][id]["terminals"] = transformer["connections"][1]
         end
     end
     data_eng["transformer"][transformer["name"]]["status"] = DISABLED
