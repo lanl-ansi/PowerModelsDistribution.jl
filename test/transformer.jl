@@ -387,22 +387,21 @@
     @testset "test center tap eq" begin
         @testset "trans_3w_center_tap" begin
             data = deepcopy(trans_3w_center_tap)
-
             remove_distribution_transformers!(data)
 
-            @test trans_3w_center_tap["transformer"]["xfmr_1"]["status"] == ENABLED
-            @test trans_3w_center_tap["transformer"]["xfmr_2"]["status"] == ENABLED
-            @test trans_3w_center_tap["transformer"]["xfmr_3"]["status"] == ENABLED
+            @test data["transformer"]["xfmr_1"]["status"] == ENABLED
+            @test data["transformer"]["xfmr_2"]["status"] == ENABLED
+            @test data["transformer"]["xfmr_3"]["status"] == ENABLED
         end
 
         @testset "dist_transformer" begin
             data = deepcopy(dist_transformer)
             remove_distribution_transformers!(data)
 
-            result = solve_mc_pf(dist_transformer, ACPUPowerModel, ipopt_solver; make_si=false)
+            result = solve_mc_pf(data, ACPUPowerModel, ipopt_solver; make_si=false)
 
-            @test dist_transformer["transformer"]["t1"]["status"] == DISABLED
-            @test dist_transformer["transformer"]["t2"]["status"] == DISABLED
+            @test data["transformer"]["t1"]["status"] == DISABLED
+            @test data["transformer"]["t2"]["status"] == DISABLED
             @test norm(result["solution"]["bus"]["4"]["vm"]-[0.9990740842103211], Inf) <= 1.5E-5
             @test norm(result["solution"]["bus"]["4"]["va"]-[-0.39064739635881085], Inf) <= 0.1
             @test norm(result["solution"]["bus"]["4_l"]["vm"]-[0.9990723339621554], Inf) <= 1.5E-5
