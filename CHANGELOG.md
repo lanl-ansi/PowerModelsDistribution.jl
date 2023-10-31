@@ -2,7 +2,7 @@
 
 ## staged
 
-- none
+- Fixed bug in parsing of dss lines where `switch=y`
 
 ## v0.15.1
 

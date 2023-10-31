@@ -90,20 +90,27 @@ function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}
     line.xmatrix .-= xgmod
     line.xmatrix .*= lenmult * (line.basefreq / circuit_basefreq)
 
-
-    line.r1 = line.r1 / _convert_to_meters[line.units]
-    line.x1 = line.x1 / _convert_to_meters[line.units]
-    line.r0 = line.r0 / _convert_to_meters[line.units]
-    line.x0 = line.x0 / _convert_to_meters[line.units]
-    line.c1 = line.c1 / _convert_to_meters[line.units]
-    line.c0 = line.c0 / _convert_to_meters[line.units]
-    line.rmatrix = line.rmatrix / _convert_to_meters[line.units]
-    line.xmatrix = line.xmatrix / _convert_to_meters[line.units]
-    line.cmatrix = line.cmatrix / _convert_to_meters[line.units]
-    line.b1 = line.b1 / _convert_to_meters[line.units]
-    line.b0 = line.b0 / _convert_to_meters[line.units]
-    line.length = line.length * _convert_to_meters[line.units]
-    line.units = "m"
+    if !line.switch
+        line.r1 = line.r1 / _convert_to_meters[line.units]
+        line.x1 = line.x1 / _convert_to_meters[line.units]
+        line.r0 = line.r0 / _convert_to_meters[line.units]
+        line.x0 = line.x0 / _convert_to_meters[line.units]
+        line.c1 = line.c1 / _convert_to_meters[line.units]
+        line.c0 = line.c0 / _convert_to_meters[line.units]
+        line.rmatrix = line.rmatrix / _convert_to_meters[line.units]
+        line.xmatrix = line.xmatrix / _convert_to_meters[line.units]
+        line.cmatrix = line.cmatrix / _convert_to_meters[line.units]
+        line.b1 = line.b1 / _convert_to_meters[line.units]
+        line.b0 = line.b0 / _convert_to_meters[line.units]
+        line.length = line.length * _convert_to_meters[line.units]
+        line.units = "m"
+    else
+        # TODO: bug in DSS?
+        line.b1 = line.b1 / _convert_to_meters[line.units]
+        line.b0 = line.b0 / _convert_to_meters[line.units]
+        line.length = 0.001
+        line.units = "none"
+    end
 
     return line
 end
