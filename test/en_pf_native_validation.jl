@@ -247,6 +247,7 @@ filter!(e -> e ≠ "case3_balanced_battery_3ph", cases)
             case_path = "$data_dir/$case.dss"
 
             data_eng = parse_file(case_path, transformations=[transform_loops!])
+            make_lossless!(data_eng; exclude=collect(filter(x->x!="switch",keys(PowerModelsDistribution._loss_model_objects))))
 
             data_math = transform_data_model(data_eng; kron_reduce=false)
 

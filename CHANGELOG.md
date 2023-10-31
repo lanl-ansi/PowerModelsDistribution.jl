@@ -2,7 +2,10 @@
 
 ## staged
 
-- Fixed bug in parsing of dss lines where `switch=y`
+- Fixed bug in `DssLine` parser where `c1` was being set to `c0`
+- Fixed native pf unit tests, which assume no virtual branches from switches (applied `make_lossless!` before test)
+- Added `g_fr`, `g_to`, `b_fr`, `b_to` to switches in `dss2eng` and `eng2math`
+- Fixed bug in parsing of dss lines where `switch=y` actually implies `x1=1`, `x0=1`, `r1=1`, `r0=1`, `c1=1.1`, `c0=1`, `length=0.001`, and `units=none`
 
 ## v0.15.1
 

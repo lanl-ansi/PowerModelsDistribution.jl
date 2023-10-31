@@ -62,7 +62,7 @@
 
             vbase = case3_unbalanced_switch["settings"]["vbases_default"]["sourcebus"]
             @test all(isapprox.(result["solution"]["bus"]["loadbus"]["vm"] ./ vbase, [0.98102, 0.98922, 0.98692]; atol=9e-2))
-            @test all(isapprox.(result["solution"]["bus"]["loadbus"]["va"], [-0.2, -120.1, 120.1]; atol=3e-2))
+            @test all(isapprox.(result["solution"]["bus"]["loadbus"]["va"], [-0.2312, -120.1135, 120.1174]; atol=3e-2))
         end
 
         @testset "3-bus unbalanced fbs opf_bf with yy transformer" begin

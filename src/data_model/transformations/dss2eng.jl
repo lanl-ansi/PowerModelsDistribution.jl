@@ -495,10 +495,6 @@ function _dss2eng_line!(data_eng::Dict{String,<:Any}, data_dss::OpenDssDataModel
             eng_obj["state"] = CLOSED
             eng_obj["dispatchable"] = YES
 
-            for key in ["g_fr", "b_fr", "g_to", "b_to"]
-                delete!(eng_obj, key)
-            end
-
             _add_eng_obj!(data_eng, "switch", id, eng_obj)
         else
             _add_eng_obj!(data_eng, "line", id, eng_obj)

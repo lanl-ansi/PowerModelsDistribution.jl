@@ -28,6 +28,14 @@ OpenDSS documentation for valid fields and ways to specify the different
 properties.
 """
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssLine
+    for (i,(field,value)) in enumerate(collect(property_pairs))
+        if field == "switch" && parse(Bool, startswith("y", value) ? "true" : "false")
+            for item in reverse(["r1"=>"1","x1"=>"1","r0"=>"1","x0"=>"1","c1"=>"1.1","c0"=>"1","length"=>"0.001","units"=>"none"])
+                insert!(property_pairs, i+1, item)
+            end
+        end
+    end
+    @warn property_pairs
     raw_fields = _get_raw_fields(property_pairs)
 
     line = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
@@ -41,7 +49,7 @@ function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}
     if line.phases == 1
         line.r0 = line.r1
         line.x0 = line.x1
-        line.c0 = line.c1
+        line.c0 = line.c0
         line.b0 = line.b1
     else
         if :b0 ∈ raw_fields
@@ -90,27 +98,19 @@ function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}
     line.xmatrix .-= xgmod
     line.xmatrix .*= lenmult * (line.basefreq / circuit_basefreq)
 
-    if !line.switch
-        line.r1 = line.r1 / _convert_to_meters[line.units]
-        line.x1 = line.x1 / _convert_to_meters[line.units]
-        line.r0 = line.r0 / _convert_to_meters[line.units]
-        line.x0 = line.x0 / _convert_to_meters[line.units]
-        line.c1 = line.c1 / _convert_to_meters[line.units]
-        line.c0 = line.c0 / _convert_to_meters[line.units]
-        line.rmatrix = line.rmatrix / _convert_to_meters[line.units]
-        line.xmatrix = line.xmatrix / _convert_to_meters[line.units]
-        line.cmatrix = line.cmatrix / _convert_to_meters[line.units]
-        line.b1 = line.b1 / _convert_to_meters[line.units]
-        line.b0 = line.b0 / _convert_to_meters[line.units]
-        line.length = line.length * _convert_to_meters[line.units]
-        line.units = "m"
-    else
-        # TODO: bug in DSS?
-        line.b1 = line.b1 / _convert_to_meters[line.units]
-        line.b0 = line.b0 / _convert_to_meters[line.units]
-        line.length = 0.001
-        line.units = "none"
-    end
+    line.r1 = line.r1 / _convert_to_meters[line.units]
+    line.x1 = line.x1 / _convert_to_meters[line.units]
+    line.r0 = line.r0 / _convert_to_meters[line.units]
+    line.x0 = line.x0 / _convert_to_meters[line.units]
+    line.c1 = line.c1 / _convert_to_meters[line.units]
+    line.c0 = line.c0 / _convert_to_meters[line.units]
+    line.rmatrix = line.rmatrix / _convert_to_meters[line.units]
+    line.xmatrix = line.xmatrix / _convert_to_meters[line.units]
+    line.cmatrix = line.cmatrix / _convert_to_meters[line.units]
+    line.b1 = line.b1 / _convert_to_meters[line.units]
+    line.b0 = line.b0 / _convert_to_meters[line.units]
+    line.length = line.length * _convert_to_meters[line.units]
+    line.units = "m"
 
     return line
 end
