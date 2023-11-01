@@ -35,7 +35,7 @@ function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}
             end
         end
     end
-    @warn property_pairs
+
     raw_fields = _get_raw_fields(property_pairs)
 
     line = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
