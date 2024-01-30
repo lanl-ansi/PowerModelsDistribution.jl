@@ -410,10 +410,10 @@ end;
 # ╔═╡ f7b500a6-7dbf-44cb-9433-3b534f13cd6b
 begin
 	# link charge to generator models
-	JuMP.@NLconstraint(nc_model, [e in EVs, k in K],
+	JuMP.@constraint(nc_model, [e in EVs, k in K],
 		nc_Pg_ek[e,k] == -nc_P_ek[e,k]
 		)
-	JuMP.@NLconstraint(nc_model, [e in EVs, k in K],
+	JuMP.@constraint(nc_model, [e in EVs, k in K],
 		nc_Qg_ek[e,k] == 0.0
 		)
 end;
