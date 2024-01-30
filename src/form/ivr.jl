@@ -338,7 +338,7 @@ function constraint_mc_current_balance_capc(pm::AbstractUnbalancedIVRModel, nw::
     # calculate Gs, Bs
     ncnds = length(terminals)
     Gt = fill(0.0, ncnds, ncnds)
-    Bt = convert(Matrix{JuMP.NonlinearExpr}, JuMP.@expression(pm.model, [idx=1:ncnds, jdx=1:ncnds], 0.0))
+    Bt = Any[0.0 for idx in 1:ncnds, jdx in 1:ncnds]
     for (val, connections) in bus_shunts
         shunt = ref(pm,nw,:shunt,val)
         for (idx,c) in enumerate(connections)
@@ -787,6 +787,7 @@ function constraint_mc_generator_power_delta(pm::IVRUPowerModel, nw::Int, id::In
     end
 
     if bounded
+        # TODO(odow): refactor as pmin[i] <= pg[i] <= pmax[i]
         JuMP.@constraint(pm.model, [i in 1:nph], pmin[i] <= pg[i])
         JuMP.@constraint(pm.model, [i in 1:nph], pmax[i] >= pg[i])
         JuMP.@constraint(pm.model, [i in 1:nph], qmin[i] <= qg[i])

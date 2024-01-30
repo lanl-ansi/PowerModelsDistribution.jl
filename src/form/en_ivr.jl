@@ -205,6 +205,7 @@ function constraint_mc_generator_power_delta(pm::AbstractNLExplicitNeutralIVRMod
         push!(qg, JuMP.@expression(pm.model, -vrg[idx]*cig[idx]+vig[idx]*crg[idx]))
     end
 
+    # TODO(odow): refactor as pmin[i] <= pg[i] <= pmax[i]
     JuMP.@constraint(pm.model, [i in 1:nph], pmin[i] <= pg[i])
     JuMP.@constraint(pm.model, [i in 1:nph], pmax[i] >= pg[i])
     JuMP.@constraint(pm.model, [i in 1:nph], qmin[i] <= qg[i])

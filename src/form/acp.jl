@@ -486,7 +486,7 @@ function constraint_mc_power_balance_capc(pm::AbstractUnbalancedACPModel, nw::In
     cap_state = 1.0
     ncnds = length(terminals)
     Gs = fill(0.0, ncnds, ncnds)
-    Bs = convert(Matrix{JuMP.NonlinearExpr}, JuMP.@expression(pm.model, [idx=1:ncnds, jdx=1:ncnds], 0.0))
+    Bs = Any[0.0 for idx in 1:ncnds, jdx in 1:ncnds]
     for (val, connections) in bus_shunts
         shunt = ref(pm,nw,:shunt,val)
         for (idx,c) in enumerate(connections)
