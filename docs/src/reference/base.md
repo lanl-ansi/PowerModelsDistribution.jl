@@ -13,7 +13,6 @@ nw_ids
 ## Helper functions
 
 ```@docs
-@smart_constraint
 set_lower_bound
 set_upper_bound
 comp_start_value
