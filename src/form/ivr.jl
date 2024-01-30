@@ -338,7 +338,7 @@ function constraint_mc_current_balance_capc(pm::AbstractUnbalancedIVRModel, nw::
     # calculate Gs, Bs
     ncnds = length(terminals)
     Gt = fill(0.0, ncnds, ncnds)
-    Bt = convert(Matrix{JuMP.NonlinearExpression}, JuMP.@expression(pm.model, [idx=1:ncnds, jdx=1:ncnds], 0.0))
+    Bt = convert(Matrix{JuMP.NonlinearExpr}, JuMP.@expression(pm.model, [idx=1:ncnds, jdx=1:ncnds], 0.0))
     for (val, connections) in bus_shunts
         shunt = ref(pm,nw,:shunt,val)
         for (idx,c) in enumerate(connections)
@@ -615,8 +615,8 @@ function constraint_mc_load_power_wye(pm::IVRUPowerModel, nw::Int, id::Int, bus_
     vr = var(pm, nw, :vr, bus_id)
     vi = var(pm, nw, :vi, bus_id)
 
-    crd = Vector{JuMP.NonlinearExpression}([])
-    cid = Vector{JuMP.NonlinearExpression}([])
+    crd = JuMP.NonlinearExpr[]
+    cid = JuMP.NonlinearExpr[]
 
     for (idx, c) in enumerate(connections)
         push!(crd, JuMP.@expression(pm.model,
@@ -633,8 +633,8 @@ function constraint_mc_load_power_wye(pm::IVRUPowerModel, nw::Int, id::Int, bus_
     var(pm, nw, :cid_bus)[id] = JuMP.Containers.DenseAxisArray(cid, connections)
 
     if report
-        pd_bus = Vector{JuMP.NonlinearExpression}([])
-        qd_bus = Vector{JuMP.NonlinearExpression}([])
+        pd_bus = JuMP.NonlinearExpr[]
+        qd_bus = JuMP.NonlinearExpr[]
         for (idx,c) in enumerate(connections)
             push!(pd_bus, JuMP.@expression(pm.model,  vr[c]*crd[idx]+vi[c]*cid[idx]))
             push!(qd_bus, JuMP.@expression(pm.model, -vr[c]*cid[idx]+vi[c]*crd[idx]))
@@ -646,8 +646,8 @@ function constraint_mc_load_power_wye(pm::IVRUPowerModel, nw::Int, id::Int, bus_
         sol(pm, nw, :load, id)[:crd_bus] = JuMP.Containers.DenseAxisArray(crd, connections)
         sol(pm, nw, :load, id)[:cid_bus] = JuMP.Containers.DenseAxisArray(cid, connections)
 
-        pd = Vector{JuMP.NonlinearExpression}([])
-        qd = Vector{JuMP.NonlinearExpression}([])
+        pd = JuMP.NonlinearExpr[]
+        qd = JuMP.NonlinearExpr[]
         for (idx, c) in enumerate(connections)
             push!(pd, JuMP.@expression(pm.model, a[idx]*(vr[c]^2+vi[c]^2)^(alpha[idx]/2) ))
             push!(qd, JuMP.@expression(pm.model, b[idx]*(vr[c]^2+vi[c]^2)^(beta[idx]/2)  ))
@@ -718,8 +718,8 @@ function constraint_mc_generator_power_wye(pm::IVRUPowerModel, nw::Int, id::Int,
     crg = var(pm, nw, :crg, id)
     cig = var(pm, nw, :cig, id)
 
-    pg = Vector{JuMP.NonlinearExpression}([])
-    qg = Vector{JuMP.NonlinearExpression}([])
+    pg = JuMP.NonlinearExpr[]
+    qg = JuMP.NonlinearExpr[]
 
     for (idx, c) in enumerate(connections)
         push!(pg, JuMP.@expression(pm.model,  vr[c]*crg[c]+vi[c]*cig[c]))
@@ -779,8 +779,8 @@ function constraint_mc_generator_power_delta(pm::IVRUPowerModel, nw::Int, id::In
         vig[c] = JuMP.@expression(pm.model, vi[c]-vi[next[c]])
     end
 
-    pg = Vector{JuMP.NonlinearExpression}([])
-    qg = Vector{JuMP.NonlinearExpression}([])
+    pg = JuMP.NonlinearExpr[]
+    qg = JuMP.NonlinearExpr[]
     for c in connections
         push!(pg, JuMP.@expression(pm.model,  vrg[c]*crg[c]+vig[c]*cig[c]))
         push!(qg, JuMP.@expression(pm.model, -vrg[c]*cig[c]+vig[c]*crg[c]))
@@ -793,8 +793,8 @@ function constraint_mc_generator_power_delta(pm::IVRUPowerModel, nw::Int, id::In
         JuMP.@constraint(pm.model, [i in 1:nph], qmax[i] >= qg[i])
     end
 
-    crg_bus = Vector{JuMP.NonlinearExpression}([])
-    cig_bus = Vector{JuMP.NonlinearExpression}([])
+    crg_bus = JuMP.NonlinearExpr[]
+    cig_bus = JuMP.NonlinearExpr[]
     for c in conn_bus
         if is_triplex
             push!(crg_bus, JuMP.@expression(pm.model, (-1.0)^(c-1)*crg[1]))
@@ -805,8 +805,8 @@ function constraint_mc_generator_power_delta(pm::IVRUPowerModel, nw::Int, id::In
         end
     end
 
-    pg_bus = Vector{JuMP.NonlinearExpression}([])
-    qg_bus = Vector{JuMP.NonlinearExpression}([])
+    pg_bus = JuMP.NonlinearExpr[]
+    qg_bus = JuMP.NonlinearExpr[]
     for (idx,c) in enumerate(conn_bus)
         push!(pg_bus, JuMP.@expression(pm.model,  vr[c]*crg_bus[c]+vi[c]*cig_bus[c]))
         push!(qg_bus, JuMP.@expression(pm.model, -vr[c]*cig_bus[c]+vi[c]*crg_bus[c]))

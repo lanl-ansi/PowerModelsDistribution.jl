@@ -132,8 +132,8 @@ function constraint_mc_generator_power_wye(pm::AbstractNLExplicitNeutralIVRModel
     phases = connections[1:end-1]
     n      = connections[end]
 
-    pg = Vector{JuMP.NonlinearExpression}([])
-    qg = Vector{JuMP.NonlinearExpression}([])
+    pg = JuMP.NonlinearExpr[]
+    qg = JuMP.NonlinearExpr[]
 
     for (idx, p) in enumerate(phases)
         push!(pg, JuMP.@expression(pm.model,  (vr[p]-vr[n])*crg[idx]+(vi[p]-vi[n])*cig[idx]))
@@ -198,8 +198,8 @@ function constraint_mc_generator_power_delta(pm::AbstractNLExplicitNeutralIVRMod
         vig[idx] = JuMP.@expression(pm.model, vi[c]-vi[d])
     end
 
-    pg = Vector{JuMP.NonlinearExpression}([])
-    qg = Vector{JuMP.NonlinearExpression}([])
+    pg = JuMP.NonlinearExpr[]
+    qg = JuMP.NonlinearExpr[]
     for idx in 1:nph
         push!(pg, JuMP.@expression(pm.model,  vrg[idx]*crg[idx]+vig[idx]*cig[idx]))
         push!(qg, JuMP.@expression(pm.model, -vrg[idx]*cig[idx]+vig[idx]*crg[idx]))
@@ -499,8 +499,8 @@ function constraint_mc_load_current_wye(pm::AbstractExplicitNeutralIVRModel, nw:
     vr = var(pm, nw, :vr, bus_id)
     vi = var(pm, nw, :vi, bus_id)
 
-    crd = Vector{JuMP.NonlinearExpression}([])
-    cid = Vector{JuMP.NonlinearExpression}([])
+    crd = JuMP.NonlinearExpr[]
+    cid = JuMP.NonlinearExpr[]
 
     phases = connections[1:end-1]
     n      = connections[end]
@@ -526,8 +526,8 @@ function constraint_mc_load_current_wye(pm::AbstractExplicitNeutralIVRModel, nw:
     var(pm, nw, :cid_bus)[id] = cid_bus = _merge_bus_flows(pm, [cid..., cid_bus_n], connections)
 
     if report
-        pd_bus = Vector{JuMP.NonlinearExpression}([])
-        qd_bus = Vector{JuMP.NonlinearExpression}([])
+        pd_bus = JuMP.NonlinearExpr[]
+        qd_bus = JuMP.NonlinearExpr[]
         for (idx,c) in enumerate(connections)
             push!(pd_bus, JuMP.@expression(pm.model,  vr[c]*crd_bus[c]+vi[c]*cid_bus[c]))
             push!(qd_bus, JuMP.@expression(pm.model, -vr[c]*cid_bus[c]+vi[c]*crd_bus[c]))
@@ -542,8 +542,8 @@ function constraint_mc_load_current_wye(pm::AbstractExplicitNeutralIVRModel, nw:
         sol(pm, nw, :load, id)[:crd_bus] = crd_bus
         sol(pm, nw, :load, id)[:cid_bus] = cid_bus
 
-        pd = Vector{JuMP.NonlinearExpression}([])
-        qd = Vector{JuMP.NonlinearExpression}([])
+        pd = JuMP.NonlinearExpr[]
+        qd = JuMP.NonlinearExpr[]
         for (idx, p) in enumerate(phases)
             push!(pd, JuMP.@expression(pm.model, a[idx]*(vr[p]^2+vi[p]^2)^(alpha[idx]/2) ))
             push!(qd, JuMP.@expression(pm.model, b[idx]*(vr[p]^2+vi[p]^2)^(beta[idx]/2)  ))

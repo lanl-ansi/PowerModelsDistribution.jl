@@ -538,7 +538,7 @@ function constraint_mc_power_balance_capc(pm::AbstractUnbalancedACRModel, nw::In
     # calculate Gs, Bs
     ncnds = length(terminals)
     Gt = fill(0.0, ncnds, ncnds)
-    Bt = convert(Matrix{JuMP.NonlinearExpression}, JuMP.@expression(pm.model, [idx=1:ncnds, jdx=1:ncnds], 0.0))
+    Bt = convert(Matrix{JuMP.Nonlinear}, JuMP.@expression(pm.model, [idx=1:ncnds, jdx=1:ncnds], 0.0))
     for (val, connections) in bus_shunts
         shunt = ref(pm,nw,:shunt,val)
         for (idx,c) in enumerate(connections)
@@ -780,8 +780,8 @@ function constraint_mc_load_power_wye(pm::AbstractUnbalancedACRModel, nw::Int, i
         pd_bus = a
         qd_bus = b
     else
-        pd_bus = Vector{JuMP.NonlinearExpression}([])
-        qd_bus = Vector{JuMP.NonlinearExpression}([])
+        pd_bus = JuMP.NonlinearExpr[]
+        qd_bus = JuMP.NonlinearExpr[]
 
         for (idx,c) in enumerate(connections)
             crd = JuMP.@expression(pm.model, a[idx]*vr[c]*(vr[c]^2+vi[c]^2)^(alpha[idx]/2-1)+b[idx]*vi[c]*(vr[c]^2+vi[c]^2)^(beta[idx]/2 -1))
@@ -802,8 +802,8 @@ function constraint_mc_load_power_wye(pm::AbstractUnbalancedACRModel, nw::Int, i
         sol(pm, nw, :load, id)[:pd_bus] = pd_bus
         sol(pm, nw, :load, id)[:qd_bus] = qd_bus
 
-        pd = Vector{JuMP.NonlinearExpression}([])
-        qd = Vector{JuMP.NonlinearExpression}([])
+        pd = JuMP.NonlinearExpr[]
+        qd = JuMP.NonlinearExpr[]
 
         for (idx,c) in enumerate(connections)
             push!(pd, JuMP.@expression(pm.model, a[idx]*(vr[c]^2+vi[c]^2)^(alpha[idx]/2) ))
@@ -853,8 +853,8 @@ function constraint_mc_load_power_delta(pm::AbstractUnbalancedACRModel, nw::Int,
         end
     end
 
-    pd_bus = Vector{JuMP.NonlinearExpression}([])
-    qd_bus = Vector{JuMP.NonlinearExpression}([])
+    pd_bus = JuMP.NonlinearExpr[]
+    qd_bus = JuMP.NonlinearExpr[]
     for (idx,c) in enumerate(conn_bus)
         push!(pd_bus, JuMP.@expression(pm.model,  vr[c]*crd_bus[c]+vi[c]*cid_bus[c]))
         push!(qd_bus, JuMP.@expression(pm.model, -vr[c]*cid_bus[c]+vi[c]*crd_bus[c]))
@@ -870,8 +870,8 @@ function constraint_mc_load_power_delta(pm::AbstractUnbalancedACRModel, nw::Int,
         sol(pm, nw, :load, id)[:pd_bus] = pd_bus
         sol(pm, nw, :load, id)[:qd_bus] = qd_bus
 
-        pd = Vector{JuMP.NonlinearExpression}([])
-        qd = Vector{JuMP.NonlinearExpression}([])
+        pd = JuMP.NonlinearExpr[]
+        qd = JuMP.NonlinearExpr[]
         for (idx,c) in enumerate(connections)
             push!(pd, JuMP.@expression(pm.model, a[idx]*(vrd[c]^2+vid[c]^2)^(alpha[idx]/2) ))
             push!(qd, JuMP.@expression(pm.model, b[idx]*(vrd[c]^2+vid[c]^2)^(beta[idx]/2)  ))
@@ -931,8 +931,8 @@ function constraint_mc_generator_power_delta(pm::AbstractUnbalancedACRModel, nw:
         end
     end
 
-    pg_bus = Vector{JuMP.NonlinearExpression}([])
-    qg_bus = Vector{JuMP.NonlinearExpression}([])
+    pg_bus = JuMP.NonlinearExpr[]
+    qg_bus = JuMP.NonlinearExpr[]
     for (idx,c) in enumerate(conn_bus)
         push!(pg_bus, JuMP.@expression(pm.model,  vr[c]*crg_bus[c]+vi[c]*cig_bus[c]))
         push!(qg_bus, JuMP.@expression(pm.model, -vr[c]*cig_bus[c]+vi[c]*crg_bus[c]))

@@ -486,7 +486,7 @@ function constraint_mc_power_balance_capc(pm::AbstractUnbalancedACPModel, nw::In
     cap_state = 1.0
     ncnds = length(terminals)
     Gs = fill(0.0, ncnds, ncnds)
-    Bs = convert(Matrix{JuMP.NonlinearExpression}, JuMP.@expression(pm.model, [idx=1:ncnds, jdx=1:ncnds], 0.0))
+    Bs = convert(Matrix{JuMP.NonlinearExpr}, JuMP.@expression(pm.model, [idx=1:ncnds, jdx=1:ncnds], 0.0))
     for (val, connections) in bus_shunts
         shunt = ref(pm,nw,:shunt,val)
         for (idx,c) in enumerate(connections)
@@ -1083,8 +1083,8 @@ function constraint_mc_load_power_wye(pm::AbstractUnbalancedACPModel, nw::Int, i
         pd_bus = a
         qd_bus = b
     else
-        pd_bus = Vector{JuMP.NonlinearExpression}([])
-        qd_bus = Vector{JuMP.NonlinearExpression}([])
+        pd_bus = JuMP.NonlinearExpr[]
+        qd_bus = JuMP.NonlinearExpr[]
 
         for (idx, c) in enumerate(connections)
             crd = JuMP.@expression(pm.model,
@@ -1111,8 +1111,8 @@ function constraint_mc_load_power_wye(pm::AbstractUnbalancedACPModel, nw::Int, i
         sol(pm, nw, :load, id)[:pd_bus] = pd_bus
         sol(pm, nw, :load, id)[:qd_bus] = qd_bus
 
-        pd = Vector{JuMP.NonlinearExpression}([])
-        qd = Vector{JuMP.NonlinearExpression}([])
+        pd = JuMP.NonlinearExpr[]
+        qd = JuMP.NonlinearExpr[]
 
         for (idx,c) in enumerate(connections)
             push!(pd, JuMP.@expression(pm.model, a[idx]*vm[c]^alpha[idx] ))
@@ -1168,8 +1168,8 @@ function constraint_mc_load_power_delta(pm::AbstractUnbalancedACPModel, nw::Int,
         end
     end
 
-    pd_bus = Vector{JuMP.NonlinearExpression}([])
-    qd_bus = Vector{JuMP.NonlinearExpression}([])
+    pd_bus = JuMP.NonlinearExpr[]
+    qd_bus = JuMP.NonlinearExpr[]
     for (idx,c) in enumerate(conn_bus)
         push!(pd_bus, JuMP.@expression(pm.model,  vm[c]*cos(va[c])*crd_bus[c]+vm[c]*sin(va[c])*cid_bus[c]))
         push!(qd_bus, JuMP.@expression(pm.model, -vm[c]*cos(va[c])*cid_bus[c]+vm[c]*sin(va[c])*crd_bus[c]))
@@ -1237,8 +1237,8 @@ function constraint_mc_generator_power_delta(pm::AbstractUnbalancedACPModel, nw:
         end
     end
 
-    pg_bus = Vector{JuMP.NonlinearExpression}([])
-    qg_bus = Vector{JuMP.NonlinearExpression}([])
+    pg_bus = JuMP.NonlinearExpr[]
+    qg_bus = JuMP.NonlinearExpr[]
     for c in conn_bus
         push!(pg_bus, JuMP.@expression(pm.model,  vm[c]*cos(va[c])*crg_bus[c]+vm[c]*sin(va[c])*cig_bus[c]))
         push!(qg_bus, JuMP.@expression(pm.model, -vm[c]*cos(va[c])*cig_bus[c]+vm[c]*sin(va[c])*crg_bus[c]))
