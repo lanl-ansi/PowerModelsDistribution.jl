@@ -274,8 +274,8 @@ function constraint_mc_load_power_delta(pm::AbstractExplicitNeutralACRModel, nw:
         sol(pm, nw, :load, id)[:pd_bus] = pd_bus
         sol(pm, nw, :load, id)[:qd_bus] = qd_bus
 
-        pd = Vector{JuMP.NonlinearExpression}([])
-        qd = Vector{JuMP.NonlinearExpression}([])
+        pd = JuMP.NonlinearExpr[]
+        qd = JuMP.NonlinearExpr[]
         for idx in 1:nph
             push!(pd, JuMP.@expression(pm.model, a[idx]*(vrd[idx]^2+vid[idx]^2)^(alpha[idx]/2) ))
             push!(qd, JuMP.@expression(pm.model, b[idx]*(vrd[idx]^2+vid[idx]^2)^(beta[idx]/2)  ))
