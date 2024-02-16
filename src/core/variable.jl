@@ -507,8 +507,10 @@ function variable_mc_oltc_transformer_tap(pm::AbstractUnbalancedPowerModel; nw::
 
     if bounded
         for tr_id in p_oltc_ids, p in 1:length(ref(pm,nw,:transformer,tr_id,"f_connections"))
-            set_lower_bound(var(pm, nw)[:tap][tr_id][p], ref(pm, nw, :transformer, tr_id, "tm_lb")[p])
-            set_upper_bound(var(pm, nw)[:tap][tr_id][p], ref(pm, nw, :transformer, tr_id, "tm_ub")[p])
+            if haskey(ref(pm, nw, :transformer, tr_id), "tm_lb") && haskey(ref(pm, nw, :transformer, tr_id), "tm_ub")
+                set_lower_bound(var(pm, nw)[:tap][tr_id][p], ref(pm, nw, :transformer, tr_id, "tm_lb")[p])
+                set_upper_bound(var(pm, nw)[:tap][tr_id][p], ref(pm, nw, :transformer, tr_id, "tm_ub")[p])
+            end
         end
     end
 
