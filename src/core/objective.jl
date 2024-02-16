@@ -473,8 +473,8 @@ Checks that all generator cost models are of the same type
 """
 function check_gen_cost_models(pm::AbstractUnbalancedPowerModel)
     model = nothing
-    println(keys(nw_ref))
     for (n, nw_ref) in nws(pm)
+        println(keys(nw_ref))
         for (i,gen) in nw_ref[:gen]
             if haskey(gen, "cost")
                 if model === nothing
