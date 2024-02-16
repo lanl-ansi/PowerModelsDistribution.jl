@@ -154,7 +154,7 @@ Fuel cost minimization objective with piecewise linear terms
 """
 function objective_mc_min_fuel_cost_pwl(pm::AbstractUnbalancedPowerModel; report::Bool=true)
     objective_mc_variable_pg_cost(pm; report=report)
-
+    println(keys(nw_ref))
     return JuMP.@objective(pm.model, Min,
         sum(
             sum( var(pm, n, :pg_cost, i) for (i,gen) in nw_ref[:gen])
