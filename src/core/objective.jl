@@ -154,7 +154,6 @@ Fuel cost minimization objective with piecewise linear terms
 """
 function objective_mc_min_fuel_cost_pwl(pm::AbstractUnbalancedPowerModel; report::Bool=true)
     objective_mc_variable_pg_cost(pm; report=report)
-    println(keys(nw_ref))
     return JuMP.@objective(pm.model, Min,
         sum(
             sum( var(pm, n, :pg_cost, i) for (i,gen) in nw_ref[:gen])
@@ -474,7 +473,6 @@ Checks that all generator cost models are of the same type
 function check_gen_cost_models(pm::AbstractUnbalancedPowerModel)
     model = nothing
     for (n, nw_ref) in nws(pm)
-        println(keys(nw_ref))
         for (i,gen) in nw_ref[:gen]
             if haskey(gen, "cost")
                 if model === nothing
