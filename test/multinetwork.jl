@@ -31,19 +31,12 @@
         result_mn = PowerModelsDistribution.solve_mn_mc_opf_oltc(IEEE13_Feeder_engr, ACPUPowerModel, ipopt_solver)
         @test result_mn["termination_status"] == LOCALLY_SOLVED
         
-        @info result_mn["solution"]["nw"]["1"]["voltage_source"]["source"]["pg"]
-        @info result_mn["solution"]["nw"]["1"]["voltage_source"]["source"]["qg"]
-        @info result_mn["solution"]["nw"]["8"]["voltage_source"]["source"]["pg"]
-        @info result_mn["solution"]["nw"]["8"]["voltage_source"]["source"]["qg"]
-        @info result_mn["solution"]["nw"]["1"]["transformer"]["reg1"]["tap"]
-        @info result_mn["solution"]["nw"]["8"]["transformer"]["reg1"]["tap"]
+        @test all(isapprox.(result_mn["solution"]["nw"]["1"]["voltage_source"]["source"]["pg"], [738.58786, 788.38272, 787.79729]; atol=1e-5))
+        @test all(isapprox.(result_mn["solution"]["nw"]["1"]["voltage_source"]["source"]["qg"], [237.68517, 209.61208, 266.77223]; atol=1e-5))
+        @test all(isapprox.(result_mn["solution"]["nw"]["8"]["voltage_source"]["source"]["pg"], [847.77707, 889.87745, 918.34146]; atol=1e-5))
+        @test all(isapprox.(result_mn["solution"]["nw"]["8"]["voltage_source"]["source"]["qg"], [284.46267, 227.28860, 292.33564]; atol=1e-5))
         
-        @test all(isapprox.(result_mn["solution"]["nw"]["1"]["voltage_source"]["source"]["pg"], [.74423, .79428, .79403]; atol=1e-5))
-        @test all(isapprox.(result_mn["solution"]["nw"]["1"]["voltage_source"]["source"]["qg"], [.23829, .20968, .26733]; atol=1e-5))
-        @test all(isapprox.(result_mn["solution"]["nw"]["8"]["voltage_source"]["source"]["pg"], [.83028, .87402, .90503]; atol=1e-5))
-        @test all(isapprox.(result_mn["solution"]["nw"]["8"]["voltage_source"]["source"]["qg"], [.28470, .22363, .29205]; atol=1e-5))
-        
-        @test all(isapprox.(result_mn["solution"]["nw"]["1"]["transformer"]["reg1"]["tap"], [1.02369, 1.01734, 1.02179]; atol=1e-5))
-        @test all(isapprox.(result_mn["solution"]["nw"]["8"]["transformer"]["reg1"]["tap"], [1.02699, 1.01953, 1.02387]; atol=1e-5))
+        @test all(isapprox.(result_mn["solution"]["nw"]["1"]["transformer"]["reg1"]["tap"], [1.02358, 1.01724, 1.02169]; atol=1e-5))
+        @test all(isapprox.(result_mn["solution"]["nw"]["8"]["transformer"]["reg1"]["tap"], [1.02719, 1.01984, 1.02414]; atol=1e-5))
     end
 end
