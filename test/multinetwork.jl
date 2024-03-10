@@ -31,6 +31,13 @@
         result_mn = PowerModelsDistribution.solve_mn_mc_opf_oltc(IEEE13_Feeder_engr, ACPUPowerModel, ipopt_solver)
         @test result_mn["termination_status"] == LOCALLY_SOLVED
         
+        @info result_mn["solution"]["nw"]["1"]["voltage_source"]["source"]["pg"]
+        @info result_mn["solution"]["nw"]["1"]["voltage_source"]["source"]["qg"]
+        @info result_mn["solution"]["nw"]["8"]["voltage_source"]["source"]["pg"]
+        @info result_mn["solution"]["nw"]["8"]["voltage_source"]["source"]["qg"]
+        @info result_mn["solution"]["nw"]["1"]["transformer"]["reg1"]["tap"]
+        @info result_mn["solution"]["nw"]["8"]["transformer"]["reg1"]["tap"]
+        
         @test all(isapprox.(result_mn["solution"]["nw"]["1"]["voltage_source"]["source"]["pg"], [.74423, .79428, .79403]; atol=1e-5))
         @test all(isapprox.(result_mn["solution"]["nw"]["1"]["voltage_source"]["source"]["qg"], [.23829, .20968, .26733]; atol=1e-5))
         @test all(isapprox.(result_mn["solution"]["nw"]["8"]["voltage_source"]["source"]["pg"], [.83028, .87402, .90503]; atol=1e-5))
