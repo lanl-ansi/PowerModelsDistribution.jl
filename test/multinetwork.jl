@@ -36,7 +36,7 @@
         @test all(isapprox.(result_mn["solution"]["nw"]["8"]["voltage_source"]["source"]["pg"], [847.77707, 889.87745, 918.34146]; atol=1e-5))
         @test all(isapprox.(result_mn["solution"]["nw"]["8"]["voltage_source"]["source"]["qg"], [284.46267, 227.28860, 292.33564]; atol=1e-5))
         
-        @test all(isapprox.(result_mn["solution"]["nw"]["1"]["transformer"]["reg1"]["tap"], [1.02358, 1.01724, 1.02169]; atol=1e-5))
-        @test all(isapprox.(result_mn["solution"]["nw"]["8"]["transformer"]["reg1"]["tap"], [1.02719, 1.01984, 1.02414]; atol=1e-5))
+        @test all(isapprox.(result_mn["solution"]["nw"]["1"]["transformer"]["reg1"]["tap"][2], [1.02358, 1.01724, 1.02169]; atol=1e-5))
+        @test all(isapprox.(result_mn["solution"]["nw"]["8"]["transformer"]["reg1"]["tap"][2], [1.02719, 1.01984, 1.02414]; atol=1e-5))
     end
 end
