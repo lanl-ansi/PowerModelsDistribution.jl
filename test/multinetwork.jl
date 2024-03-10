@@ -28,7 +28,7 @@
     end
     
     @testset "solve_mc_opf_oltc" begin
-        result_mn = PowerModelsDistribution.solve_mc_opf_oltc(IEEE13_Feeder_engr, ACPUPowerModel, ipopt_solver)
+        result_mn = PowerModelsDistribution.solve_mn_mc_opf_oltc(IEEE13_Feeder_engr, ACPUPowerModel, ipopt_solver)
         @test result_mn["termination_status"] == LOCALLY_SOLVED
         
         @test all(isapprox.(result_mn["solution"]["nw"]["1"]["voltage_source"]["source"]["pg"], [.74423, .79428, .79403]; atol=1e-5))
