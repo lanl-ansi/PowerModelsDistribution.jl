@@ -101,4 +101,17 @@
         result_opf = solve_mc_opf(data, ACRUPowerModel, ipopt_solver)
         @test isapprox(result_opf["objective"], 0.006197; atol=1e-3)
     end
+
+    @testset "test reduce_line_series" begin
+        eng = parse_file("../test/data/opendss/line_series.dss")
+        engn = deepcopy(eng)
+        reduce_line_series!(engn)
+
+        r = solve_mc_opf(eng, ACRUPowerModel, ipopt_solver; solution_processors=[sol_data_model!])
+        rn = solve_mc_opf(engn, ACRUPowerModel, ipopt_solver; solution_processors=[sol_data_model!])
+
+        for bus_id in [line[bus_end] for line in values(engn["line"]) for bus_end in ["f_bus", "t_bus"] if line["status"]!=DISABLED]
+            @test all(isapprox.(rn["solution"]["bus"][bus_id]["vm"], r["solution"]["bus"][bus_id]["vm"]; atol=1e-4))
+        end
+    end
 end

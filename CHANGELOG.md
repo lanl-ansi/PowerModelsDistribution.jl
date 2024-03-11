@@ -2,6 +2,7 @@
 
 ## staged
 
+- Added transformation `reduce_line_series!` which will reduce lines that consist of only buses with no additional connections to a single line.
 - Added function `solve_mn_mc_opf_oltc` for multi-networks
 - Fixed bug in `DssLine` parser where `c1` was being set to `c0`
 - Fixed native pf unit tests, which assume no virtual branches from switches (applied `make_lossless!` before test)
