@@ -2,7 +2,7 @@
 
 ## staged
 
-- none
+- Indicated broken tests in `"2w_dy_lead"` and `"3-bus SOCConicUBF opf_bf"` by using `@test_skip`
 
 ## v0.15.2
 
