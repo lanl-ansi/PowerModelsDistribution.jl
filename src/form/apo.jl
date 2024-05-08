@@ -126,11 +126,11 @@ function constraint_mc_power_balance(pm::AbstractUnbalancedActivePowerModel, nw:
               sum(p[a][t] for (a, conns) in bus_arcs if t in conns)
             + sum(psw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
             + sum(pt[a_trans][t] for (a_trans, conns) in bus_arcs_trans if t in conns)
-            ==
-              sum(pg[g][t] for (g, conns) in bus_gens if t in conns)
-            - sum(ps[s][t] for (s, conns) in bus_storage if t in conns)
-            - sum(pd[d][t] for (d, conns) in bus_loads if t in conns)
-            - LinearAlgebra.diag(Gt)[idx]
+            + sum(-pg[g][t] for (g, conns) in bus_gens if t in conns)
+            + sum(ps[s][t] for (s, conns) in bus_storage if t in conns)
+            + sum(pd[d][t] for (d, conns) in bus_loads if t in conns)
+            + LinearAlgebra.diag(Gt)[idx]
+            == 0.0
         )
         push!(cstr_p, cp)
     end

@@ -1045,10 +1045,11 @@ function constraint_mc_power_balance(pm::KCLMXModels, nw::Int, i::Int, terminals
                   sum(       P[a][findfirst(isequal(t), conns),findfirst(isequal(u), conns)] for (a, conns) in bus_arcs if t in conns && u in conns)
                 # + sum(  Psw[a_sw][findfirst(isequal(t), conns),findfirst(isequal(u), conns)] for (a_sw, conns) in bus_arcs_sw if t in conns && u in conns)
                 # + sum(Pt[a_trans][findfirst(isequal(t), conns),findfirst(isequal(u), conns)] for (a_trans, conns) in bus_arcs_trans if t in conns && u in conns)
-                ==
-                  sum(      Pg[g][findfirst(isequal(t), conns),findfirst(isequal(u), conns)] for (g, conns) in bus_gens if t in conns && u in conns)
-                - sum(      Pd[d][findfirst(isequal(t), conns),findfirst(isequal(u), conns)] for (d, conns) in bus_loads if t in conns && u in conns)
-                - LinearAlgebra.diag(Wr*Gt'+Wi*Bt')[idx]
+
+                + sum(      -Pg[g][findfirst(isequal(t), conns),findfirst(isequal(u), conns)] for (g, conns) in bus_gens if t in conns && u in conns)
+                + sum(      Pd[d][findfirst(isequal(t), conns),findfirst(isequal(u), conns)] for (d, conns) in bus_loads if t in conns && u in conns)
+                + LinearAlgebra.diag(Wr*Gt'+Wi*Bt')[idx]
+                == 0.0
             )
             push!(cstr_p, cp)
 
@@ -1056,10 +1057,10 @@ function constraint_mc_power_balance(pm::KCLMXModels, nw::Int, i::Int, terminals
                   sum(       Q[a][findfirst(isequal(t), conns),findfirst(isequal(u), conns)] for (a, conns) in bus_arcs if t in conns && u in conns)
                 # + sum(  Qsw[a_sw][findfirst(isequal(t), conns),findfirst(isequal(u), conns)] for (a_sw, conns) in bus_arcs_sw if t in conns && u in conns)
                 # + sum(Qt[a_trans][findfirst(isequal(t), conns),findfirst(isequal(u), conns)] for (a_trans, conns) in bus_arcs_trans if t in conns && u in conns)
-                ==
-                  sum(      Qg[g][findfirst(isequal(t), conns),findfirst(isequal(u), conns)] for (g, conns) in bus_gens if t in conns && u in conns)
-                - sum(      Qd[d][findfirst(isequal(t), conns),findfirst(isequal(u), conns)] for (d, conns) in bus_loads if t in conns && u in conns)
-                - LinearAlgebra.diag(-Wr*Bt'+Wi*Gt')[idx]
+                + sum(      -Qg[g][findfirst(isequal(t), conns),findfirst(isequal(u), conns)] for (g, conns) in bus_gens if t in conns && u in conns)
+                + sum(      Qd[d][findfirst(isequal(t), conns),findfirst(isequal(u), conns)] for (d, conns) in bus_loads if t in conns && u in conns)
+                + LinearAlgebra.diag(-Wr*Bt'+Wi*Gt')[idx]
+                == 0.0
             )
             push!(cstr_q, cq)
         end

@@ -69,21 +69,6 @@ function _check_var_keys(vars, keys, var_name, comp_name)
 end
 
 
-"""
-    @smart_constraint model::JuMP.Model vars::Vector expr::JuMP.Expression
-
-Detection of whether a constraint should be NL or not"
-"""
-macro smart_constraint(model, vars, expr)
-    esc(quote
-        if _has_nl_expression($vars)
-            JuMP.@NLconstraint($model, $expr)
-        else
-            JuMP.@constraint($model, $expr)
-        end
-    end)
-end
-
 
 """
 	function set_lower_bound(

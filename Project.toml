@@ -2,7 +2,7 @@ name = "PowerModelsDistribution"
 uuid = "d7431456-977f-11e9-2de3-97ff7677985e"
 authors = ["David M Fobes <dfobes@lanl.gov>", "Carleton Coffrin"]
 repo = "https://github.com/lanl-ansi/PowerModelsDistribution.jl.git"
-version = "0.15.2"
+version = "0.16.0"
 
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
@@ -29,7 +29,7 @@ Graphs = "1"
 InfrastructureModels = "0.7.3, 0.7.5"
 Ipopt = "0.9, 1.0.2, 1.1"
 JSON = "0.18, 0.19, 0.20, 0.21"
-JuMP = "0.22, 0.23, 1"
+JuMP = ">=1.15,<2"
 LoggingExtras = "0.4.7, 1"
 PolyhedralRelaxations = "0.3.5"
 SCS = "0.9, 1.0, 1.1"

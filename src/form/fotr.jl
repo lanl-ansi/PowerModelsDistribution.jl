@@ -250,16 +250,16 @@ function constraint_mc_power_balance_capc(pm::FOTRUPowerModel, nw::Int, i::Int, 
                 sum(  p[arc][t] for (arc, conns) in bus_arcs if t in conns)
                 + sum(psw[arc][t] for (arc, conns) in bus_arcs_sw if t in conns)
                 + sum( pt[arc][t] for (arc, conns) in bus_arcs_trans if t in conns)
-                ==
-                sum(pg[gen][t] for (gen, conns) in bus_gens if t in conns)
-                - sum(ps[strg][t] for (strg, conns) in bus_storage if t in conns)
-                - sum(pd[load][t] for (load, conns) in bus_loads if t in conns)
-                + ( -sum(Gt[idx,jdx]*vr0[idx]*vr0[jdx]-Bt0[idx,jdx]*vr0[idx]*vi0[jdx] for (jdx,u) in ungrounded_terminals)
+                + sum(-pg[gen][t] for (gen, conns) in bus_gens if t in conns)
+                + sum(ps[strg][t] for (strg, conns) in bus_storage if t in conns)
+                + sum(pd[load][t] for (load, conns) in bus_loads if t in conns)
+                - ( -sum(Gt[idx,jdx]*vr0[idx]*vr0[jdx]-Bt0[idx,jdx]*vr0[idx]*vi0[jdx] for (jdx,u) in ungrounded_terminals)
                     -sum(Gt[idx,jdx]*vi0[idx]*vi0[jdx]+Bt0[idx,jdx]*vi0[idx]*vr0[jdx] for (jdx,u) in ungrounded_terminals)
                 )
-                + ( -sum(Gt[idx,jdx]*(vr[t]*vr0[jdx]+vr0[idx]*vr[u]-2*vr0[idx]*vr0[jdx])-(Bt[idx,jdx]*vr0[idx]*vi0[jdx]+Bt0[idx,jdx]*vr[t]*vi0[jdx]+Bt0[idx,jdx]*vr0[idx]*vi[u]-3*Bt0[idx,jdx]*vr0[idx]*vi0[jdx]) for (jdx,u) in ungrounded_terminals)
+                - ( -sum(Gt[idx,jdx]*(vr[t]*vr0[jdx]+vr0[idx]*vr[u]-2*vr0[idx]*vr0[jdx])-(Bt[idx,jdx]*vr0[idx]*vi0[jdx]+Bt0[idx,jdx]*vr[t]*vi0[jdx]+Bt0[idx,jdx]*vr0[idx]*vi[u]-3*Bt0[idx,jdx]*vr0[idx]*vi0[jdx]) for (jdx,u) in ungrounded_terminals)
                     -sum(Gt[idx,jdx]*(vi[t]*vi0[jdx]+vi0[idx]*vi[u]-2*vi0[idx]*vi0[jdx])+(Bt[idx,jdx]*vi0[idx]*vr0[jdx]+Bt0[idx,jdx]*vi[t]*vr0[jdx]+Bt0[idx,jdx]*vi0[idx]*vr[u]-3*Bt0[idx,jdx]*vi0[idx]*vr0[jdx]) for (jdx,u) in ungrounded_terminals)
                 )
+                == 0.0
             )
             push!(cstr_p, cp)
 
@@ -267,16 +267,16 @@ function constraint_mc_power_balance_capc(pm::FOTRUPowerModel, nw::Int, i::Int, 
                 sum(  q[arc][t] for (arc, conns) in bus_arcs if t in conns)
                 + sum(qsw[arc][t] for (arc, conns) in bus_arcs_sw if t in conns)
                 + sum( qt[arc][t] for (arc, conns) in bus_arcs_trans if t in conns)
-                ==
-                sum(qg[gen][t] for (gen, conns) in bus_gens if t in conns)
-                - sum(qd[load][t] for (load, conns) in bus_loads if t in conns)
-                - sum(qs[strg][t] for (strg, conns) in bus_storage if t in conns)
-                + ( sum(Gt[idx,jdx]*vr0[idx]*vi0[jdx]+Bt0[idx,jdx]*vr0[idx]*vr0[jdx] for (jdx,u) in ungrounded_terminals)
+                + sum(-qg[gen][t] for (gen, conns) in bus_gens if t in conns)
+                + sum(qd[load][t] for (load, conns) in bus_loads if t in conns)
+                + sum(qs[strg][t] for (strg, conns) in bus_storage if t in conns)
+                - ( sum(Gt[idx,jdx]*vr0[idx]*vi0[jdx]+Bt0[idx,jdx]*vr0[idx]*vr0[jdx] for (jdx,u) in ungrounded_terminals)
                    -sum(Gt[idx,jdx]*vi0[idx]*vr0[jdx]-Bt0[idx,jdx]*vi0[idx]*vi0[jdx] for (jdx,u) in ungrounded_terminals)
                 )
-                + ( sum(Gt[idx,jdx]*(vr[t]*vi0[jdx]+vr0[idx]*vi[u]-2*vr0[idx]*vi0[jdx])+(Bt[idx,jdx]*vr0[idx]*vr0[jdx]+Bt0[idx,jdx]*vr[t]*vr0[jdx]+Bt0[idx,jdx]*vr0[idx]*vr[u]-3*Bt0[idx,jdx]*vr0[idx]*vr0[jdx]) for (jdx,u) in ungrounded_terminals)
+                - ( sum(Gt[idx,jdx]*(vr[t]*vi0[jdx]+vr0[idx]*vi[u]-2*vr0[idx]*vi0[jdx])+(Bt[idx,jdx]*vr0[idx]*vr0[jdx]+Bt0[idx,jdx]*vr[t]*vr0[jdx]+Bt0[idx,jdx]*vr0[idx]*vr[u]-3*Bt0[idx,jdx]*vr0[idx]*vr0[jdx]) for (jdx,u) in ungrounded_terminals)
                    -sum(Gt[idx,jdx]*(vi[t]*vr0[jdx]+vi0[idx]*vr[u]-2*vi0[idx]*vr0[jdx])-(Bt[idx,jdx]*vi0[idx]*vi0[jdx]+Bt0[idx,jdx]*vi[t]*vi0[jdx]+Bt0[idx,jdx]*vi0[idx]*vi[u]-3*Bt0[idx,jdx]*vi0[idx]*vi0[jdx]) for (jdx,u) in ungrounded_terminals)
                 )
+                == 0.0
             )
             push!(cstr_q, cq)
         end
@@ -286,16 +286,16 @@ function constraint_mc_power_balance_capc(pm::FOTRUPowerModel, nw::Int, i::Int, 
                 sum(  p[arc][t] for (arc, conns) in bus_arcs if t in conns)
                 + sum(psw[arc][t] for (arc, conns) in bus_arcs_sw if t in conns)
                 + sum( pt[arc][t] for (arc, conns) in bus_arcs_trans if t in conns)
-                ==
-                sum(pg[gen][t] for (gen, conns) in bus_gens if t in conns)
-                - sum(ps[strg][t] for (strg, conns) in bus_storage if t in conns)
-                - sum(pd[load][t] for (load, conns) in bus_loads if t in conns)
-                + ( -sum(Gt[idx,jdx]*vr0[idx]*vr0[jdx]-Bt[idx,jdx]*vr0[idx]*vi0[jdx] for (jdx,u) in ungrounded_terminals)
+                + sum(-pg[gen][t] for (gen, conns) in bus_gens if t in conns)
+                + sum(ps[strg][t] for (strg, conns) in bus_storage if t in conns)
+                + sum(pd[load][t] for (load, conns) in bus_loads if t in conns)
+                - ( -sum(Gt[idx,jdx]*vr0[idx]*vr0[jdx]-Bt[idx,jdx]*vr0[idx]*vi0[jdx] for (jdx,u) in ungrounded_terminals)
                     -sum(Gt[idx,jdx]*vi0[idx]*vi0[jdx]+Bt[idx,jdx]*vi0[idx]*vr0[jdx] for (jdx,u) in ungrounded_terminals)
                 )
-                + ( -sum(Gt[idx,jdx]*(vr[t]*vr0[jdx]+vr0[idx]*vr[u]-2*vr0[idx]*vr0[jdx])-Bt[idx,jdx]*(vr[t]*vi0[jdx]+vr0[idx]*vi[u]-2*vr0[idx]*vi0[jdx]) for (jdx,u) in ungrounded_terminals)
+                - ( -sum(Gt[idx,jdx]*(vr[t]*vr0[jdx]+vr0[idx]*vr[u]-2*vr0[idx]*vr0[jdx])-Bt[idx,jdx]*(vr[t]*vi0[jdx]+vr0[idx]*vi[u]-2*vr0[idx]*vi0[jdx]) for (jdx,u) in ungrounded_terminals)
                     -sum(Gt[idx,jdx]*(vi[t]*vi0[jdx]+vi0[idx]*vi[u]-2*vi0[idx]*vi0[jdx])+Bt[idx,jdx]*(vi[t]*vr0[jdx]+vi0[idx]*vr[u]-2*vi0[idx]*vr0[jdx]) for (jdx,u) in ungrounded_terminals)
                 )
+                == 0.0
             )
             push!(cstr_p, cp)
 
@@ -303,16 +303,16 @@ function constraint_mc_power_balance_capc(pm::FOTRUPowerModel, nw::Int, i::Int, 
                 sum(  q[arc][t] for (arc, conns) in bus_arcs if t in conns)
                 + sum(qsw[arc][t] for (arc, conns) in bus_arcs_sw if t in conns)
                 + sum( qt[arc][t] for (arc, conns) in bus_arcs_trans if t in conns)
-                ==
-                sum(qg[gen][t] for (gen, conns) in bus_gens if t in conns)
-                - sum(qd[load][t] for (load, conns) in bus_loads if t in conns)
-                - sum(qs[strg][t] for (strg, conns) in bus_storage if t in conns)
-                + ( sum(Gt[idx,jdx]*vr0[idx]*vi0[jdx]+Bt[idx,jdx]*vr0[idx]*vr0[jdx] for (jdx,u) in ungrounded_terminals)
+                + sum(-qg[gen][t] for (gen, conns) in bus_gens if t in conns)
+                + sum(qd[load][t] for (load, conns) in bus_loads if t in conns)
+                + sum(qs[strg][t] for (strg, conns) in bus_storage if t in conns)
+                - ( sum(Gt[idx,jdx]*vr0[idx]*vi0[jdx]+Bt[idx,jdx]*vr0[idx]*vr0[jdx] for (jdx,u) in ungrounded_terminals)
                 -sum(Gt[idx,jdx]*vi0[idx]*vr0[jdx]-Bt[idx,jdx]*vi0[idx]*vi0[jdx] for (jdx,u) in ungrounded_terminals)
                 )
-                + ( sum(Gt[idx,jdx]*(vr[t]*vi0[jdx]+vr0[idx]*vi[u]-2*vr0[idx]*vi0[jdx])+Bt[idx,jdx]*(vr[t]*vr0[jdx]+vr0[idx]*vr[u]-2*vr0[idx]*vr0[jdx]) for (jdx,u) in ungrounded_terminals)
+                - ( sum(Gt[idx,jdx]*(vr[t]*vi0[jdx]+vr0[idx]*vi[u]-2*vr0[idx]*vi0[jdx])+Bt[idx,jdx]*(vr[t]*vr0[jdx]+vr0[idx]*vr[u]-2*vr0[idx]*vr0[jdx]) for (jdx,u) in ungrounded_terminals)
                 -sum(Gt[idx,jdx]*(vi[t]*vr0[jdx]+vi0[idx]*vr[u]-2*vi0[idx]*vr0[jdx])-Bt[idx,jdx]*(vi[t]*vi0[jdx]+vi0[idx]*vi[u]-2*vi0[idx]*vi0[jdx]) for (jdx,u) in ungrounded_terminals)
                 )
+                == 0.0
             )
             push!(cstr_q, cq)
         end
@@ -411,21 +411,21 @@ function constraint_mc_ohms_yt_from(pm::FOTRUPowerModel, nw::Int, f_bus::Int, t_
 
     for (idx,fc) in enumerate(f_connections)
         JuMP.@constraint(pm.model,
-                p_fr[idx] ==  p0_fr[idx] + sum(G[idx,jdx]*(vr_fr[jdx]*vr0_fr[idx]+vr0_fr[jdx]*vr_fr[idx]-2*vr0_fr[jdx]*vr0_fr[idx]) - G[idx,jdx]*(vr_to[jdx]*vr0_fr[idx]+vr0_to[jdx]*vr_fr[idx]-2*vr0_to[jdx]*vr0_fr[idx])
-                            -B[idx,jdx]*(vi_fr[jdx]*vr0_fr[idx]+vi0_fr[jdx]*vr_fr[idx]-2*vi0_fr[jdx]*vr0_fr[idx]) + B[idx,jdx]*(vi_to[jdx]*vr0_fr[idx]+vi0_to[jdx]*vr_fr[idx]-2*vi0_to[jdx]*vr0_fr[idx]) for (jdx,tc) in enumerate(t_connections))
-                        +sum(G[idx,jdx]*(vi_fr[jdx]*vi0_fr[idx]+vi0_fr[jdx]*vi_fr[idx]-2*vi0_fr[jdx]*vi0_fr[idx]) - G[idx,jdx]*(vi_to[jdx]*vi0_fr[idx]+vi0_to[jdx]*vi_fr[idx]-2*vi0_to[jdx]*vi0_fr[idx])
-                            +B[idx,jdx]*(vr_fr[jdx]*vi0_fr[idx]+vr0_fr[jdx]*vi_fr[idx]-2*vr0_fr[jdx]*vi0_fr[idx]) - B[idx,jdx]*(vr_to[jdx]*vi0_fr[idx]+vr0_to[jdx]*vi_fr[idx]-2*vr0_to[jdx]*vi0_fr[idx]) for (jdx,tc) in enumerate(t_connections))
-                        +sum(G_fr[idx,jdx]*(vr_fr[jdx]*vr0_fr[idx]+vr0_fr[jdx]*vr_fr[idx]-2*vr0_fr[jdx]*vr0_fr[idx]) - B_fr[idx,jdx]*(vi_fr[jdx]*vr0_fr[idx]+vi0_fr[jdx]*vr_fr[idx]-2*vi0_fr[jdx]*vr0_fr[idx]) for (jdx,tc) in enumerate(t_connections))
-                        +sum(G_fr[idx,jdx]*(vi_fr[jdx]*vi0_fr[idx]+vi0_fr[jdx]*vi_fr[idx]-2*vi0_fr[jdx]*vi0_fr[idx]) + B_fr[idx,jdx]*(vr_fr[jdx]*vi0_fr[idx]+vr0_fr[jdx]*vi_fr[idx]-2*vr0_fr[jdx]*vi0_fr[idx]) for (jdx,tc) in enumerate(t_connections))
+            p_fr[idx] ==  p0_fr[idx] + sum(G[idx,jdx]*(vr_fr[jdx]*vr0_fr[idx]+vr0_fr[jdx]*vr_fr[idx]-2*vr0_fr[jdx]*vr0_fr[idx]) - G[idx,jdx]*(vr_to[jdx]*vr0_fr[idx]+vr0_to[jdx]*vr_fr[idx]-2*vr0_to[jdx]*vr0_fr[idx])
+                        -B[idx,jdx]*(vi_fr[jdx]*vr0_fr[idx]+vi0_fr[jdx]*vr_fr[idx]-2*vi0_fr[jdx]*vr0_fr[idx]) + B[idx,jdx]*(vi_to[jdx]*vr0_fr[idx]+vi0_to[jdx]*vr_fr[idx]-2*vi0_to[jdx]*vr0_fr[idx]) for (jdx,tc) in enumerate(t_connections))
+                    +sum(G[idx,jdx]*(vi_fr[jdx]*vi0_fr[idx]+vi0_fr[jdx]*vi_fr[idx]-2*vi0_fr[jdx]*vi0_fr[idx]) - G[idx,jdx]*(vi_to[jdx]*vi0_fr[idx]+vi0_to[jdx]*vi_fr[idx]-2*vi0_to[jdx]*vi0_fr[idx])
+                        +B[idx,jdx]*(vr_fr[jdx]*vi0_fr[idx]+vr0_fr[jdx]*vi_fr[idx]-2*vr0_fr[jdx]*vi0_fr[idx]) - B[idx,jdx]*(vr_to[jdx]*vi0_fr[idx]+vr0_to[jdx]*vi_fr[idx]-2*vr0_to[jdx]*vi0_fr[idx]) for (jdx,tc) in enumerate(t_connections))
+                    +sum(G_fr[idx,jdx]*(vr_fr[jdx]*vr0_fr[idx]+vr0_fr[jdx]*vr_fr[idx]-2*vr0_fr[jdx]*vr0_fr[idx]) - B_fr[idx,jdx]*(vi_fr[jdx]*vr0_fr[idx]+vi0_fr[jdx]*vr_fr[idx]-2*vi0_fr[jdx]*vr0_fr[idx]) for (jdx,tc) in enumerate(t_connections))
+                    +sum(G_fr[idx,jdx]*(vi_fr[jdx]*vi0_fr[idx]+vi0_fr[jdx]*vi_fr[idx]-2*vi0_fr[jdx]*vi0_fr[idx]) + B_fr[idx,jdx]*(vr_fr[jdx]*vi0_fr[idx]+vr0_fr[jdx]*vi_fr[idx]-2*vr0_fr[jdx]*vi0_fr[idx]) for (jdx,tc) in enumerate(t_connections))
         )
 
         JuMP.@constraint(pm.model,
-                q_fr[idx] == q0_fr[idx] - sum(G[idx,jdx]*(vi_fr[jdx]*vr0_fr[idx]+vi0_fr[jdx]*vr_fr[idx]-2*vi0_fr[jdx]*vr0_fr[idx]) - G[idx,jdx]*(vi_to[jdx]*vr0_fr[idx]+vi0_to[jdx]*vr_fr[idx]-2*vi0_to[jdx]*vr0_fr[idx])
-                            +B[idx,jdx]*(vr_fr[jdx]*vr0_fr[idx]+vr0_fr[jdx]*vr_fr[idx]-2*vr0_fr[jdx]*vr0_fr[idx]) - B[idx,jdx]*(vr_to[jdx]*vr0_fr[idx]+vr0_to[jdx]*vr_fr[idx]-2*vr0_to[jdx]*vr0_fr[idx]) for (jdx,tc) in enumerate(t_connections))
-                        +sum(G[idx,jdx]*(vr_fr[jdx]*vi0_fr[idx]+vr0_fr[jdx]*vi_fr[idx]-2*vr0_fr[jdx]*vi0_fr[idx]) - G[idx,jdx]*(vr_to[jdx]*vi0_fr[idx]+vr0_to[jdx]*vi_fr[idx]-2*vr0_to[jdx]*vi0_fr[idx])
-                            -B[idx,jdx]*(vi_fr[jdx]*vi0_fr[idx]+vi0_fr[jdx]*vi_fr[idx]-2*vi0_fr[jdx]*vi0_fr[idx]) + B[idx,jdx]*(vi_to[jdx]*vi0_fr[idx]+vi0_to[jdx]*vi_fr[idx]-2*vi0_to[jdx]*vi0_fr[idx]) for (jdx,tc) in enumerate(t_connections))
-                        -sum(G_fr[idx,jdx]*(vi_fr[jdx]*vr0_fr[idx]+vi0_fr[jdx]*vr_fr[idx]-2*vi0_fr[jdx]*vr0_fr[idx]) + B_fr[idx,jdx]*(vr_fr[jdx]*vr0_fr[idx]+vr0_fr[jdx]*vr_fr[idx]-2*vr0_fr[jdx]*vr0_fr[idx]) for (jdx,tc) in enumerate(t_connections))
-                        +sum(G_fr[idx,jdx]*(vr_fr[jdx]*vi0_fr[idx]+vr0_fr[jdx]*vi_fr[idx]-2*vr0_fr[jdx]*vi0_fr[idx]) - B_fr[idx,jdx]*(vi_fr[jdx]*vi0_fr[idx]+vi0_fr[jdx]*vi_fr[idx]-2*vi0_fr[jdx]*vi0_fr[idx]) for (jdx,tc) in enumerate(t_connections))
+            q_fr[idx] == q0_fr[idx] - sum(G[idx,jdx]*(vi_fr[jdx]*vr0_fr[idx]+vi0_fr[jdx]*vr_fr[idx]-2*vi0_fr[jdx]*vr0_fr[idx]) - G[idx,jdx]*(vi_to[jdx]*vr0_fr[idx]+vi0_to[jdx]*vr_fr[idx]-2*vi0_to[jdx]*vr0_fr[idx])
+                        +B[idx,jdx]*(vr_fr[jdx]*vr0_fr[idx]+vr0_fr[jdx]*vr_fr[idx]-2*vr0_fr[jdx]*vr0_fr[idx]) - B[idx,jdx]*(vr_to[jdx]*vr0_fr[idx]+vr0_to[jdx]*vr_fr[idx]-2*vr0_to[jdx]*vr0_fr[idx]) for (jdx,tc) in enumerate(t_connections))
+                    +sum(G[idx,jdx]*(vr_fr[jdx]*vi0_fr[idx]+vr0_fr[jdx]*vi_fr[idx]-2*vr0_fr[jdx]*vi0_fr[idx]) - G[idx,jdx]*(vr_to[jdx]*vi0_fr[idx]+vr0_to[jdx]*vi_fr[idx]-2*vr0_to[jdx]*vi0_fr[idx])
+                        -B[idx,jdx]*(vi_fr[jdx]*vi0_fr[idx]+vi0_fr[jdx]*vi_fr[idx]-2*vi0_fr[jdx]*vi0_fr[idx]) + B[idx,jdx]*(vi_to[jdx]*vi0_fr[idx]+vi0_to[jdx]*vi_fr[idx]-2*vi0_to[jdx]*vi0_fr[idx]) for (jdx,tc) in enumerate(t_connections))
+                    -sum(G_fr[idx,jdx]*(vi_fr[jdx]*vr0_fr[idx]+vi0_fr[jdx]*vr_fr[idx]-2*vi0_fr[jdx]*vr0_fr[idx]) + B_fr[idx,jdx]*(vr_fr[jdx]*vr0_fr[idx]+vr0_fr[jdx]*vr_fr[idx]-2*vr0_fr[jdx]*vr0_fr[idx]) for (jdx,tc) in enumerate(t_connections))
+                    +sum(G_fr[idx,jdx]*(vr_fr[jdx]*vi0_fr[idx]+vr0_fr[jdx]*vi_fr[idx]-2*vr0_fr[jdx]*vi0_fr[idx]) - B_fr[idx,jdx]*(vi_fr[jdx]*vi0_fr[idx]+vi0_fr[jdx]*vi_fr[idx]-2*vi0_fr[jdx]*vi0_fr[idx]) for (jdx,tc) in enumerate(t_connections))
         )
     end
 end
@@ -737,8 +737,8 @@ function constraint_mc_generator_power_delta(pm::FOTRUPowerModel, nw::Int, id::I
             crg_bus[c] = JuMP.@expression(pm.model, (-1.0)^(c-1)*crg[1])
             cig_bus[c] = JuMP.@expression(pm.model, (-1.0)^(c-1)*cig[1])
         else
-            crg_bus[c] = JuMP.@NLexpression(pm.model, crg[c]-crg[prev[c]])
-            cig_bus[c] = JuMP.@NLexpression(pm.model, cig[c]-cig[prev[c]])
+            crg_bus[c] = JuMP.@expression(pm.model, crg[c]-crg[prev[c]])
+            cig_bus[c] = JuMP.@expression(pm.model, cig[c]-cig[prev[c]])
         end
     end
 

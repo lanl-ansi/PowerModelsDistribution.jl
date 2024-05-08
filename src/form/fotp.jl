@@ -331,7 +331,7 @@ function constraint_mc_power_balance_capc(pm::FOTPUPowerModel, nw::Int, i::Int, 
                     - sum( pg[g][t] for (g, conns) in bus_gens if t in conns)
                     + sum( ps[s][t] for (s, conns) in bus_storage if t in conns)
                     + sum( pd[l][t] for (l, conns) in bus_loads if t in conns)
-                    + Gs[idx,idx]*(vm0[idx]^2+2*vm0[idx]*(vm[t]-vm0[idx]))
+                    + (Gs[idx,idx]*(vm0[idx]^2+(2*vm0[idx]*(vm[t]-vm0[idx]))))
                     ==
                     0.0
                 )
@@ -344,7 +344,7 @@ function constraint_mc_power_balance_capc(pm::FOTPUPowerModel, nw::Int, i::Int, 
                     - sum( qg[g][t] for (g, conns) in bus_gens if t in conns)
                     + sum( qs[s][t] for (s, conns) in bus_storage if t in conns)
                     + sum( qd[l][t] for (l, conns) in bus_loads if t in conns)
-                    - Bs[idx,idx]*(vm0[idx]^2+2*vm0[idx]*(vm[t]-vm0[idx]))
+                    - (Bs[idx,idx]*(vm0[idx]^2+(2*vm0[idx]*(vm[t]-vm0[idx]))))
                     ==
                     0.0
                 )
@@ -361,7 +361,7 @@ function constraint_mc_power_balance_capc(pm::FOTPUPowerModel, nw::Int, i::Int, 
                     - sum( pg[g][t] for (g, conns) in bus_gens if t in conns)
                     + sum( ps[s][t] for (s, conns) in bus_storage if t in conns)
                     + sum( pd[l][t] for (l, conns) in bus_loads if t in conns)
-                    + ( Gs[idx,idx]*(vm0[idx]^2+2*vm0[idx]*(vm[t]-vm0[idx]))
+                    + ( (Gs[idx,idx]*(vm0[idx]^2+((2*vm0[idx])*(vm[t]-vm0[idx]))))
                         +sum( Gs[idx,jdx] * vm0[idx]*vm0[jdx] * cos(va0[idx]-va0[jdx])
                             +Bs[idx,jdx] * vm0[idx]*vm0[jdx] * sin(va0[idx]-va0[jdx])
                             +[Gs[idx,jdx]*vm0[jdx]*cos(va0[idx]-va0[jdx]) Gs[idx,jdx]*vm0[idx]*cos(va0[idx]-va0[jdx]) -Gs[idx,jdx]*vm0[idx]*vm0[jdx]*sin(va0[idx]-va0[jdx])  Gs[idx,jdx]*vm0[idx]*vm0[jdx]*sin(va0[idx]-va0[jdx])]*[vm[t]-vm0[idx];vm[u]-vm0[jdx];va[t]-va0[idx];va[u]-va0[jdx]]
@@ -821,8 +821,8 @@ function constraint_mc_generator_power_delta(pm::FOTPUPowerModel, nw::Int, id::I
             crg_bus[c] = JuMP.@expression(pm.model, (-1.0)^(c-1)*crg[1])
             cig_bus[c] = JuMP.@expression(pm.model, (-1.0)^(c-1)*cig[1])
         else
-            crg_bus[c] = JuMP.@NLexpression(pm.model, crg[c]-crg[prev[c]])
-            cig_bus[c] = JuMP.@NLexpression(pm.model, cig[c]-cig[prev[c]])
+            crg_bus[c] = JuMP.@expression(pm.model, crg[c]-crg[prev[c]])
+            cig_bus[c] = JuMP.@expression(pm.model, cig[c]-cig[prev[c]])
         end
     end
 

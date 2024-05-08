@@ -284,26 +284,26 @@ function constraint_mc_current_balance(pm::AbstractUnbalancedIVRModel, nw::Int, 
     ungrounded_terminals = [(idx,t) for (idx,t) in enumerate(terminals) if !grounded[idx]]
 
     for (idx, t) in ungrounded_terminals
-        @smart_constraint(pm.model,  [cr, crd, crg, crs, crsw, crt, vr],
-                                      sum(cr[a][t] for (a, conns) in bus_arcs if t in conns)
-                                    + sum(crsw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
-                                    + sum(crt[a_trans][t] for (a_trans, conns) in bus_arcs_trans if t in conns)
-                                    ==
-                                      sum(crg[g][t]         for (g, conns) in bus_gens if t in conns)
-                                    - sum(crs[s][t]         for (s, conns) in bus_storage if t in conns)
-                                    - sum(crd[d][t]         for (d, conns) in bus_loads if t in conns)
-                                    - sum( Gt[idx,jdx]*vr[u] -Bt[idx,jdx]*vi[u] for (jdx,u) in ungrounded_terminals) # shunts
-                                    )
-        @smart_constraint(pm.model, [ci, cid, cig, cis, cisw, cit, vi],
-                                      sum(ci[a][t] for (a, conns) in bus_arcs if t in conns)
-                                    + sum(cisw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
-                                    + sum(cit[a_trans][t] for (a_trans, conns) in bus_arcs_trans if t in conns)
-                                    ==
-                                      sum(cig[g][t]         for (g, conns) in bus_gens if t in conns)
-                                    - sum(cis[s][t]         for (s, conns) in bus_storage if t in conns)
-                                    - sum(cid[d][t]         for (d, conns) in bus_loads if t in conns)
-                                    - sum( Gt[idx,jdx]*vi[u] +Bt[idx,jdx]*vr[u] for (jdx,u) in ungrounded_terminals) # shunts
-                                    )
+        JuMP.@constraint(pm.model,
+            sum(cr[a][t] for (a, conns) in bus_arcs if t in conns)
+            + sum(crsw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
+            + sum(crt[a_trans][t] for (a_trans, conns) in bus_arcs_trans if t in conns)
+            + sum(-crg[g][t]         for (g, conns) in bus_gens if t in conns)
+            + sum(crs[s][t]         for (s, conns) in bus_storage if t in conns)
+            + sum(crd[d][t]         for (d, conns) in bus_loads if t in conns)
+            + sum( (Gt[idx,jdx]*vr[u])-(Bt[idx,jdx]*vi[u]) for (jdx,u) in ungrounded_terminals) # shunts
+            == 0.0
+            )
+        JuMP.@constraint(pm.model,
+            sum(ci[a][t] for (a, conns) in bus_arcs if t in conns)
+            + sum(cisw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
+            + sum(cit[a_trans][t] for (a_trans, conns) in bus_arcs_trans if t in conns)
+            + sum(-cig[g][t]         for (g, conns) in bus_gens if t in conns)
+            + sum(cis[s][t]         for (s, conns) in bus_storage if t in conns)
+            + sum(cid[d][t]         for (d, conns) in bus_loads if t in conns)
+            + sum( (Gt[idx,jdx]*vi[u])+(Bt[idx,jdx]*vr[u]) for (jdx,u) in ungrounded_terminals) # shunts
+            == 0.0
+            )
     end
 end
 
@@ -338,14 +338,14 @@ function constraint_mc_current_balance_capc(pm::AbstractUnbalancedIVRModel, nw::
     # calculate Gs, Bs
     ncnds = length(terminals)
     Gt = fill(0.0, ncnds, ncnds)
-    Bt = convert(Matrix{JuMP.NonlinearExpression}, JuMP.@NLexpression(pm.model, [idx=1:ncnds, jdx=1:ncnds], 0.0))
+    Bt = convert(Matrix{JuMP.NonlinearExpr}, JuMP.@expression(pm.model, [idx=1:ncnds, jdx=1:ncnds], 0.0))
     for (val, connections) in bus_shunts
         shunt = ref(pm,nw,:shunt,val)
         for (idx,c) in enumerate(connections)
             cap_state = haskey(shunt,"controls") ? var(pm, nw, :capacitor_state, val)[c] : 1.0
             for (jdx,d) in enumerate(connections)
                 Gt[findfirst(isequal(c), terminals),findfirst(isequal(d), terminals)] += shunt["gs"][idx,jdx]
-                Bt[findfirst(isequal(c), terminals),findfirst(isequal(d), terminals)] = JuMP.@NLexpression(pm.model, Bt[findfirst(isequal(c), terminals),findfirst(isequal(d), terminals)] + shunt["bs"][idx,jdx]*cap_state)
+                Bt[findfirst(isequal(c), terminals),findfirst(isequal(d), terminals)] = JuMP.@expression(pm.model, Bt[findfirst(isequal(c), terminals),findfirst(isequal(d), terminals)] + (shunt["bs"][idx,jdx]*cap_state))
             end
         end
     end
@@ -353,26 +353,26 @@ function constraint_mc_current_balance_capc(pm::AbstractUnbalancedIVRModel, nw::
     ungrounded_terminals = [(idx,t) for (idx,t) in enumerate(terminals) if !grounded[idx]]
 
     for (idx, t) in ungrounded_terminals
-        @smart_constraint(pm.model,  [cr, crd, crg, crs, crsw, crt, vr, vi, Bt],
-                                      sum(cr[a][t] for (a, conns) in bus_arcs if t in conns)
-                                    + sum(crsw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
-                                    + sum(crt[a_trans][t] for (a_trans, conns) in bus_arcs_trans if t in conns)
-                                    ==
-                                      sum(crg[g][t]         for (g, conns) in bus_gens if t in conns)
-                                    - sum(crs[s][t]         for (s, conns) in bus_storage if t in conns)
-                                    - sum(crd[d][t]         for (d, conns) in bus_loads if t in conns)
-                                    - sum( Gt[idx,jdx]*vr[u] -Bt[idx,jdx]*vi[u] for (jdx,u) in ungrounded_terminals) # shunts
-                                    )
-        @smart_constraint(pm.model, [ci, cid, cig, cis, cisw, cit, vr, vi, Bt],
-                                      sum(ci[a][t] for (a, conns) in bus_arcs if t in conns)
-                                    + sum(cisw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
-                                    + sum(cit[a_trans][t] for (a_trans, conns) in bus_arcs_trans if t in conns)
-                                    ==
-                                      sum(cig[g][t]         for (g, conns) in bus_gens if t in conns)
-                                    - sum(cis[s][t]         for (s, conns) in bus_storage if t in conns)
-                                    - sum(cid[d][t]         for (d, conns) in bus_loads if t in conns)
-                                    - sum( Gt[idx,jdx]*vi[u] +Bt[idx,jdx]*vr[u] for (jdx,u) in ungrounded_terminals) # shunts
-                                    )
+        JuMP.@constraint(pm.model,
+            sum(cr[a][t] for (a, conns) in bus_arcs if t in conns)
+            + sum(crsw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
+            + sum(crt[a_trans][t] for (a_trans, conns) in bus_arcs_trans if t in conns)
+            + sum(-crg[g][t]         for (g, conns) in bus_gens if t in conns)
+            + sum(crs[s][t]         for (s, conns) in bus_storage if t in conns)
+            + sum(crd[d][t]         for (d, conns) in bus_loads if t in conns)
+            + sum( (Gt[idx,jdx]*vr[u])-(Bt[idx,jdx]*vi[u]) for (jdx,u) in ungrounded_terminals) # shunts
+            == 0.0
+            )
+        JuMP.@constraint(pm.model,
+            sum(ci[a][t] for (a, conns) in bus_arcs if t in conns)
+            + sum(cisw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
+            + sum(cit[a_trans][t] for (a_trans, conns) in bus_arcs_trans if t in conns)
+            + sum(-cig[g][t]         for (g, conns) in bus_gens if t in conns)
+            + sum(cis[s][t]         for (s, conns) in bus_storage if t in conns)
+            + sum(cid[d][t]         for (d, conns) in bus_loads if t in conns)
+            + sum( (Gt[idx,jdx]*vi[u])+(Bt[idx,jdx]*vr[u]) for (jdx,u) in ungrounded_terminals) # shunts
+            == 0.0
+            )
     end
 end
 
@@ -451,7 +451,7 @@ function constraint_mc_thermal_limit_from(pm::AbstractUnbalancedIVRModel, nw::In
 
     for (idx, fc) in enumerate(f_connections)
         if rate_a[idx] < Inf
-            JuMP.@NLconstraint(pm.model, (vr[fc]^2 + vi[fc]^2)*(crf[fc]^2 + cif[fc]^2) <= rate_a[idx]^2)
+            JuMP.@constraint(pm.model, (vr[fc]^2 + vi[fc]^2)*(crf[fc]^2 + cif[fc]^2) <= rate_a[idx]^2)
         end
     end
 end
@@ -468,7 +468,7 @@ function constraint_mc_thermal_limit_to(pm::AbstractUnbalancedIVRModel, nw::Int,
 
     for (idx, tc) in enumerate(t_connections)
         if rate_a[idx] < Inf
-            JuMP.@NLconstraint(pm.model, (vr[tc]^2 + vi[tc]^2)*(crt[tc]^2 + cit[tc]^2) <= rate_a[idx]^2)
+            JuMP.@constraint(pm.model, (vr[tc]^2 + vi[tc]^2)*(crt[tc]^2 + cit[tc]^2) <= rate_a[idx]^2)
         end
     end
 end
@@ -615,17 +615,17 @@ function constraint_mc_load_power_wye(pm::IVRUPowerModel, nw::Int, id::Int, bus_
     vr = var(pm, nw, :vr, bus_id)
     vi = var(pm, nw, :vi, bus_id)
 
-    crd = Vector{JuMP.NonlinearExpression}([])
-    cid = Vector{JuMP.NonlinearExpression}([])
+    crd = Vector{JuMP.NonlinearExpr}([])
+    cid = Vector{JuMP.NonlinearExpr}([])
 
     for (idx, c) in enumerate(connections)
-        push!(crd, JuMP.@NLexpression(pm.model,
-             a[idx]*vr[c]*(vr[c]^2+vi[c]^2)^(alpha[idx]/2-1)
-            +b[idx]*vi[c]*(vr[c]^2+vi[c]^2)^(beta[idx]/2 -1)
+        push!(crd, JuMP.@expression(pm.model,
+             (a[idx]*vr[c]*(vr[c]^2+vi[c]^2)^(alpha[idx]/2-1))
+            +(b[idx]*vi[c]*(vr[c]^2+vi[c]^2)^(beta[idx]/2 -1))
         ))
-        push!(cid, JuMP.@NLexpression(pm.model,
-             a[idx]*vi[c]*(vr[c]^2+vi[c]^2)^(alpha[idx]/2-1)
-            -b[idx]*vr[c]*(vr[c]^2+vi[c]^2)^(beta[idx]/2 -1)
+        push!(cid, JuMP.@expression(pm.model,
+             (a[idx]*vi[c]*(vr[c]^2+vi[c]^2)^(alpha[idx]/2-1))
+            -(b[idx]*vr[c]*(vr[c]^2+vi[c]^2)^(beta[idx]/2 -1))
         ))
     end
 
@@ -633,11 +633,11 @@ function constraint_mc_load_power_wye(pm::IVRUPowerModel, nw::Int, id::Int, bus_
     var(pm, nw, :cid_bus)[id] = JuMP.Containers.DenseAxisArray(cid, connections)
 
     if report
-        pd_bus = Vector{JuMP.NonlinearExpression}([])
-        qd_bus = Vector{JuMP.NonlinearExpression}([])
+        pd_bus = Vector{JuMP.NonlinearExpr}([])
+        qd_bus = Vector{JuMP.NonlinearExpr}([])
         for (idx,c) in enumerate(connections)
-            push!(pd_bus, JuMP.@NLexpression(pm.model,  vr[c]*crd[idx]+vi[c]*cid[idx]))
-            push!(qd_bus, JuMP.@NLexpression(pm.model, -vr[c]*cid[idx]+vi[c]*crd[idx]))
+            push!(pd_bus, JuMP.@expression(pm.model,  (vr[c]*crd[idx])+(vi[c]*cid[idx])))
+            push!(qd_bus, JuMP.@expression(pm.model, (-vr[c]*cid[idx])+(vi[c]*crd[idx])))
         end
 
         sol(pm, nw, :load, id)[:pd_bus] = JuMP.Containers.DenseAxisArray(pd_bus, connections)
@@ -646,11 +646,11 @@ function constraint_mc_load_power_wye(pm::IVRUPowerModel, nw::Int, id::Int, bus_
         sol(pm, nw, :load, id)[:crd_bus] = JuMP.Containers.DenseAxisArray(crd, connections)
         sol(pm, nw, :load, id)[:cid_bus] = JuMP.Containers.DenseAxisArray(cid, connections)
 
-        pd = Vector{JuMP.NonlinearExpression}([])
-        qd = Vector{JuMP.NonlinearExpression}([])
+        pd = Vector{JuMP.NonlinearExpr}([])
+        qd = Vector{JuMP.NonlinearExpr}([])
         for (idx, c) in enumerate(connections)
-            push!(pd, JuMP.@NLexpression(pm.model, a[idx]*(vr[c]^2+vi[c]^2)^(alpha[idx]/2) ))
-            push!(qd, JuMP.@NLexpression(pm.model, b[idx]*(vr[c]^2+vi[c]^2)^(beta[idx]/2)  ))
+            push!(pd, JuMP.@expression(pm.model, a[idx]*(vr[c]^2+vi[c]^2)^(alpha[idx]/2) ))
+            push!(qd, JuMP.@expression(pm.model, b[idx]*(vr[c]^2+vi[c]^2)^(beta[idx]/2)  ))
         end
         sol(pm, nw, :load, id)[:pd] = JuMP.Containers.DenseAxisArray(pd, connections)
         sol(pm, nw, :load, id)[:qd] = JuMP.Containers.DenseAxisArray(qd, connections)
@@ -670,27 +670,27 @@ function constraint_mc_load_power_delta(pm::IVRUPowerModel, nw::Int, id::Int, bu
     prev = Dict(i=>(i+nph-2)%nph+1 for i in 1:nph)
     next = is_triplex ? conn_bus[2] : Dict(i=>i%nph+1 for i in 1:nph)
 
-    vrd = JuMP.@NLexpression(pm.model, [i in 1:nph], vr[i]-vr[next[i]])
-    vid = JuMP.@NLexpression(pm.model, [i in 1:nph], vi[i]-vi[next[i]])
+    vrd = JuMP.@expression(pm.model, [i in 1:nph], vr[i]-vr[next[i]])
+    vid = JuMP.@expression(pm.model, [i in 1:nph], vi[i]-vi[next[i]])
 
-    crd = JuMP.@NLexpression(pm.model, [i in 1:nph],
-        a[i]*vrd[i]*(vrd[i]^2+vid[i]^2)^(alpha[i]/2-1)
-       +b[i]*vid[i]*(vrd[i]^2+vid[i]^2)^(beta[i]/2 -1)
+    crd = JuMP.@expression(pm.model, [i in 1:nph],
+        (a[i]*vrd[i]*(vrd[i]^2+vid[i]^2)^(alpha[i]/2-1))
+       +(b[i]*vid[i]*(vrd[i]^2+vid[i]^2)^(beta[i]/2 -1))
     )
-    cid = JuMP.@NLexpression(pm.model, [i in 1:nph],
-        a[i]*vid[i]*(vrd[i]^2+vid[i]^2)^(alpha[i]/2-1)
-       -b[i]*vrd[i]*(vrd[i]^2+vid[i]^2)^(beta[i]/2 -1)
+    cid = JuMP.@expression(pm.model, [i in 1:nph],
+        (a[i]*vid[i]*(vrd[i]^2+vid[i]^2)^(alpha[i]/2-1))
+       -(b[i]*vrd[i]*(vrd[i]^2+vid[i]^2)^(beta[i]/2 -1))
     )
 
     crd_bus = Dict()
     cid_bus = Dict()
     for (idx, c) in enumerate(conn_bus)
         if is_triplex
-            crd_bus[c] = JuMP.@NLexpression(pm.model, (-1.0)^(c-1)*crd[1])
-            cid_bus[c] = JuMP.@NLexpression(pm.model, (-1.0)^(c-1)*cid[1])
+            crd_bus[c] = JuMP.@expression(pm.model, (-1.0)^(c-1)*crd[1])
+            cid_bus[c] = JuMP.@expression(pm.model, (-1.0)^(c-1)*cid[1])
         else
-            crd_bus[c] = JuMP.@NLexpression(pm.model, crd[c]-crd[prev[c]])
-            cid_bus[c] = JuMP.@NLexpression(pm.model, cid[c]-cid[prev[c]])
+            crd_bus[c] = JuMP.@expression(pm.model, crd[c]-crd[prev[c]])
+            cid_bus[c] = JuMP.@expression(pm.model, cid[c]-cid[prev[c]])
         end
     end
 
@@ -698,13 +698,13 @@ function constraint_mc_load_power_delta(pm::IVRUPowerModel, nw::Int, id::Int, bu
     var(pm, nw, :cid_bus)[id] = cid_bus
 
     if report
-        pd_bus = JuMP.@NLexpression(pm.model, [c in conn_bus],  vr[c]*crd_bus[c]+vi[c]*cid_bus[c])
-        qd_bus = JuMP.@NLexpression(pm.model, [c in conn_bus], -vr[c]*cid_bus[c]+vi[c]*crd_bus[c])
+        pd_bus = JuMP.@expression(pm.model, [c in conn_bus], -(vr[c]*(-crd_bus[c]))-(vi[c]*(-cid_bus[c])))
+        qd_bus = JuMP.@expression(pm.model, [c in conn_bus],  (vr[c]*(-cid_bus[c]))-(vi[c]*(-crd_bus[c])))
         sol(pm, nw, :load, id)[:pd_bus] = pd_bus
         sol(pm, nw, :load, id)[:qd_bus] = qd_bus
 
-        pd = JuMP.@NLexpression(pm.model, [i in 1:nph], a[i]*(vrd[i]^2+vid[i]^2)^(alpha[i]/2) )
-        qd = JuMP.@NLexpression(pm.model, [i in 1:nph], b[i]*(vrd[i]^2+vid[i]^2)^(beta[i]/2)  )
+        pd = JuMP.@expression(pm.model, [i in 1:nph], a[i]*(vrd[i]^2+vid[i]^2)^(alpha[i]/2) )
+        qd = JuMP.@expression(pm.model, [i in 1:nph], b[i]*(vrd[i]^2+vid[i]^2)^(beta[i]/2)  )
         sol(pm, nw, :load, id)[:pd] = pd
         sol(pm, nw, :load, id)[:qd] = qd
     end
@@ -718,12 +718,12 @@ function constraint_mc_generator_power_wye(pm::IVRUPowerModel, nw::Int, id::Int,
     crg = var(pm, nw, :crg, id)
     cig = var(pm, nw, :cig, id)
 
-    pg = Vector{JuMP.NonlinearExpression}([])
-    qg = Vector{JuMP.NonlinearExpression}([])
+    pg = Vector{JuMP.NonlinearExpr}([])
+    qg = Vector{JuMP.NonlinearExpr}([])
 
     for (idx, c) in enumerate(connections)
-        push!(pg, JuMP.@NLexpression(pm.model,  vr[c]*crg[c]+vi[c]*cig[c]))
-        push!(qg, JuMP.@NLexpression(pm.model, -vr[c]*cig[c]+vi[c]*crg[c]))
+        push!(pg, JuMP.@expression(pm.model, -(vr[c]*(-crg[c]))-(vi[c]*(-cig[c]))))
+        push!(qg, JuMP.@expression(pm.model,  (vr[c]*(-cig[c]))-(vi[c]*(-crg[c]))))
     end
 
     if bounded
@@ -775,41 +775,41 @@ function constraint_mc_generator_power_delta(pm::IVRUPowerModel, nw::Int, id::In
     vrg = Dict()
     vig = Dict()
     for c in connections
-        vrg[c] = JuMP.@NLexpression(pm.model, vr[c]-vr[next[c]])
-        vig[c] = JuMP.@NLexpression(pm.model, vi[c]-vi[next[c]])
+        vrg[c] = JuMP.@expression(pm.model, vr[c]-vr[next[c]])
+        vig[c] = JuMP.@expression(pm.model, vi[c]-vi[next[c]])
     end
 
-    pg = Vector{JuMP.NonlinearExpression}([])
-    qg = Vector{JuMP.NonlinearExpression}([])
+    pg = Vector{JuMP.NonlinearExpr}([])
+    qg = Vector{JuMP.NonlinearExpr}([])
     for c in connections
-        push!(pg, JuMP.@NLexpression(pm.model,  vrg[c]*crg[c]+vig[c]*cig[c]))
-        push!(qg, JuMP.@NLexpression(pm.model, -vrg[c]*cig[c]+vig[c]*crg[c]))
+        push!(pg, JuMP.@expression(pm.model, -(vrg[c]*(-crg[c]))-(vig[c]*(-cig[c]))))
+        push!(qg, JuMP.@expression(pm.model,  (vrg[c]*(-cig[c]))-(vig[c]*(-crg[c]))))
     end
 
     if bounded
-        JuMP.@NLconstraint(pm.model, [i in 1:nph], pmin[i] <= pg[i])
-        JuMP.@NLconstraint(pm.model, [i in 1:nph], pmax[i] >= pg[i])
-        JuMP.@NLconstraint(pm.model, [i in 1:nph], qmin[i] <= qg[i])
-        JuMP.@NLconstraint(pm.model, [i in 1:nph], qmax[i] >= qg[i])
+        JuMP.@constraint(pm.model, [i in 1:nph], pmin[i] <= pg[i])
+        JuMP.@constraint(pm.model, [i in 1:nph], pmax[i] >= pg[i])
+        JuMP.@constraint(pm.model, [i in 1:nph], qmin[i] <= qg[i])
+        JuMP.@constraint(pm.model, [i in 1:nph], qmax[i] >= qg[i])
     end
 
-    crg_bus = Vector{JuMP.NonlinearExpression}([])
-    cig_bus = Vector{JuMP.NonlinearExpression}([])
+    crg_bus = Vector{JuMP.NonlinearExpr}([])
+    cig_bus = Vector{JuMP.NonlinearExpr}([])
     for c in conn_bus
         if is_triplex
-            push!(crg_bus, JuMP.@NLexpression(pm.model, (-1.0)^(c-1)*crg[1]))
-            push!(cig_bus, JuMP.@NLexpression(pm.model, (-1.0)^(c-1)*cig[1]))
+            push!(crg_bus, JuMP.@expression(pm.model, (-1.0)^(c-1)*crg[1]))
+            push!(cig_bus, JuMP.@expression(pm.model, (-1.0)^(c-1)*cig[1]))
         else
-            push!(crg_bus, JuMP.@NLexpression(pm.model, crg[c]-crg[prev[c]]))
-            push!(cig_bus, JuMP.@NLexpression(pm.model, cig[c]-cig[prev[c]]))
+            push!(crg_bus, JuMP.@expression(pm.model, crg[c]-crg[prev[c]]))
+            push!(cig_bus, JuMP.@expression(pm.model, cig[c]-cig[prev[c]]))
         end
     end
 
-    pg_bus = Vector{JuMP.NonlinearExpression}([])
-    qg_bus = Vector{JuMP.NonlinearExpression}([])
+    pg_bus = Vector{JuMP.NonlinearExpr}([])
+    qg_bus = Vector{JuMP.NonlinearExpr}([])
     for (idx,c) in enumerate(conn_bus)
-        push!(pg_bus, JuMP.@NLexpression(pm.model,  vr[c]*crg_bus[c]+vi[c]*cig_bus[c]))
-        push!(qg_bus, JuMP.@NLexpression(pm.model, -vr[c]*cig_bus[c]+vi[c]*crg_bus[c]))
+        push!(pg_bus, JuMP.@expression(pm.model, -(vr[c]*(-crg_bus[c]))-(vi[c]*(-cig_bus[c]))))
+        push!(qg_bus, JuMP.@expression(pm.model,  (vr[c]*(-cig_bus[c]))-(vi[c]*(-crg_bus[c]))))
     end
 
     var(pm, nw, :crg_bus)[id] = JuMP.Containers.DenseAxisArray(crg_bus, conn_bus)

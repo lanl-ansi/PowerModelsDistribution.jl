@@ -316,13 +316,13 @@ function constraint_mc_power_balance(pm::FBSUBFPowerModel, nw::Int, i::Int, term
               sum(  p[arc][t] for (arc, conns) in bus_arcs if t in conns)
             + sum(psw[arc][t] for (arc, conns) in bus_arcs_sw if t in conns)
             + sum( pt[arc][t] for (arc, conns) in bus_arcs_trans if t in conns)
-            ==
-              sum(pg[gen][t] for (gen, conns) in bus_gens if t in conns)
-            - sum(ps[strg][t] for (strg, conns) in bus_storage if t in conns)
-            - sum(pd[load][t] for (load, conns) in bus_loads if t in conns)
-            + ( -vr0[idx] * sum(Gt[idx,jdx]*vr0[jdx]-Bt[idx,jdx]*vi0[jdx] for (jdx,u) in ungrounded_terminals)
+            + sum(-pg[gen][t] for (gen, conns) in bus_gens if t in conns)
+            + sum(ps[strg][t] for (strg, conns) in bus_storage if t in conns)
+            + sum(pd[load][t] for (load, conns) in bus_loads if t in conns)
+            - ( -vr0[idx] * sum(Gt[idx,jdx]*vr0[jdx]-Bt[idx,jdx]*vi0[jdx] for (jdx,u) in ungrounded_terminals)
                 -vi0[idx] * sum(Gt[idx,jdx]*vi0[jdx]+Bt[idx,jdx]*vr0[jdx] for (jdx,u) in ungrounded_terminals)
             )
+            == 0.0
         )
         push!(cstr_p, cp)
 
@@ -330,13 +330,13 @@ function constraint_mc_power_balance(pm::FBSUBFPowerModel, nw::Int, i::Int, term
               sum(  q[arc][t] for (arc, conns) in bus_arcs if t in conns)
             + sum(qsw[arc][t] for (arc, conns) in bus_arcs_sw if t in conns)
             + sum( qt[arc][t] for (arc, conns) in bus_arcs_trans if t in conns)
-            ==
-              sum(qg[gen][t] for (gen, conns) in bus_gens if t in conns)
-            - sum(qd[load][t] for (load, conns) in bus_loads if t in conns)
-            - sum(qs[strg][t] for (strg, conns) in bus_storage if t in conns)
-            + ( vr0[idx] * sum(Gt[idx,jdx]*vi0[jdx]+Bt[idx,jdx]*vr0[jdx] for (jdx,u) in ungrounded_terminals)
+            + sum(-qg[gen][t] for (gen, conns) in bus_gens if t in conns)
+            + sum(qd[load][t] for (load, conns) in bus_loads if t in conns)
+            + sum(qs[strg][t] for (strg, conns) in bus_storage if t in conns)
+            - ( vr0[idx] * sum(Gt[idx,jdx]*vi0[jdx]+Bt[idx,jdx]*vr0[jdx] for (jdx,u) in ungrounded_terminals)
                -vi0[idx] * sum(Gt[idx,jdx]*vr0[jdx]-Bt[idx,jdx]*vi0[jdx] for (jdx,u) in ungrounded_terminals)
             )
+            == 0.0
         )
         push!(cstr_q, cq)
     end
@@ -402,13 +402,13 @@ function constraint_mc_power_balance_capc(pm::FBSUBFPowerModel, nw::Int, i::Int,
               sum(  p[arc][t] for (arc, conns) in bus_arcs if t in conns)
             + sum(psw[arc][t] for (arc, conns) in bus_arcs_sw if t in conns)
             + sum( pt[arc][t] for (arc, conns) in bus_arcs_trans if t in conns)
-            ==
-              sum(pg[gen][t] for (gen, conns) in bus_gens if t in conns)
-            - sum(ps[strg][t] for (strg, conns) in bus_storage if t in conns)
-            - sum(pd[load][t] for (load, conns) in bus_loads if t in conns)
-            + ( -vr0[idx] * sum(Gt[idx,jdx]*vr0[jdx]-Bt[idx,jdx]*vi0[jdx] for (jdx,u) in ungrounded_terminals)
+            + sum(-pg[gen][t] for (gen, conns) in bus_gens if t in conns)
+            + sum(ps[strg][t] for (strg, conns) in bus_storage if t in conns)
+            + sum(pd[load][t] for (load, conns) in bus_loads if t in conns)
+            - ( -vr0[idx] * sum(Gt[idx,jdx]*vr0[jdx]-Bt[idx,jdx]*vi0[jdx] for (jdx,u) in ungrounded_terminals)
                 -vi0[idx] * sum(Gt[idx,jdx]*vi0[jdx]+Bt[idx,jdx]*vr0[jdx] for (jdx,u) in ungrounded_terminals)
             )
+            == 0.0
         )
         push!(cstr_p, cp)
 
@@ -416,13 +416,13 @@ function constraint_mc_power_balance_capc(pm::FBSUBFPowerModel, nw::Int, i::Int,
               sum(  q[arc][t] for (arc, conns) in bus_arcs if t in conns)
             + sum(qsw[arc][t] for (arc, conns) in bus_arcs_sw if t in conns)
             + sum( qt[arc][t] for (arc, conns) in bus_arcs_trans if t in conns)
-            ==
-              sum(qg[gen][t] for (gen, conns) in bus_gens if t in conns)
-            - sum(qd[load][t] for (load, conns) in bus_loads if t in conns)
-            - sum(qs[strg][t] for (strg, conns) in bus_storage if t in conns)
-            + ( vr0[idx] * sum(Gt[idx,jdx]*vi0[jdx]+Bt[idx,jdx]*vr0[jdx] for (jdx,u) in ungrounded_terminals)
+            + sum(-qg[gen][t] for (gen, conns) in bus_gens if t in conns)
+            + sum(qd[load][t] for (load, conns) in bus_loads if t in conns)
+            + sum(qs[strg][t] for (strg, conns) in bus_storage if t in conns)
+            - ( vr0[idx] * sum(Gt[idx,jdx]*vi0[jdx]+Bt[idx,jdx]*vr0[jdx] for (jdx,u) in ungrounded_terminals)
                -vi0[idx] * sum(Gt[idx,jdx]*vr0[jdx]-Bt[idx,jdx]*vi0[jdx] for (jdx,u) in ungrounded_terminals)
             )
+            == 0.0
         )
         push!(cstr_q, cq)
     end
@@ -827,8 +827,8 @@ function constraint_mc_generator_power_delta(pm::FBSUBFPowerModel, nw::Int, id::
             crg_bus[c] = JuMP.@expression(pm.model, (-1.0)^(c-1)*crg[1])
             cig_bus[c] = JuMP.@expression(pm.model, (-1.0)^(c-1)*cig[1])
         else
-            crg_bus[c] = JuMP.@NLexpression(pm.model, crg[c]-crg[prev[c]])
-            cig_bus[c] = JuMP.@NLexpression(pm.model, cig[c]-cig[prev[c]])
+            crg_bus[c] = JuMP.@expression(pm.model, crg[c]-crg[prev[c]])
+            cig_bus[c] = JuMP.@expression(pm.model, cig[c]-cig[prev[c]])
         end
     end
 

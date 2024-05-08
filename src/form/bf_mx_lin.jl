@@ -138,7 +138,7 @@ function constraint_mc_power_balance(pm::LPUBFDiagModel, nw::Int, i::Int, termin
               sum(  p[a][t] for (a, conns) in bus_arcs if t in conns)
             + sum(psw[a][t] for (a, conns) in bus_arcs_sw if t in conns)
             + sum( pt[a][t] for (a, conns) in bus_arcs_trans if t in conns)
-            - sum( pg[g][t] for (g, conns) in bus_gens if t in conns)
+            + sum(-pg[g][t] for (g, conns) in bus_gens if t in conns)
             + sum( ps[s][t] for (s, conns) in bus_storage if t in conns)
             + sum( pd[d][t] for (d, conns) in bus_loads if t in conns)
             + sum(LinearAlgebra.diag(ref(pm, nw, :shunt, sh, "gs"))[findfirst(isequal(t), conns)]*w[t] for (sh, conns) in bus_shunts if t in conns)
@@ -151,7 +151,7 @@ function constraint_mc_power_balance(pm::LPUBFDiagModel, nw::Int, i::Int, termin
               sum(  q[a][t] for (a, conns) in bus_arcs if t in conns)
             + sum(qsw[a][t] for (a, conns) in bus_arcs_sw if t in conns)
             + sum( qt[a][t] for (a, conns) in bus_arcs_trans if t in conns)
-            - sum( qg[g][t] for (g, conns) in bus_gens if t in conns)
+            + sum(-qg[g][t] for (g, conns) in bus_gens if t in conns)
             + sum( qs[s][t] for (s, conns) in bus_storage if t in conns)
             + sum( qd[d][t] for (d, conns) in bus_loads if t in conns)
             - sum(LinearAlgebra.diag(ref(pm, nw, :shunt, sh, "bs"))[findfirst(isequal(t), conns)]*w[t] for (sh, conns) in bus_shunts if t in conns)
@@ -228,11 +228,11 @@ function constraint_mc_power_balance_capc(pm::LPUBFDiagModel, nw::Int, i::Int, t
             sum(p[a][t] for (a, conns) in bus_arcs if t in conns)
             + sum(psw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
             + sum(pt[a_trans][t] for (a_trans, conns) in bus_arcs_trans if t in conns)
-            ==
-            sum(pg[g][t] for (g, conns) in bus_gens if t in conns)
-            - sum(ps[s][t] for (s, conns) in bus_storage if t in conns)
-            - sum(pd[l][t] for (l, conns) in bus_loads if t in conns)
-            - sum((w[t] * LinearAlgebra.diag(Gt')[idx]) for (sh, conns) in bus_shunts if t in conns)
+            + sum(-pg[g][t] for (g, conns) in bus_gens if t in conns)
+            + sum(ps[s][t] for (s, conns) in bus_storage if t in conns)
+            + sum(pd[l][t] for (l, conns) in bus_loads if t in conns)
+            + sum((w[t] * LinearAlgebra.diag(Gt')[idx]) for (sh, conns) in bus_shunts if t in conns)
+            == 0.0
         )
         push!(cstr_p, cp)
 
@@ -257,12 +257,12 @@ function constraint_mc_power_balance_capc(pm::LPUBFDiagModel, nw::Int, i::Int, t
             sum(q[a][t] for (a, conns) in bus_arcs if t in conns)
             + sum(qsw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
             + sum(qt[a_trans][t] for (a_trans, conns) in bus_arcs_trans if t in conns)
-            ==
-            sum(qg[g][t] for (g, conns) in bus_gens if t in conns)
-            - sum(qs[s][t] for (s, conns) in bus_storage if t in conns)
-            - sum(qd[l][t] for (l, conns) in bus_loads if t in conns)
-            - sum((-w[t] * LinearAlgebra.diag(Bt')[idx]) for (sh, conns) in uncontrolled_shunts if t in conns)
-            - sum(-var(pm, nw, :capacitor_reactive_power, sh)[t] for (sh, conns) in controlled_shunts if t in conns)
+            + sum(-qg[g][t] for (g, conns) in bus_gens if t in conns)
+            + sum(qs[s][t] for (s, conns) in bus_storage if t in conns)
+            + sum(qd[l][t] for (l, conns) in bus_loads if t in conns)
+            + sum((-w[t] * LinearAlgebra.diag(Bt')[idx]) for (sh, conns) in uncontrolled_shunts if t in conns)
+            + sum(-var(pm, nw, :capacitor_reactive_power, sh)[t] for (sh, conns) in controlled_shunts if t in conns)
+            == 0.0
         )
         push!(cstr_q, cq)
     end
