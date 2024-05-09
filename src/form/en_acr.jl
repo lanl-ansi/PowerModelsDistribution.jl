@@ -57,19 +57,19 @@ function constraint_mc_generator_power_wye(pm::AbstractExplicitNeutralACRModel, 
         vr_pn = [vr[p]-vr[n] for p in phases]
         vi_pn = [vi[p]-vi[n] for p in phases]
 
-        crg = JuMP.@expression(pm.model, [idx in 1:P],
+        crg = JuMP.@NLexpression(pm.model, [idx in 1:P],
             ( pg[idx]*vr_pn[idx] + qg[idx]*vi_pn[idx] )/( vr_pn[idx]^2 + vi_pn[idx]^2 )
         )
-        cig = JuMP.@expression(pm.model, [idx in 1:P],
+        cig = JuMP.@NLexpression(pm.model, [idx in 1:P],
             ( pg[idx]*vi_pn[idx] - qg[idx]*vr_pn[idx] )/( vr_pn[idx]^2 + vi_pn[idx]^2 )
         )
         pg_bus_unmerged = [
-            [JuMP.@expression(pm.model, vr[p]*crg[idx]+vi[p]*cig[idx]) for (idx,p) in enumerate(phases)]...,
-            JuMP.@expression(pm.model, vr[n]*sum(-crg[idx] for idx in 1:P)+vi[n]*sum(-cig[idx] for idx in 1:P))
+            [JuMP.@NLexpression(pm.model, vr[p]*crg[idx]+vi[p]*cig[idx]) for (idx,p) in enumerate(phases)]...,
+            JuMP.@NLexpression(pm.model, vr[n]*sum(-crg[idx] for idx in 1:P)+vi[n]*sum(-cig[idx] for idx in 1:P))
         ]
         qg_bus_unmerged = [
-            [JuMP.@expression(pm.model, -vr[p]*cig[idx]+vi[p]*crg[idx]) for (idx,p) in enumerate(phases)]...,
-            JuMP.@expression(pm.model, -vr[n]*sum(-cig[idx] for idx in 1:P)+vi[n]*sum(-crg[idx] for idx in 1:P))
+            [JuMP.@NLexpression(pm.model, -vr[p]*cig[idx]+vi[p]*crg[idx]) for (idx,p) in enumerate(phases)]...,
+            JuMP.@NLexpression(pm.model, -vr[n]*sum(-cig[idx] for idx in 1:P)+vi[n]*sum(-crg[idx] for idx in 1:P))
         ]
     end
     var(pm, nw, :pg_bus)[id] = pg_bus = _merge_bus_flows(pm, pg_bus_unmerged, connections)
@@ -115,17 +115,17 @@ function constraint_mc_generator_power_delta(pm::AbstractExplicitNeutralACRModel
     vr_pp = [vr[c]-vr[d] for (c,d) in zip(ph,ph_next)]
     vi_pp = [vi[c]-vi[d] for (c,d) in zip(ph,ph_next)]
 
-    crg = JuMP.@expression(pm.model, [idx in 1:P],
+    crg = JuMP.@NLexpression(pm.model, [idx in 1:P],
         ( pg[idx]*vr_pp[idx] + qg[idx]*vi_pp[idx] )/( vr_pp[idx]^2 + vi_pp[idx]^2 )
     )
-    cig = JuMP.@expression(pm.model, [idx in 1:P],
+    cig = JuMP.@NLexpression(pm.model, [idx in 1:P],
         ( pg[idx]*vi_pp[idx] - qg[idx]*vr_pp[idx] )/( vr_pp[idx]^2 + vi_pp[idx]^2 )
     )
-    crg_bus = JuMP.@expression(pm.model, [idx in 1:P], crg[idx] - crg[idxs_prev[idx]])
-    cig_bus = JuMP.@expression(pm.model, [idx in 1:P], cig[idx] - cig[idxs_prev[idx]])
+    crg_bus = JuMP.@NLexpression(pm.model, [idx in 1:P], crg[idx] - crg[idxs_prev[idx]])
+    cig_bus = JuMP.@NLexpression(pm.model, [idx in 1:P], cig[idx] - cig[idxs_prev[idx]])
 
-    pg_bus_unmerged = [JuMP.@expression(pm.model,  vr[p]*crg_bus[idx]+vi[p]*cig_bus[idx]) for (idx,p) in enumerate(ph)]
-    qg_bus_unmerged = [JuMP.@expression(pm.model, -vr[p]*cig_bus[idx]+vi[p]*crg_bus[idx]) for (idx,p) in enumerate(ph)]
+    pg_bus_unmerged = [JuMP.@NLexpression(pm.model,  vr[p]*crg_bus[idx]+vi[p]*cig_bus[idx]) for (idx,p) in enumerate(ph)]
+    qg_bus_unmerged = [JuMP.@NLexpression(pm.model, -vr[p]*cig_bus[idx]+vi[p]*crg_bus[idx]) for (idx,p) in enumerate(ph)]
 
     var(pm, nw, :pg_bus)[id] = pg_bus = _merge_bus_flows(pm, pg_bus_unmerged, connections)
     var(pm, nw, :qg_bus)[id] = qg_bus = _merge_bus_flows(pm, qg_bus_unmerged, connections)
@@ -190,8 +190,8 @@ function constraint_mc_load_power_wye(pm::AbstractExplicitNeutralACRModel, nw::I
     vr_pn = [vr[p]-vr[n] for p in phases]
     vi_pn = [vi[p]-vi[n] for p in phases]
 
-    crd = JuMP.@expression(pm.model, [idx in 1:P], a[idx]*vr_pn[idx]*(vr_pn[idx]^2+vi_pn[idx]^2)^(alpha[idx]/2-1)+b[idx]*vi_pn[idx]*(vr_pn[idx]^2+vi_pn[idx]^2)^(beta[idx]/2 -1))
-    cid = JuMP.@expression(pm.model, [idx in 1:P], a[idx]*vi_pn[idx]*(vr_pn[idx]^2+vi_pn[idx]^2)^(alpha[idx]/2-1)-b[idx]*vr_pn[idx]*(vr_pn[idx]^2+vi_pn[idx]^2)^(beta[idx]/2 -1))
+    crd = JuMP.@NLexpression(pm.model, [idx in 1:P], a[idx]*vr_pn[idx]*(vr_pn[idx]^2+vi_pn[idx]^2)^(alpha[idx]/2-1)+b[idx]*vi_pn[idx]*(vr_pn[idx]^2+vi_pn[idx]^2)^(beta[idx]/2 -1))
+    cid = JuMP.@NLexpression(pm.model, [idx in 1:P], a[idx]*vi_pn[idx]*(vr_pn[idx]^2+vi_pn[idx]^2)^(alpha[idx]/2-1)-b[idx]*vr_pn[idx]*(vr_pn[idx]^2+vi_pn[idx]^2)^(beta[idx]/2 -1))
 
 
     # if constant power load
@@ -199,8 +199,8 @@ function constraint_mc_load_power_wye(pm::AbstractExplicitNeutralACRModel, nw::I
         pd = a
         qd = b
     else
-        pd = JuMP.@expression(pm.model, [idx in 1:P],  vr_pn[idx]*crd[idx]+vi_pn[idx]*cid[idx])
-        qd = JuMP.@expression(pm.model, [idx in 1:P], -vr_pn[idx]*cid[idx]+vi_pn[idx]*crd[idx])
+        pd = JuMP.@NLexpression(pm.model, [idx in 1:P],  vr_pn[idx]*crd[idx]+vi_pn[idx]*cid[idx])
+        qd = JuMP.@NLexpression(pm.model, [idx in 1:P], -vr_pn[idx]*cid[idx]+vi_pn[idx]*crd[idx])
     end
 
     if iszero(vr[n]) && iszero(vi[n])
@@ -208,12 +208,12 @@ function constraint_mc_load_power_wye(pm::AbstractExplicitNeutralACRModel, nw::I
         qd_bus_unmerged = [qd..., 0.0]
     else
         pd_bus_unmerged = [
-            [JuMP.@expression(pm.model, vr[p]*crd[idx]+vi[p]*cid[idx]) for (idx,p) in enumerate(phases)]...,
-            JuMP.@expression(pm.model, vr[n]*sum(-crd[idx] for idx in 1:P)+vi[n]*sum(-cid[idx] for idx in 1:P))
+            [JuMP.@NLexpression(pm.model, vr[p]*crd[idx]+vi[p]*cid[idx]) for (idx,p) in enumerate(phases)]...,
+            JuMP.@NLexpression(pm.model, vr[n]*sum(-crd[idx] for idx in 1:P)+vi[n]*sum(-cid[idx] for idx in 1:P))
         ]
         qd_bus_unmerged = [
-            [JuMP.@expression(pm.model, -vr[p]*cid[idx]+vi[p]*crd[idx]) for (idx,p) in enumerate(phases)]...,
-            JuMP.@expression(pm.model, -vr[n]*sum(-cid[idx] for idx in 1:P)+vi[n]*sum(-crd[idx] for idx in 1:P))
+            [JuMP.@NLexpression(pm.model, -vr[p]*cid[idx]+vi[p]*crd[idx]) for (idx,p) in enumerate(phases)]...,
+            JuMP.@NLexpression(pm.model, -vr[n]*sum(-cid[idx] for idx in 1:P)+vi[n]*sum(-crd[idx] for idx in 1:P))
         ]
     end
     var(pm, nw, :pd_bus)[id] = pd_bus = _merge_bus_flows(pm, pd_bus_unmerged, connections)
@@ -258,14 +258,14 @@ function constraint_mc_load_power_delta(pm::AbstractExplicitNeutralACRModel, nw:
     vrd = [vr[t]-vr[connections[next(idx)]] for (idx,t) in enumerate(connections)]
     vid = [vi[t]-vi[connections[next(idx)]] for (idx,t) in enumerate(connections)]
 
-    crd = JuMP.@expression(pm.model, [idx in 1:nph], a[idx]*vrd[idx]*(vrd[idx]^2+vid[idx]^2)^(alpha[idx]/2-1)+b[idx]*vid[idx]*(vrd[idx]^2+vid[idx]^2)^(beta[idx]/2 -1))
-    cid = JuMP.@expression(pm.model, [idx in 1:nph], a[idx]*vid[idx]*(vrd[idx]^2+vid[idx]^2)^(alpha[idx]/2-1)-b[idx]*vrd[idx]*(vrd[idx]^2+vid[idx]^2)^(beta[idx]/2 -1))
+    crd = JuMP.@NLexpression(pm.model, [idx in 1:nph], a[idx]*vrd[idx]*(vrd[idx]^2+vid[idx]^2)^(alpha[idx]/2-1)+b[idx]*vid[idx]*(vrd[idx]^2+vid[idx]^2)^(beta[idx]/2 -1))
+    cid = JuMP.@NLexpression(pm.model, [idx in 1:nph], a[idx]*vid[idx]*(vrd[idx]^2+vid[idx]^2)^(alpha[idx]/2-1)-b[idx]*vrd[idx]*(vrd[idx]^2+vid[idx]^2)^(beta[idx]/2 -1))
 
-    crd_bus_unmerged = JuMP.@expression(pm.model, [idx in 1:nph], crd[idx]-crd[prev(idx)])
-    cid_bus_unmerged = JuMP.@expression(pm.model, [idx in 1:nph], cid[idx]-cid[prev(idx)])
+    crd_bus_unmerged = JuMP.@NLexpression(pm.model, [idx in 1:nph], crd[idx]-crd[prev(idx)])
+    cid_bus_unmerged = JuMP.@NLexpression(pm.model, [idx in 1:nph], cid[idx]-cid[prev(idx)])
 
-    pd_bus_unmerged = [JuMP.@expression(pm.model,  vr[p]*crd_bus_unmerged[idx]+vi[p]*cid_bus_unmerged[idx]) for (idx,p) in enumerate(connections)]
-    qd_bus_unmerged = [JuMP.@expression(pm.model, -vr[p]*cid_bus_unmerged[idx]+vi[p]*crd_bus_unmerged[idx]) for (idx,p) in enumerate(connections)]
+    pd_bus_unmerged = [JuMP.@NLexpression(pm.model,  vr[p]*crd_bus_unmerged[idx]+vi[p]*cid_bus_unmerged[idx]) for (idx,p) in enumerate(connections)]
+    qd_bus_unmerged = [JuMP.@NLexpression(pm.model, -vr[p]*cid_bus_unmerged[idx]+vi[p]*crd_bus_unmerged[idx]) for (idx,p) in enumerate(connections)]
 
     var(pm, nw, :pd_bus)[id] = pd_bus = _merge_bus_flows(pm, pd_bus_unmerged, connections)
     var(pm, nw, :qd_bus)[id] = qd_bus = _merge_bus_flows(pm, qd_bus_unmerged, connections)
@@ -274,11 +274,11 @@ function constraint_mc_load_power_delta(pm::AbstractExplicitNeutralACRModel, nw:
         sol(pm, nw, :load, id)[:pd_bus] = pd_bus
         sol(pm, nw, :load, id)[:qd_bus] = qd_bus
 
-        pd = Vector{JuMP.NonlinearExpr}([])
-        qd = Vector{JuMP.NonlinearExpr}([])
+        pd = Vector{JuMP.NonlinearExpression}([])
+        qd = Vector{JuMP.NonlinearExpression}([])
         for idx in 1:nph
-            push!(pd, JuMP.@expression(pm.model, a[idx]*(vrd[idx]^2+vid[idx]^2)^(alpha[idx]/2) ))
-            push!(qd, JuMP.@expression(pm.model, b[idx]*(vrd[idx]^2+vid[idx]^2)^(beta[idx]/2)  ))
+            push!(pd, JuMP.@NLexpression(pm.model, a[idx]*(vrd[idx]^2+vid[idx]^2)^(alpha[idx]/2) ))
+            push!(qd, JuMP.@NLexpression(pm.model, b[idx]*(vrd[idx]^2+vid[idx]^2)^(beta[idx]/2)  ))
         end
         sol(pm, nw, :load, id)[:pd] = JuMP.Containers.DenseAxisArray(pd, connections)
         sol(pm, nw, :load, id)[:qd] = JuMP.Containers.DenseAxisArray(qd, connections)
@@ -357,16 +357,16 @@ function constraint_mc_transformer_power_yy(pm::AbstractExplicitNeutralACRModel,
         vr_fr_pn = [vr_fr[p]-vr_fr[f_n] for p in f_phases]
         vi_fr_pn = [vi_fr[p]-vi_fr[f_n] for p in f_phases]
 
-        crt_fr = [JuMP.@expression(pm.model, ( pt_fr[idx]*vr_fr_pn[idx]+qt_fr[idx]*vi_fr_pn[idx])/(vr_fr_pn[idx]^2+vi_fr_pn[idx]^2)) for idx in 1:P]
-        cit_fr = [JuMP.@expression(pm.model, (-pt_fr[idx]*vi_fr_pn[idx]+qt_fr[idx]*vr_fr_pn[idx])/(vr_fr_pn[idx]^2+vi_fr_pn[idx]^2)) for idx in 1:P]
+        crt_fr = [JuMP.@NLexpression(pm.model, ( pt_fr[idx]*vr_fr_pn[idx]+qt_fr[idx]*vi_fr_pn[idx])/(vr_fr_pn[idx]^2+vi_fr_pn[idx]^2)) for idx in 1:P]
+        cit_fr = [JuMP.@NLexpression(pm.model, (-pt_fr[idx]*vi_fr_pn[idx]+qt_fr[idx]*vr_fr_pn[idx])/(vr_fr_pn[idx]^2+vi_fr_pn[idx]^2)) for idx in 1:P]
 
         pt_bus_fr_unmerged = [
-            [JuMP.@expression(pm.model, vr_fr[p]*crt_fr[idx]+vi_fr[p]*cit_fr[idx]) for (idx,p) in enumerate(f_phases)]...,
-            JuMP.@expression(pm.model, vr_fr[f_n]*sum(-crt_fr[idx] for idx in 1:P)+vi_fr[f_n]*sum(-cit_fr[idx] for idx in 1:P))
+            [JuMP.@NLexpression(pm.model, vr_fr[p]*crt_fr[idx]+vi_fr[p]*cit_fr[idx]) for (idx,p) in enumerate(f_phases)]...,
+            JuMP.@NLexpression(pm.model, vr_fr[f_n]*sum(-crt_fr[idx] for idx in 1:P)+vi_fr[f_n]*sum(-cit_fr[idx] for idx in 1:P))
         ]
         qt_bus_fr_unmerged = [
-            [JuMP.@expression(pm.model, -vr_fr[p]*cit_fr[idx]+vi_fr[p]*crt_fr[idx]) for (idx,p) in enumerate(f_phases)]...,
-            JuMP.@expression(pm.model, -vr_fr[f_n]*sum(-cit_fr[idx] for idx in 1:P)+vi_fr[f_n]*sum(-crt_fr[idx] for idx in 1:P))
+            [JuMP.@NLexpression(pm.model, -vr_fr[p]*cit_fr[idx]+vi_fr[p]*crt_fr[idx]) for (idx,p) in enumerate(f_phases)]...,
+            JuMP.@NLexpression(pm.model, -vr_fr[f_n]*sum(-cit_fr[idx] for idx in 1:P)+vi_fr[f_n]*sum(-crt_fr[idx] for idx in 1:P))
         ]
     end
     var(pm, nw, :pt_bus)[f_idx] = pt_bus_fr = _merge_bus_flows(pm, pt_bus_fr_unmerged, f_connections)
@@ -380,16 +380,16 @@ function constraint_mc_transformer_power_yy(pm::AbstractExplicitNeutralACRModel,
         vr_to_pn = [vr_to[p]-vr_to[t_n] for p in t_phases]
         vi_to_pn = [vi_to[p]-vi_to[t_n] for p in t_phases]
 
-        crt_to = [JuMP.@expression(pm.model, ( pt_to[idx]*vr_to_pn[idx]+qt_to[idx]*vi_to_pn[idx])/(vr_to_pn[idx]^2+vi_to_pn[idx]^2)) for idx in 1:P]
-        cit_to = [JuMP.@expression(pm.model, (-pt_to[idx]*vi_to_pn[idx]+qt_to[idx]*vr_to_pn[idx])/(vr_to_pn[idx]^2+vi_to_pn[idx]^2)) for idx in 1:P]
+        crt_to = [JuMP.@NLexpression(pm.model, ( pt_to[idx]*vr_to_pn[idx]+qt_to[idx]*vi_to_pn[idx])/(vr_to_pn[idx]^2+vi_to_pn[idx]^2)) for idx in 1:P]
+        cit_to = [JuMP.@NLexpression(pm.model, (-pt_to[idx]*vi_to_pn[idx]+qt_to[idx]*vr_to_pn[idx])/(vr_to_pn[idx]^2+vi_to_pn[idx]^2)) for idx in 1:P]
 
         pt_bus_to_unmerged = [
-            [JuMP.@expression(pm.model, vr_to[p]*crt_to[idx]+vi_to[p]*cit_to[idx]) for (idx,p) in enumerate(t_phases)]...,
-            JuMP.@expression(pm.model, vr_to[t_n]*sum(-crt_to[idx] for idx in 1:P)+vi_to[t_n]*sum(-cit_to[idx] for idx in 1:P))
+            [JuMP.@NLexpression(pm.model, vr_to[p]*crt_to[idx]+vi_to[p]*cit_to[idx]) for (idx,p) in enumerate(t_phases)]...,
+            JuMP.@NLexpression(pm.model, vr_to[t_n]*sum(-crt_to[idx] for idx in 1:P)+vi_to[t_n]*sum(-cit_to[idx] for idx in 1:P))
         ]
         qt_bus_to_unmerged = [
-            [JuMP.@expression(pm.model, -vr_to[p]*cit_to[idx]+vi_to[p]*crt_to[idx]) for (idx,p) in enumerate(t_phases)]...,
-            JuMP.@expression(pm.model, -vr_to[t_n]*sum(-cit_to[idx] for idx in 1:P)+vi_to[t_n]*sum(-crt_to[idx] for idx in 1:P))
+            [JuMP.@NLexpression(pm.model, -vr_to[p]*cit_to[idx]+vi_to[p]*crt_to[idx]) for (idx,p) in enumerate(t_phases)]...,
+            JuMP.@NLexpression(pm.model, -vr_to[t_n]*sum(-cit_to[idx] for idx in 1:P)+vi_to[t_n]*sum(-crt_to[idx] for idx in 1:P))
         ]
     end
     var(pm, nw, :pt_bus)[t_idx] = pt_bus_to = _merge_bus_flows(pm, pt_bus_to_unmerged, t_connections)
@@ -440,14 +440,14 @@ function constraint_mc_transformer_power_dy(pm::AbstractExplicitNeutralACRModel,
     vrg_fr = [vr_fr[p]-vr_fr[f_connections[next(idx)]] for (idx,p) in enumerate(f_connections)]
     vig_fr = [vi_fr[p]-vi_fr[f_connections[next(idx)]] for (idx,p) in enumerate(f_connections)]
 
-    crt_fr = JuMP.@expression(pm.model, [idx in 1:P], (pt_fr[idx]*vrg_fr[idx]+qt_fr[idx]*vig_fr[idx])/(vrg_fr[idx]^2+vig_fr[idx]^2))
-    cit_fr = JuMP.@expression(pm.model, [idx in 1:P], (pt_fr[idx]*vig_fr[idx]-qt_fr[idx]*vrg_fr[idx])/(vrg_fr[idx]^2+vig_fr[idx]^2))
+    crt_fr = JuMP.@NLexpression(pm.model, [idx in 1:P], (pt_fr[idx]*vrg_fr[idx]+qt_fr[idx]*vig_fr[idx])/(vrg_fr[idx]^2+vig_fr[idx]^2))
+    cit_fr = JuMP.@NLexpression(pm.model, [idx in 1:P], (pt_fr[idx]*vig_fr[idx]-qt_fr[idx]*vrg_fr[idx])/(vrg_fr[idx]^2+vig_fr[idx]^2))
 
-    crt_bus_fr_unmerged = JuMP.@expression(pm.model, [idx in 1:P], crt_fr[idx]-crt_fr[prev(idx)])
-    cit_bus_fr_unmerged = JuMP.@expression(pm.model, [idx in 1:P], cit_fr[idx]-cit_fr[prev(idx)])
+    crt_bus_fr_unmerged = JuMP.@NLexpression(pm.model, [idx in 1:P], crt_fr[idx]-crt_fr[prev(idx)])
+    cit_bus_fr_unmerged = JuMP.@NLexpression(pm.model, [idx in 1:P], cit_fr[idx]-cit_fr[prev(idx)])
 
-    pt_bus_fr_unmerged = [JuMP.@expression(pm.model,  vr_fr[p]*crt_bus_fr_unmerged[idx]+vi_fr[p]*cit_bus_fr_unmerged[idx]) for (idx,p) in enumerate(f_connections)]
-    qt_bus_fr_unmerged = [JuMP.@expression(pm.model, -vr_fr[p]*cit_bus_fr_unmerged[idx]+vi_fr[p]*crt_bus_fr_unmerged[idx]) for (idx,p) in enumerate(f_connections)]
+    pt_bus_fr_unmerged = [JuMP.@NLexpression(pm.model,  vr_fr[p]*crt_bus_fr_unmerged[idx]+vi_fr[p]*cit_bus_fr_unmerged[idx]) for (idx,p) in enumerate(f_connections)]
+    qt_bus_fr_unmerged = [JuMP.@NLexpression(pm.model, -vr_fr[p]*cit_bus_fr_unmerged[idx]+vi_fr[p]*crt_bus_fr_unmerged[idx]) for (idx,p) in enumerate(f_connections)]
 
     var(pm, nw, :pt_bus)[f_idx] = pt_bus_fr = _merge_bus_flows(pm, pt_bus_fr_unmerged, f_connections)
     var(pm, nw, :qt_bus)[f_idx] = qt_bus_fr = _merge_bus_flows(pm, qt_bus_fr_unmerged, f_connections)
@@ -460,16 +460,16 @@ function constraint_mc_transformer_power_dy(pm::AbstractExplicitNeutralACRModel,
         vr_to_pn = [vr_to[p]-vr_to[t_n] for p in t_phases]
         vi_to_pn = [vi_to[p]-vi_to[t_n] for p in t_phases]
 
-        crt_to = [JuMP.@expression(pm.model, ( pt_to[idx]*vr_to_pn[idx]+qt_to[idx]*vi_to_pn[idx])/(vr_to_pn[idx]^2+vi_to_pn[idx]^2)) for idx in 1:P]
-        cit_to = [JuMP.@expression(pm.model, (-pt_to[idx]*vi_to_pn[idx]+qt_to[idx]*vr_to_pn[idx])/(vr_to_pn[idx]^2+vi_to_pn[idx]^2)) for idx in 1:P]
+        crt_to = [JuMP.@NLexpression(pm.model, ( pt_to[idx]*vr_to_pn[idx]+qt_to[idx]*vi_to_pn[idx])/(vr_to_pn[idx]^2+vi_to_pn[idx]^2)) for idx in 1:P]
+        cit_to = [JuMP.@NLexpression(pm.model, (-pt_to[idx]*vi_to_pn[idx]+qt_to[idx]*vr_to_pn[idx])/(vr_to_pn[idx]^2+vi_to_pn[idx]^2)) for idx in 1:P]
 
         pt_bus_to_unmerged = [
-            [JuMP.@expression(pm.model, vr_to[p]*crt_to[idx]+vi_to[p]*cit_to[idx]) for (idx,p) in enumerate(phases)]...,
-            JuMP.@expression(pm.model, vr_to[n]*sum(-crt_to[idx] for idx in 1:P)+vi_to[n]*sum(-cit_to[idx] for idx in 1:P))
+            [JuMP.@NLexpression(pm.model, vr_to[p]*crt_to[idx]+vi_to[p]*cit_to[idx]) for (idx,p) in enumerate(phases)]...,
+            JuMP.@NLexpression(pm.model, vr_to[n]*sum(-crt_to[idx] for idx in 1:P)+vi_to[n]*sum(-cit_to[idx] for idx in 1:P))
         ]
         qt_bus_to_unmerged = [
-            [JuMP.@expression(pm.model, -vr_to[p]*cit_to[idx]+vi_to[p]*crt_to[idx]) for (idx,p) in enumerate(phases)]...,
-            JuMP.@expression(pm.model, -vr_to[n]*sum(-cit_to[idx] for idx in 1:P)+vi_to[n]*sum(-crt_to[idx] for idx in 1:P))
+            [JuMP.@NLexpression(pm.model, -vr_to[p]*cit_to[idx]+vi_to[p]*crt_to[idx]) for (idx,p) in enumerate(phases)]...,
+            JuMP.@NLexpression(pm.model, -vr_to[n]*sum(-cit_to[idx] for idx in 1:P)+vi_to[n]*sum(-crt_to[idx] for idx in 1:P))
         ]
     end
     var(pm, nw, :pt_bus)[t_idx] = pt_bus_to = _merge_bus_flows(pm, pt_bus_to_unmerged, t_connections)
@@ -680,7 +680,7 @@ function constraint_mc_thermal_limit_from(pm::AbstractExplicitNeutralACRModel, n
         if rate_a[idx]<Inf
             # for branch-reduced models, p_fr and q_fr can be a sum of several terms
             # therefore, use a NLconstraint to handle these cases as well
-            JuMP.@constraint(pm.model, p_fr[idx]^2 + q_fr[idx]^2 <= rate_a[idx]^2)
+            JuMP.@NLconstraint(pm.model, p_fr[idx]^2 + q_fr[idx]^2 <= rate_a[idx]^2)
         end
     end
 end
@@ -706,7 +706,7 @@ function constraint_mc_thermal_limit_to(pm::AbstractExplicitNeutralACRModel, nw:
         if rate_a[idx]<Inf
             # for branch-reduced models, p_fr and q_fr can be a sum of several terms
             # therefore, use a NLconstraint to handle these cases as well
-            JuMP.@constraint(pm.model, p_to[idx]^2 + q_to[idx]^2 <= rate_a[idx]^2)
+            JuMP.@NLconstraint(pm.model, p_to[idx]^2 + q_to[idx]^2 <= rate_a[idx]^2)
         end
     end
 end

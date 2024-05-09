@@ -95,6 +95,11 @@ function constraint_mc_switch_state_on_off(pm::AbstractUnbalancedACPModel, nw::I
 
     for (idx,(fc,tc)) in enumerate(zip(f_connections, t_connections))
         if relax
+            vm_fr_ub = JuMP.has_upper_bound(vm_fr[fc]) ? JuMP.upper_bound(vm_fr[fc]) :  1e20
+            vm_to_lb = JuMP.has_lower_bound(vm_to[tc]) ? JuMP.lower_bound(vm_to[tc]) : -1e20
+            va_fr_ub = JuMP.has_upper_bound(va_fr[tc]) ? JuMP.upper_bound(va_fr[fc]) :  1e20
+            va_to_lb = JuMP.has_lower_bound(va_to[tc]) ? JuMP.lower_bound(va_to[tc]) : -1e20
+
             M = 1e20
             JuMP.@constraint(pm.model, vm_fr[fc] - vm_to[tc] <=  M * (1-z))
             JuMP.@constraint(pm.model, vm_fr[fc] - vm_to[tc] >= -M * (1-z))
@@ -144,39 +149,39 @@ function constraint_mc_power_balance_slack(pm::AbstractUnbalancedACPModel, nw::I
     ungrounded_terminals = [(idx,t) for (idx,t) in enumerate(terminals) if !grounded[idx]]
 
     for (idx,t) in ungrounded_terminals
-        cp = JuMP.@constraint(pm.model,
+        cp = JuMP.@NLconstraint(pm.model,
               sum(  p[a][t] for (a, conns) in bus_arcs if t in conns)
             + sum(psw[a][t] for (a, conns) in bus_arcs_sw if t in conns)
             + sum( pt[a][t] for (a, conns) in bus_arcs_trans if t in conns)
-            + sum(-pg[g][t] for (g, conns) in bus_gens if t in conns)
-            + sum( ps[s][t] for (s, conns) in bus_storage if t in conns)
-            + Pd[idx]
-            + ( # shunt
-                (Gt[idx,idx] * vm[t]^2)
-                +sum( (Gt[idx,jdx] * vm[t]*vm[u] * cos(va[t]-va[u]))
-                     +(Bt[idx,jdx] * vm[t]*vm[u] * sin(va[t]-va[u]))
+            ==
+              sum(pg[g][t] for (g, conns) in bus_gens if t in conns)
+            - sum(ps[s][t] for (s, conns) in bus_storage if t in conns)
+            - Pd[idx]
+            - ( # shunt
+                Gt[idx,idx] * vm[t]^2
+                +sum( Gt[idx,jdx] * vm[t]*vm[u] * cos(va[t]-va[u])
+                     +Bt[idx,jdx] * vm[t]*vm[u] * sin(va[t]-va[u])
                      for (jdx,u) in ungrounded_terminals if idx != jdx)
             )
-            - p_slack[t]
-            == 0.0
+            + p_slack[t]
         )
         push!(cstr_p, cp)
 
-        cq = JuMP.@constraint(pm.model,
+        cq = JuMP.@NLconstraint(pm.model,
               sum(  q[a][t] for (a, conns) in bus_arcs if t in conns)
             + sum(qsw[a][t] for (a, conns) in bus_arcs_sw if t in conns)
             + sum( qt[a][t] for (a, conns) in bus_arcs_trans if t in conns)
-            + sum(-qg[g][t] for (g, conns) in bus_gens if t in conns)
-            + sum( qs[s][t] for (s, conns) in bus_storage if t in conns)
-            + Qd[idx]
-            + ( # shunt
-                (-Bt[idx,idx] * vm[t]^2)
-                -sum( (Bt[idx,jdx] * vm[t]*vm[u] * cos(va[t]-va[u]))
-                     -(Gt[idx,jdx] * vm[t]*vm[u] * sin(va[t]-va[u]))
+            ==
+              sum(qg[g][t] for (g, conns) in bus_gens if t in conns)
+            - sum(qs[s][t] for (s, conns) in bus_storage if t in conns)
+            - Qd[idx]
+            - ( # shunt
+                -Bt[idx,idx] * vm[t]^2
+                -sum( Bt[idx,jdx] * vm[t]*vm[u] * cos(va[t]-va[u])
+                     -Gt[idx,jdx] * vm[t]*vm[u] * sin(va[t]-va[u])
                      for (jdx,u) in ungrounded_terminals if idx != jdx)
             )
-            - q_slack[t]
-            == 0.0
+            + q_slack[t]
         )
         push!(cstr_q, cq)
 
@@ -218,17 +223,17 @@ function constraint_mc_power_balance_shed(pm::AbstractUnbalancedACPModel, nw::In
     ungrounded_terminals = [(idx,t) for (idx,t) in enumerate(terminals) if !grounded[idx]]
 
     for (idx,t) in ungrounded_terminals
-        cp = JuMP.@constraint(pm.model,
-              sum(p[a][t] for (a, conns) in bus_arcs if t in conns)
+        cp = JuMP.@NLconstraint(pm.model,
+              sum(     p[a][t] for (a, conns) in bus_arcs if t in conns)
             + sum(psw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
-            + sum(pt[a_t][t] for (a_t, conns) in bus_arcs_trans if t in conns)
-            + sum(-pg[g][t]*z_gen[g] for (g, conns) in bus_gens if t in conns)
+            + sum(  pt[a_t][t] for (a_t, conns) in bus_arcs_trans if t in conns)
+            - sum(pg[g][t]*z_gen[g] for (g, conns) in bus_gens if t in conns)
             + sum(ps[s][t]*z_storage[s] for (s, conns) in bus_storage if t in conns)
             + sum(ref(pm, nw, :load, d, "pd")[findfirst(isequal(t), conns)]*z_demand[d] for (d, conns) in bus_loads if t in conns)
             + sum(z_shunt[s] *
-                ((ref(pm, nw, :shunt, s)["gs"][findfirst(isequal(t), conns), findfirst(isequal(t), conns)] * vm[t]^2)
-                +sum( (ref(pm, nw, :shunt, s)["gs"][findfirst(isequal(t), conns), findfirst(isequal(u), conns)] * vm[t]*vm[u] * cos(va[t]-va[u]))
-                     +(ref(pm, nw, :shunt, s)["bs"][findfirst(isequal(t), conns), findfirst(isequal(u), conns)] * vm[t]*vm[u] * sin(va[t]-va[u]))
+                (ref(pm, nw, :shunt, s)["gs"][findfirst(isequal(t), conns), findfirst(isequal(t), conns)] * vm[t]^2
+                +sum( ref(pm, nw, :shunt, s)["gs"][findfirst(isequal(t), conns), findfirst(isequal(u), conns)] * vm[t]*vm[u] * cos(va[t]-va[u])
+                     +ref(pm, nw, :shunt, s)["bs"][findfirst(isequal(t), conns), findfirst(isequal(u), conns)] * vm[t]*vm[u] * sin(va[t]-va[u])
                 for (jdx, u) in ungrounded_terminals if idx != jdx ) )
             for (s, conns) in bus_shunts if t in conns )
             ==
@@ -236,17 +241,17 @@ function constraint_mc_power_balance_shed(pm::AbstractUnbalancedACPModel, nw::In
         )
         push!(cstr_p, cp)
 
-        cq = JuMP.@constraint(pm.model,
-              sum(q[a][t] for (a, conns) in bus_arcs if t in conns)
+        cq = JuMP.@NLconstraint(pm.model,
+              sum(     q[a][t] for (a, conns) in bus_arcs if t in conns)
             + sum(qsw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
-            + sum(qt[a_t][t] for (a_t, conns) in bus_arcs_trans if t in conns)
-            + sum(-qg[g][t]*z_gen[g] for (g, conns) in bus_gens if t in conns)
-            + sum(qs[s][t]*z_storage[s] for (s, conns) in bus_storage if t in conns)
+            + sum(  qt[a_t][t] for (a_t, conns) in bus_arcs_trans if t in conns)
+            - sum(    qg[g][t]*z_gen[g] for (g, conns) in bus_gens if t in conns)
+            + sum(    qs[s][t]*z_storage[s] for (s, conns) in bus_storage if t in conns)
             + sum(ref(pm, nw, :load, l, "qd")[findfirst(isequal(t), conns)]*z_demand[l] for (l, conns) in bus_loads if t in conns)
             + sum(z_shunt[sh] *
-                ((-ref(pm, nw, :shunt, sh)["bs"][findfirst(isequal(t), conns), findfirst(isequal(t), conns)] * vm[t]^2)
-                 -sum( (ref(pm, nw, :shunt, sh)["bs"][findfirst(isequal(t), conns), findfirst(isequal(u), conns)] * vm[t]*vm[u] * cos(va[t]-va[u]))
-                      -(ref(pm, nw, :shunt, sh)["gs"][findfirst(isequal(t), conns), findfirst(isequal(u), conns)] * vm[t]*vm[u] * sin(va[t]-va[u]))
+                (-ref(pm, nw, :shunt, sh)["bs"][findfirst(isequal(t), conns), findfirst(isequal(t), conns)] * vm[t]^2
+                 -sum( ref(pm, nw, :shunt, sh)["bs"][findfirst(isequal(t), conns), findfirst(isequal(u), conns)] * vm[t]*vm[u] * cos(va[t]-va[u])
+                      -ref(pm, nw, :shunt, sh)["gs"][findfirst(isequal(t), conns), findfirst(isequal(u), conns)] * vm[t]*vm[u] * sin(va[t]-va[u])
                 for (jdx, u) in ungrounded_terminals if idx != jdx ) )
             for (sh, conns) in bus_shunts if t in conns )
             ==
@@ -299,37 +304,37 @@ function constraint_mc_power_balance_simple(pm::AbstractUnbalancedACPModel, nw::
     ungrounded_terminals = [(idx,t) for (idx,t) in enumerate(terminals) if !grounded[idx]]
 
     for (idx,t) in ungrounded_terminals
-        cp = JuMP.@constraint(pm.model,
+        cp = JuMP.@NLconstraint(pm.model,
               sum(  p[a][t] for (a, conns) in bus_arcs if t in conns)
             + sum(psw[a][t] for (a, conns) in bus_arcs_sw if t in conns)
             + sum( pt[a][t] for (a, conns) in bus_arcs_trans if t in conns)
-            + sum(-pg[g][t] for (g, conns) in bus_gens)
-            + sum(ps[s][t] for (s, conns) in bus_storage)
-            + Pd[idx]
-            + ( # shunt
-                (Gt[idx,idx] * vm[t]^2)
-                +sum( (Gt[idx,jdx] * vm[t]*vm[u] * cos(va[t]-va[u]))
-                     +(Bt[idx,jdx] * vm[t]*vm[u] * sin(va[t]-va[u]))
+            ==
+              sum(pg[g][t] for (g, conns) in bus_gens)
+            - sum(ps[s][t] for (s, conns) in bus_storage)
+            - Pd[idx]
+            - ( # shunt
+                Gt[idx,idx] * vm[t]^2
+                +sum( Gt[idx,jdx] * vm[t]*vm[u] * cos(va[t]-va[u])
+                     +Bt[idx,jdx] * vm[t]*vm[u] * sin(va[t]-va[u])
                      for (jdx,u) in ungrounded_terminals if idx != jdx)
             )
-            == 0.0
         )
         push!(cstr_p, cp)
 
-        cq = JuMP.@constraint(pm.model,
+        cq = JuMP.@NLconstraint(pm.model,
             sum(q[a][c] for a in bus_arcs)
             + sum(qsw[a_sw][c] for a_sw in bus_arcs_sw)
             + sum(qt[a_trans][c] for a_trans in bus_arcs_trans)
-            + sum(-qg[g][c] for g in bus_gens)
-            + sum(qs[s][c] for s in bus_storage)
-            + Qd[idx]
-            + ( # shunt
-                (-Bt[idx,idx] * vm[t]^2)
-                -sum( (Bt[idx,jdx] * vm[t]*vm[u] * cos(va[t]-va[u]))
-                     -(Gt[idx,jdx] * vm[t]*vm[u] * sin(va[t]-va[u]))
+            ==
+            sum(qg[g][c] for g in bus_gens)
+            - sum(qs[s][c] for s in bus_storage)
+            - Qd[idx]
+            - ( # shunt
+                -Bt[idx,idx] * vm[t]^2
+                -sum( Bt[idx,jdx] * vm[t]*vm[u] * cos(va[t]-va[u])
+                     -Gt[idx,jdx] * vm[t]*vm[u] * sin(va[t]-va[u])
                      for (jdx,u) in ungrounded_terminals if idx != jdx)
             )
-            == 0.0
         )
         push!(cstr_q, cq)
     end
@@ -369,17 +374,17 @@ function constraint_mc_power_balance(pm::AbstractUnbalancedACPModel, nw::Int, i:
 
     for (idx,t) in ungrounded_terminals
         if any(Bs[idx,jdx] != 0 for (jdx, u) in ungrounded_terminals if idx != jdx) || any(Gs[idx,jdx] != 0 for (jdx, u) in ungrounded_terminals if idx != jdx)
-            cp = JuMP.@constraint(pm.model,
+            cp = JuMP.@NLconstraint(pm.model,
                   sum(  p[a][t] for (a, conns) in bus_arcs if t in conns)
                 + sum(psw[a][t] for (a, conns) in bus_arcs_sw if t in conns)
                 + sum( pt[a][t] for (a, conns) in bus_arcs_trans if t in conns)
-                + sum(-pg[g][t] for (g, conns) in bus_gens if t in conns)
+                - sum( pg[g][t] for (g, conns) in bus_gens if t in conns)
                 + sum( ps[s][t] for (s, conns) in bus_storage if t in conns)
                 + sum( pd[l][t] for (l, conns) in bus_loads if t in conns)
                 + ( # shunt
-                    (Gs[idx,idx] * vm[t]^2)
-                    +sum( (Gs[idx,jdx] * vm[t]*vm[u] * cos(va[t]-va[u]))
-                         +(Bs[idx,jdx] * vm[t]*vm[u] * sin(va[t]-va[u]))
+                    +Gs[idx,idx] * vm[t]^2
+                    +sum( Gs[idx,jdx] * vm[t]*vm[u] * cos(va[t]-va[u])
+                         +Bs[idx,jdx] * vm[t]*vm[u] * sin(va[t]-va[u])
                         for (jdx,u) in ungrounded_terminals if idx != jdx)
                 )
                 ==
@@ -387,17 +392,17 @@ function constraint_mc_power_balance(pm::AbstractUnbalancedACPModel, nw::Int, i:
             )
             push!(cstr_p, cp)
 
-            cq = JuMP.@constraint(pm.model,
+            cq = JuMP.@NLconstraint(pm.model,
                   sum(  q[a][t] for (a, conns) in bus_arcs if t in conns)
                 + sum(qsw[a][t] for (a, conns) in bus_arcs_sw if t in conns)
                 + sum( qt[a][t] for (a, conns) in bus_arcs_trans if t in conns)
-                + sum(-qg[g][t] for (g, conns) in bus_gens if t in conns)
+                - sum( qg[g][t] for (g, conns) in bus_gens if t in conns)
                 + sum( qs[s][t] for (s, conns) in bus_storage if t in conns)
                 + sum( qd[l][t] for (l, conns) in bus_loads if t in conns)
                 + ( # shunt
-                    (-Bs[idx,idx] * vm[t]^2)
-                    -sum( (Bs[idx,jdx] * vm[t]*vm[u] * cos(va[t]-va[u]))
-                         -(Gs[idx,jdx] * vm[t]*vm[u] * sin(va[t]-va[u]))
+                    -Bs[idx,idx] * vm[t]^2
+                    -sum( Bs[idx,jdx] * vm[t]*vm[u] * cos(va[t]-va[u])
+                         -Gs[idx,jdx] * vm[t]*vm[u] * sin(va[t]-va[u])
                          for (jdx,u) in ungrounded_terminals if idx != jdx)
                 )
                 ==
@@ -405,27 +410,27 @@ function constraint_mc_power_balance(pm::AbstractUnbalancedACPModel, nw::Int, i:
             )
             push!(cstr_q, cq)
         else
-            cp = JuMP.@constraint(pm.model,
+            cp = @smart_constraint(pm.model, [p, pg, ps, psw, pt, pd, vm],
                   sum(  p[a][t] for (a, conns) in bus_arcs if t in conns)
                 + sum(psw[a][t] for (a, conns) in bus_arcs_sw if t in conns)
                 + sum( pt[a][t] for (a, conns) in bus_arcs_trans if t in conns)
-                + sum(-pg[g][t] for (g, conns) in bus_gens if t in conns)
+                - sum( pg[g][t] for (g, conns) in bus_gens if t in conns)
                 + sum( ps[s][t] for (s, conns) in bus_storage if t in conns)
                 + sum( pd[l][t] for (l, conns) in bus_loads if t in conns)
-                + (Gs[idx,idx] * vm[t]^2)
+                + Gs[idx,idx] * vm[t]^2
                 ==
                 0.0
             )
             push!(cstr_p, cp)
 
-            cq = JuMP.@constraint(pm.model,
+            cq = @smart_constraint(pm.model, [q, qg, qs, qsw, qt, qd, vm],
                   sum(  q[a][t] for (a, conns) in bus_arcs if t in conns)
                 + sum(qsw[a][t] for (a, conns) in bus_arcs_sw if t in conns)
                 + sum( qt[a][t] for (a, conns) in bus_arcs_trans if t in conns)
-                + sum(-qg[g][t] for (g, conns) in bus_gens if t in conns)
+                - sum( qg[g][t] for (g, conns) in bus_gens if t in conns)
                 + sum( qs[s][t] for (s, conns) in bus_storage if t in conns)
                 + sum( qd[l][t] for (l, conns) in bus_loads if t in conns)
-                - (Bs[idx,idx] * vm[t]^2)
+                - Bs[idx,idx] * vm[t]^2
                 ==
                 0.0
             )
@@ -481,7 +486,7 @@ function constraint_mc_power_balance_capc(pm::AbstractUnbalancedACPModel, nw::In
     cap_state = 1.0
     ncnds = length(terminals)
     Gs = fill(0.0, ncnds, ncnds)
-    Bs = convert(Matrix{JuMP.NonlinearExpr}, JuMP.@expression(pm.model, [idx=1:ncnds, jdx=1:ncnds], 0.0))
+    Bs = convert(Matrix{JuMP.NonlinearExpression}, JuMP.@NLexpression(pm.model, [idx=1:ncnds, jdx=1:ncnds], 0.0))
     for (val, connections) in bus_shunts
         shunt = ref(pm,nw,:shunt,val)
         for (idx,c) in enumerate(connections)
@@ -490,7 +495,7 @@ function constraint_mc_power_balance_capc(pm::AbstractUnbalancedACPModel, nw::In
             end
             for (jdx,d) in enumerate(connections)
                 Gs[findfirst(isequal(c), terminals),findfirst(isequal(d), terminals)] += shunt["gs"][idx,jdx]
-                Bs[findfirst(isequal(c), terminals),findfirst(isequal(d), terminals)] = JuMP.@expression(pm.model, Bs[findfirst(isequal(c), terminals),findfirst(isequal(d), terminals)] + (shunt["bs"][idx,jdx]*cap_state))
+                Bs[findfirst(isequal(c), terminals),findfirst(isequal(d), terminals)] = JuMP.@NLexpression(pm.model, Bs[findfirst(isequal(c), terminals),findfirst(isequal(d), terminals)] + shunt["bs"][idx,jdx]*cap_state)
             end
         end
     end
@@ -501,17 +506,17 @@ function constraint_mc_power_balance_capc(pm::AbstractUnbalancedACPModel, nw::In
 
     for (idx,t) in ungrounded_terminals
         if any(Bs[idx,jdx] != 0 for (jdx, u) in ungrounded_terminals if idx != jdx) || any(Gs[idx,jdx] != 0 for (jdx, u) in ungrounded_terminals if idx != jdx)
-            cp = JuMP.@constraint(pm.model,
+            cp = JuMP.@NLconstraint(pm.model,
                   sum(  p[a][t] for (a, conns) in bus_arcs if t in conns)
                 + sum(psw[a][t] for (a, conns) in bus_arcs_sw if t in conns)
                 + sum( pt[a][t] for (a, conns) in bus_arcs_trans if t in conns)
-                + sum(-pg[g][t] for (g, conns) in bus_gens if t in conns)
+                - sum( pg[g][t] for (g, conns) in bus_gens if t in conns)
                 + sum( ps[s][t] for (s, conns) in bus_storage if t in conns)
                 + sum( pd[l][t] for (l, conns) in bus_loads if t in conns)
                 + ( # shunt
-                    (Gs[idx,idx] * vm[t]^2)
-                    +sum( (Gs[idx,jdx] * vm[t]*vm[u] * cos(va[t]-va[u]))
-                         +(Bs[idx,jdx] * vm[t]*vm[u] * sin(va[t]-va[u]))
+                    +Gs[idx,idx] * vm[t]^2
+                    +sum( Gs[idx,jdx] * vm[t]*vm[u] * cos(va[t]-va[u])
+                         +Bs[idx,jdx] * vm[t]*vm[u] * sin(va[t]-va[u])
                         for (jdx,u) in ungrounded_terminals if idx != jdx)
                 )
                 ==
@@ -519,17 +524,17 @@ function constraint_mc_power_balance_capc(pm::AbstractUnbalancedACPModel, nw::In
             )
             push!(cstr_p, cp)
 
-            cq = JuMP.@constraint(pm.model,
+            cq = JuMP.@NLconstraint(pm.model,
                   sum(  q[a][t] for (a, conns) in bus_arcs if t in conns)
                 + sum(qsw[a][t] for (a, conns) in bus_arcs_sw if t in conns)
                 + sum( qt[a][t] for (a, conns) in bus_arcs_trans if t in conns)
-                + sum(-qg[g][t] for (g, conns) in bus_gens if t in conns)
+                - sum( qg[g][t] for (g, conns) in bus_gens if t in conns)
                 + sum( qs[s][t] for (s, conns) in bus_storage if t in conns)
                 + sum( qd[l][t] for (l, conns) in bus_loads if t in conns)
                 + ( # shunt
-                    (-Bs[idx,idx] * vm[t]^2)
-                    -sum( (Bs[idx,jdx] * vm[t]*vm[u] * cos(va[t]-va[u]))
-                         -(Gs[idx,jdx] * vm[t]*vm[u] * sin(va[t]-va[u]))
+                    -Bs[idx,idx] * vm[t]^2
+                    -sum( Bs[idx,jdx] * vm[t]*vm[u] * cos(va[t]-va[u])
+                         -Gs[idx,jdx] * vm[t]*vm[u] * sin(va[t]-va[u])
                          for (jdx,u) in ungrounded_terminals if idx != jdx)
                 )
                 ==
@@ -537,27 +542,27 @@ function constraint_mc_power_balance_capc(pm::AbstractUnbalancedACPModel, nw::In
             )
             push!(cstr_q, cq)
         else
-            cp = JuMP.@constraint(pm.model,
+            cp = @smart_constraint(pm.model, [p, pg, ps, psw, pt, pd, vm],
                   sum(  p[a][t] for (a, conns) in bus_arcs if t in conns)
                 + sum(psw[a][t] for (a, conns) in bus_arcs_sw if t in conns)
                 + sum( pt[a][t] for (a, conns) in bus_arcs_trans if t in conns)
-                + sum(-pg[g][t] for (g, conns) in bus_gens if t in conns)
+                - sum( pg[g][t] for (g, conns) in bus_gens if t in conns)
                 + sum( ps[s][t] for (s, conns) in bus_storage if t in conns)
                 + sum( pd[l][t] for (l, conns) in bus_loads if t in conns)
-                + (Gs[idx,idx] * vm[t]^2)
+                + Gs[idx,idx] * vm[t]^2
                 ==
                 0.0
             )
             push!(cstr_p, cp)
 
-            cq = JuMP.@constraint(pm.model,
+            cq = @smart_constraint(pm.model, [q, qg, qs, qsw, qt, qd, vm, Bs],
                   sum(  q[a][t] for (a, conns) in bus_arcs if t in conns)
                 + sum(qsw[a][t] for (a, conns) in bus_arcs_sw if t in conns)
                 + sum( qt[a][t] for (a, conns) in bus_arcs_trans if t in conns)
-                + sum(-qg[g][t] for (g, conns) in bus_gens if t in conns)
+                - sum( qg[g][t] for (g, conns) in bus_gens if t in conns)
                 + sum( qs[s][t] for (s, conns) in bus_storage if t in conns)
                 + sum( qd[l][t] for (l, conns) in bus_loads if t in conns)
-                - (Bs[idx,idx] * vm[t]^2)
+                - Bs[idx,idx] * vm[t]^2
                 ==
                 0.0
             )
@@ -665,22 +670,22 @@ function constraint_mc_ohms_yt_from(pm::AbstractUnbalancedACPModel, nw::Int, f_b
     ohms_yt_p = JuMP.ConstraintRef[]
     ohms_yt_q = JuMP.ConstraintRef[]
     for (idx, (fc,tc)) in enumerate(zip(f_connections,t_connections))
-        push!(ohms_yt_p, JuMP.@constraint(pm.model, p_fr[fc] == ((G[idx,idx]+G_fr[idx,idx])*vm_fr[fc]^2)
-            +sum( ((G[idx,jdx]+G_fr[idx,jdx]) * vm_fr[fc]*vm_fr[fd]*cos(va_fr[fc]-va_fr[fd]))
-                 +((B[idx,jdx]+B_fr[idx,jdx]) * vm_fr[fc]*vm_fr[fd]*sin(va_fr[fc]-va_fr[fd]))
+        push!(ohms_yt_p, JuMP.@NLconstraint(pm.model, p_fr[fc] == (G[idx,idx]+G_fr[idx,idx])*vm_fr[fc]^2
+            +sum( (G[idx,jdx]+G_fr[idx,jdx]) * vm_fr[fc]*vm_fr[fd]*cos(va_fr[fc]-va_fr[fd])
+                 +(B[idx,jdx]+B_fr[idx,jdx]) * vm_fr[fc]*vm_fr[fd]*sin(va_fr[fc]-va_fr[fd])
                 for (jdx, (fd,td)) in enumerate(zip(f_connections,t_connections)) if idx != jdx)
-            +sum( (-G[idx,jdx]*vm_fr[fc]*vm_to[td]*cos(va_fr[fc]-va_to[td]))
-                  -(B[idx,jdx]*vm_fr[fc]*vm_to[td]*sin(va_fr[fc]-va_to[td]))
+            +sum( -G[idx,jdx]*vm_fr[fc]*vm_to[td]*cos(va_fr[fc]-va_to[td])
+                  -B[idx,jdx]*vm_fr[fc]*vm_to[td]*sin(va_fr[fc]-va_to[td])
                 for (jdx, (fd,td)) in enumerate(zip(f_connections,t_connections)))
             )
         )
 
-        push!(ohms_yt_q, JuMP.@constraint(pm.model, q_fr[fc] == (-(B[idx,idx]+B_fr[idx,idx])*vm_fr[fc]^2)
-            -sum( ((B[idx,jdx]+B_fr[idx,jdx])*vm_fr[fc]*vm_fr[fd]*cos(va_fr[fc]-va_fr[fd]))
-                 -((G[idx,jdx]+G_fr[idx,jdx])*vm_fr[fc]*vm_fr[fd]*sin(va_fr[fc]-va_fr[fd]))
+        push!(ohms_yt_q, JuMP.@NLconstraint(pm.model, q_fr[fc] == -(B[idx,idx]+B_fr[idx,idx])*vm_fr[fc]^2
+            -sum( (B[idx,jdx]+B_fr[idx,jdx])*vm_fr[fc]*vm_fr[fd]*cos(va_fr[fc]-va_fr[fd])
+                 -(G[idx,jdx]+G_fr[idx,jdx])*vm_fr[fc]*vm_fr[fd]*sin(va_fr[fc]-va_fr[fd])
                 for (jdx, (fd,td)) in enumerate(zip(f_connections,t_connections)) if idx != jdx)
-            -sum((-B[idx,jdx]*vm_fr[fc]*vm_to[td]*cos(va_fr[fc]-va_to[td]))
-                 +(G[idx,jdx]*vm_fr[fc]*vm_to[td]*sin(va_fr[fc]-va_to[td]))
+            -sum(-B[idx,jdx]*vm_fr[fc]*vm_to[td]*cos(va_fr[fc]-va_to[td])
+                 +G[idx,jdx]*vm_fr[fc]*vm_to[td]*sin(va_fr[fc]-va_to[td])
                 for (jdx, (fd,td)) in enumerate(zip(f_connections,t_connections)))
             )
         )
@@ -734,16 +739,16 @@ function constraint_mc_transformer_power_yy(pm::AbstractUnbalancedACPModel, nw::
                 x = transformer["controls"]["x"][idx]
 
                 # (cr+jci) = (p-jq)/(vm⋅cos(va)-jvm⋅sin(va))
-                cr = JuMP.@expression(pm.model, ( (p_to[idx]*vm_to[tc]*cos(va_to[tc])) + (q_to[idx]*vm_to[tc]*sin(va_to[tc])))/vm_to[tc]^2)
-                ci = JuMP.@expression(pm.model, ((-q_to[idx]*vm_to[tc]*cos(va_to[tc])) + (p_to[idx]*vm_to[tc]*sin(va_to[tc])))/vm_to[tc]^2)
+                cr = JuMP.@NLexpression(pm.model, ( p_to[idx]*vm_to[tc]*cos(va_to[tc]) + q_to[idx]*vm_to[tc]*sin(va_to[tc]))/vm_to[tc]^2)
+                ci = JuMP.@NLexpression(pm.model, (-q_to[idx]*vm_to[tc]*cos(va_to[tc]) + p_to[idx]*vm_to[tc]*sin(va_to[tc]))/vm_to[tc]^2)
                 # v_drop = (cr+jci)⋅(r+jx)
-                vr_drop = JuMP.@expression(pm.model, (r*cr)-(x*ci))
-                vi_drop = JuMP.@expression(pm.model, (r*ci)+(x*cr))
+                vr_drop = JuMP.@NLexpression(pm.model, r*cr-x*ci)
+                vi_drop = JuMP.@NLexpression(pm.model, r*ci+x*cr)
 
                 # v_ref-δ ≤ vm_fr-(cr+jci)⋅(r+jx)≤ v_ref+δ
                 # vm_fr/1.1 ≤ vm_to ≤ vm_fr/0.9
-                JuMP.@constraint(pm.model, ((vm_fr[fc]*cos(va_fr[fc])-vr_drop)^2) + (vm_fr[fc]*sin(va_fr[fc])-vi_drop)^2 ≥ (v_ref - δ)^2)
-                JuMP.@constraint(pm.model, ((vm_fr[fc]*cos(va_fr[fc])-vr_drop)^2) + (vm_fr[fc]*sin(va_fr[fc])-vi_drop)^2 ≤ (v_ref + δ)^2)
+                JuMP.@NLconstraint(pm.model, (vm_fr[fc]*cos(va_fr[fc])-vr_drop)^2 + (vm_fr[fc]*sin(va_fr[fc])-vi_drop)^2 ≥ (v_ref - δ)^2)
+                JuMP.@NLconstraint(pm.model, (vm_fr[fc]*cos(va_fr[fc])-vr_drop)^2 + (vm_fr[fc]*sin(va_fr[fc])-vi_drop)^2 ≤ (v_ref + δ)^2)
                 JuMP.@constraint(pm.model, vm_fr[fc]/1.1 ≤ vm_to[tc])
                 JuMP.@constraint(pm.model, vm_fr[fc]/0.9 ≥ vm_to[tc])
             end
@@ -777,10 +782,10 @@ function constraint_mc_transformer_power_dy(pm::AbstractUnbalancedACPModel, nw::
         # e.g., for nph=3: 1->3, 2->1, 3->2
         jdx = (idx-1+1)%nph+1
         fd = f_connections[jdx]
-        vd_re[idx] = JuMP.@expression(pm.model, (vm_fr[fc]*cos(va_fr[fc]))-(vm_fr[fd]*cos(va_fr[fd])))
-        vd_im[idx] = JuMP.@expression(pm.model, (vm_fr[fc]*sin(va_fr[fc]))-(vm_fr[fd]*sin(va_fr[fd])))
-        JuMP.@constraint(pm.model, vd_re[idx] == pol*tm_scale*tm[idx]*vm_to[tc]*cos(va_to[tc]))
-        JuMP.@constraint(pm.model, vd_im[idx] == pol*tm_scale*tm[idx]*vm_to[tc]*sin(va_to[tc]))
+        vd_re[idx] = JuMP.@NLexpression(pm.model, vm_fr[fc]*cos(va_fr[fc])-vm_fr[fd]*cos(va_fr[fd]))
+        vd_im[idx] = JuMP.@NLexpression(pm.model, vm_fr[fc]*sin(va_fr[fc])-vm_fr[fd]*sin(va_fr[fd]))
+        JuMP.@NLconstraint(pm.model, vd_re[idx] == pol*tm_scale*tm[idx]*vm_to[tc]*cos(va_to[tc]))
+        JuMP.@NLconstraint(pm.model, vd_im[idx] == pol*tm_scale*tm[idx]*vm_to[tc]*sin(va_to[tc]))
     end
 
     p_fr = var(pm, nw, :pt, f_idx)
@@ -796,8 +801,8 @@ function constraint_mc_transformer_power_dy(pm::AbstractUnbalancedACPModel, nw::
     # -Im(s/v) = -(q*cos(va)-p*sin(va))/|v|
     for (idx,(fc,tc)) in enumerate(zip(f_connections,t_connections))
         # id = conj(s_to/v_to)./tm
-        id_re[idx] = JuMP.@expression(pm.model,  ((p_to[tc]*cos(va_to[tc]))+(q_to[tc]*sin(va_to[tc])))/vm_to[tc]/(tm_scale*tm[idx])/pol)
-        id_im[idx] = JuMP.@expression(pm.model, -((q_to[tc]*cos(va_to[tc]))-(p_to[tc]*sin(va_to[tc])))/vm_to[tc]/(tm_scale*tm[idx])/pol)
+        id_re[idx] = JuMP.@NLexpression(pm.model,  (p_to[tc]*cos(va_to[tc])+q_to[tc]*sin(va_to[tc]))/vm_to[tc]/(tm_scale*tm[idx])/pol)
+        id_im[idx] = JuMP.@NLexpression(pm.model, -(q_to[tc]*cos(va_to[tc])-p_to[tc]*sin(va_to[tc]))/vm_to[tc]/(tm_scale*tm[idx])/pol)
     end
     for (idx, (fc,tc)) in enumerate(zip(f_connections,t_connections))
         # rotate by nph-1 to get 'previous' phase
@@ -806,13 +811,13 @@ function constraint_mc_transformer_power_dy(pm::AbstractUnbalancedACPModel, nw::
         # s_fr  = v_fr*conj(i_fr)
         #       = v_fr*conj(id[q]-id[p])
         #       = v_fr*(id_re[q]-j*id_im[q]-id_re[p]+j*id_im[p])
-        JuMP.@constraint(pm.model, p_fr[fc] ==
-             (vm_fr[fc]*cos(va_fr[fc])*( id_re[jdx]-id_re[idx]))
-            -(vm_fr[fc]*sin(va_fr[fc])*(-id_im[jdx]+id_im[idx]))
+        JuMP.@NLconstraint(pm.model, p_fr[fc] ==
+             vm_fr[fc]*cos(va_fr[fc])*( id_re[jdx]-id_re[idx])
+            -vm_fr[fc]*sin(va_fr[fc])*(-id_im[jdx]+id_im[idx])
         )
-        JuMP.@constraint(pm.model, q_fr[fc] ==
-             (vm_fr[fc]*cos(va_fr[fc])*(-id_im[jdx]+id_im[idx]))
-            +(vm_fr[fc]*sin(va_fr[fc])*( id_re[jdx]-id_re[idx]))
+        JuMP.@NLconstraint(pm.model, q_fr[fc] ==
+             vm_fr[fc]*cos(va_fr[fc])*(-id_im[jdx]+id_im[idx])
+            +vm_fr[fc]*sin(va_fr[fc])*( id_re[jdx]-id_re[idx])
         )
     end
 end
@@ -840,25 +845,25 @@ function constraint_mc_bus_voltage_magnitude_vuf(pm::AbstractUnbalancedACPModel,
     a2re = real(a^2)
     a2im = imag(a^2)
     # real and imaginary components of U+
-    vrepos = JuMP.@expression(pm.model,
-        ((vm_a*cos(va_a)) + (are*vm_b*cos(va_b)) - (aim*vm_b*sin(va_b)) + (a2re*vm_c*cos(va_c)) - (a2im*vm_c*sin(va_c)))/3
+    vrepos = JuMP.@NLexpression(pm.model,
+        (vm_a*cos(va_a) + are*vm_b*cos(va_b) - aim*vm_b*sin(va_b) + a2re*vm_c*cos(va_c) - a2im*vm_c*sin(va_c))/3
     )
-    vimpos = JuMP.@expression(pm.model,
-        ((vm_a*sin(va_a)) + (are*vm_b*sin(va_b)) + (aim*vm_b*cos(va_b)) + (a2re*vm_c*sin(va_c)) + (a2im*vm_c*cos(va_c)))/3
+    vimpos = JuMP.@NLexpression(pm.model,
+        (vm_a*sin(va_a) + are*vm_b*sin(va_b) + aim*vm_b*cos(va_b) + a2re*vm_c*sin(va_c) + a2im*vm_c*cos(va_c))/3
     )
     # square of magnitude of U+, |U+|^2
-    vmpossqr = JuMP.@expression(pm.model, vrepos^2+vimpos^2)
+    vmpossqr = JuMP.@NLexpression(pm.model, vrepos^2+vimpos^2)
     # real and imaginary components of U-
-    vreneg = JuMP.@expression(pm.model,
-        ((vm_a*cos(va_a)) + (a2re*vm_b*cos(va_b)) - (a2im*vm_b*sin(va_b)) + (are*vm_c*cos(va_c)) - (aim*vm_c*sin(va_c)))/3
+    vreneg = JuMP.@NLexpression(pm.model,
+        (vm_a*cos(va_a) + a2re*vm_b*cos(va_b) - a2im*vm_b*sin(va_b) + are*vm_c*cos(va_c) - aim*vm_c*sin(va_c))/3
     )
-    vimneg = JuMP.@expression(pm.model,
-        ((vm_a*sin(va_a)) + (a2re*vm_b*sin(va_b)) + (a2im*vm_b*cos(va_b)) + (are*vm_c*sin(va_c)) + (aim*vm_c*cos(va_c)))/3
+    vimneg = JuMP.@NLexpression(pm.model,
+        (vm_a*sin(va_a) + a2re*vm_b*sin(va_b) + a2im*vm_b*cos(va_b) + are*vm_c*sin(va_c) + aim*vm_c*cos(va_c))/3
     )
     # square of magnitude of U-, |U-|^2
-    vmnegsqr = JuMP.@expression(pm.model, vreneg^2+vimneg^2)
+    vmnegsqr = JuMP.@NLexpression(pm.model, vreneg^2+vimneg^2)
     # finally, apply constraint
-    JuMP.@constraint(pm.model, vmnegsqr <= vufmax^2*vmpossqr)
+    JuMP.@NLconstraint(pm.model, vmnegsqr <= vufmax^2*vmpossqr)
     # DEBUGGING: save references for post check
     #var(pm, nw_id_default, :vmpossqr)[bus_id] = vmpossqr
     #var(pm, nw_id_default, :vmnegsqr)[bus_id] = vmnegsqr
@@ -887,16 +892,16 @@ function constraint_mc_bus_voltage_magnitude_negative_sequence(pm::AbstractUnbal
     a2re = real(a^2)
     a2im = imag(a^2)
     # real and imaginary components of U-
-    vreneg = JuMP.@expression(pm.model,
-        ((vm_a*cos(va_a)) + (a2re*vm_b*cos(va_b)) - (a2im*vm_b*sin(va_b)) + (are*vm_c*cos(va_c)) - (aim*vm_c*sin(va_c)))/3
+    vreneg = JuMP.@NLexpression(pm.model,
+        (vm_a*cos(va_a) + a2re*vm_b*cos(va_b) - a2im*vm_b*sin(va_b) + are*vm_c*cos(va_c) - aim*vm_c*sin(va_c))/3
     )
-    vimneg = JuMP.@expression(pm.model,
-        ((vm_a*sin(va_a)) + (a2re*vm_b*sin(va_b)) + (a2im*vm_b*cos(va_b)) + (are*vm_c*sin(va_c)) + (aim*vm_c*cos(va_c)))/3
+    vimneg = JuMP.@NLexpression(pm.model,
+        (vm_a*sin(va_a) + a2re*vm_b*sin(va_b) + a2im*vm_b*cos(va_b) + are*vm_c*sin(va_c) + aim*vm_c*cos(va_c))/3
     )
     # square of magnitude of U-, |U-|^2
-    vmnegsqr = JuMP.@expression(pm.model, vreneg^2+vimneg^2)
+    vmnegsqr = JuMP.@NLexpression(pm.model, vreneg^2+vimneg^2)
     # finally, apply constraint
-    JuMP.@constraint(pm.model, vmnegsqr <= vmnegmax^2)
+    JuMP.@NLconstraint(pm.model, vmnegsqr <= vmnegmax^2)
 end
 
 
@@ -922,16 +927,16 @@ function constraint_mc_bus_voltage_magnitude_positive_sequence(pm::AbstractUnbal
     a2re = real(a^2)
     a2im = imag(a^2)
     # real and imaginary components of U+
-    vrepos = JuMP.@expression(pm.model,
-        ((vm_a*cos(va_a)) + (are*vm_b*cos(va_b)) - (aim*vm_b*sin(va_b)) + (a2re*vm_c*cos(va_c)) - (a2im*vm_c*sin(va_c)))/3
+    vrepos = JuMP.@NLexpression(pm.model,
+        (vm_a*cos(va_a) + are*vm_b*cos(va_b) - aim*vm_b*sin(va_b) + a2re*vm_c*cos(va_c) - a2im*vm_c*sin(va_c))/3
     )
-    vimpos = JuMP.@expression(pm.model,
-        ((vm_a*sin(va_a)) + (are*vm_b*sin(va_b)) + (aim*vm_b*cos(va_b)) + (a2re*vm_c*sin(va_c)) + (a2im*vm_c*cos(va_c)))/3
+    vimpos = JuMP.@NLexpression(pm.model,
+        (vm_a*sin(va_a) + are*vm_b*sin(va_b) + aim*vm_b*cos(va_b) + a2re*vm_c*sin(va_c) + a2im*vm_c*cos(va_c))/3
     )
     # square of magnitude of U+, |U+|^2
-    vmpossqr = JuMP.@expression(pm.model, vrepos^2+vimpos^2)
+    vmpossqr = JuMP.@NLexpression(pm.model, vrepos^2+vimpos^2)
     # finally, apply constraint
-    JuMP.@constraint(pm.model, vmpossqr <= vmposmax^2)
+    JuMP.@NLconstraint(pm.model, vmpossqr <= vmposmax^2)
 end
 
 
@@ -951,16 +956,16 @@ function constraint_mc_bus_voltage_magnitude_zero_sequence(pm::AbstractUnbalance
     (vm_a, vm_b, vm_c) = [var(pm, nw, :vm, bus_id)[i] for i in 1:3]
     (va_a, va_b, va_c) = [var(pm, nw, :va, bus_id)[i] for i in 1:3]
     # real and imaginary components of U+
-    vrezero = JuMP.@expression(pm.model,
-        ((vm_a*cos(va_a)) + (vm_b*cos(va_b)) + (vm_c*cos(va_c)))/3
+    vrezero = JuMP.@NLexpression(pm.model,
+        (vm_a*cos(va_a) + vm_b*cos(va_b) + vm_c*cos(va_c))/3
     )
-    vimzero = JuMP.@expression(pm.model,
-        ((vm_a*sin(va_a)) + (vm_b*sin(va_b)) + (vm_c*sin(va_c)))/3
+    vimzero = JuMP.@NLexpression(pm.model,
+        (vm_a*sin(va_a) + vm_b*sin(va_b) + vm_c*sin(va_c))/3
     )
     # square of magnitude of U+, |U+|^2
-    vmzerosqr = JuMP.@expression(pm.model, vrezero^2+vimzero^2)
+    vmzerosqr = JuMP.@NLexpression(pm.model, vrezero^2+vimzero^2)
     # finally, apply constraint
-    JuMP.@constraint(pm.model, vmzerosqr <= vmzeromax^2)
+    JuMP.@NLconstraint(pm.model, vmzerosqr <= vmzeromax^2)
 end
 
 
@@ -979,8 +984,8 @@ function constraint_mc_load_current_delta(pm::AbstractUnbalancedACPModel, nw::In
     vm_a, vm_b, vm_c = var(pm, nw, :vm, load_bus_id)
     va_a, va_b, va_c = var(pm, nw, :va, load_bus_id)
     # v_xy = v_x - v_y
-    vre_xy(vm_x, va_x, vm_y, va_y) = JuMP.@expression(pm.model, (vm_x*cos(va_x))-(vm_y*cos(va_y)))
-    vim_xy(vm_x, va_x, vm_y, va_y) = JuMP.@expression(pm.model, (vm_x*sin(va_x))-(vm_y*sin(va_y)))
+    vre_xy(vm_x, va_x, vm_y, va_y) = JuMP.@NLexpression(pm.model, vm_x*cos(va_x)-vm_y*cos(va_y))
+    vim_xy(vm_x, va_x, vm_y, va_y) = JuMP.@NLexpression(pm.model, vm_x*sin(va_x)-vm_y*sin(va_y))
     vre_ab = vre_xy(vm_a, va_a, vm_b, va_b)
     vim_ab = vim_xy(vm_a, va_a, vm_b, va_b)
     vre_bc = vre_xy(vm_b, va_b, vm_c, va_c)
@@ -988,8 +993,8 @@ function constraint_mc_load_current_delta(pm::AbstractUnbalancedACPModel, nw::In
     vre_ca = vre_xy(vm_c, va_c, vm_a, va_a)
     vim_ca = vim_xy(vm_c, va_c, vm_a, va_a)
     # i_xy = conj(s_xy/v_xy)
-    ire_xy(cp_xy, cq_xy, vre_xy, vim_xy) = JuMP.@expression(pm.model, 1/sqrt(vre_xy^2+vim_xy^2)*((cp_xy*vre_xy)+(cq_xy*vim_xy)))
-    iim_xy(cp_xy, cq_xy, vre_xy, vim_xy) = JuMP.@expression(pm.model, 1/sqrt(vre_xy^2+vim_xy^2)*((cp_xy*vim_xy)-(cq_xy*vre_xy)))
+    ire_xy(cp_xy, cq_xy, vre_xy, vim_xy) = JuMP.@NLexpression(pm.model, 1/sqrt(vre_xy^2+vim_xy^2)*(cp_xy*vre_xy+cq_xy*vim_xy))
+    iim_xy(cp_xy, cq_xy, vre_xy, vim_xy) = JuMP.@NLexpression(pm.model, 1/sqrt(vre_xy^2+vim_xy^2)*(cp_xy*vim_xy-cq_xy*vre_xy))
     ire_ab = ire_xy(cp_ab, cq_ab, vre_ab, vim_ab)
     iim_ab = iim_xy(cp_ab, cq_ab, vre_ab, vim_ab)
     ire_bc = ire_xy(cp_bc, cq_bc, vre_bc, vim_bc)
@@ -999,8 +1004,8 @@ function constraint_mc_load_current_delta(pm::AbstractUnbalancedACPModel, nw::In
     # s_x = v_x*conj(i_xy-i_zx)
     # p_x = vm_x*cos(va_x)*(ire_xy-ire_zx) + vm_x*sin(va_x)*(iim_xy-iim_zx)
     # q_x = vm_x*sin(va_x)*(ire_xy-ire_zx) - vm_x*cos(va_x)*(iim_xy-iim_zx)
-    p_x(vm_x, va_x, ire_xy, iim_xy, ire_zx, iim_zx) = JuMP.@expression(pm.model, (vm_x*cos(va_x)*(ire_xy-ire_zx)) + (vm_x*sin(va_x)*(iim_xy-iim_zx)))
-    q_x(vm_x, va_x, ire_xy, iim_xy, ire_zx, iim_zx) = JuMP.@expression(pm.model, (vm_x*sin(va_x)*(ire_xy-ire_zx)) - (vm_x*cos(va_x)*(iim_xy-iim_zx)))
+    p_x(vm_x, va_x, ire_xy, iim_xy, ire_zx, iim_zx) = JuMP.@NLexpression(pm.model, vm_x*cos(va_x)*(ire_xy-ire_zx) + vm_x*sin(va_x)*(iim_xy-iim_zx))
+    q_x(vm_x, va_x, ire_xy, iim_xy, ire_zx, iim_zx) = JuMP.@NLexpression(pm.model, vm_x*sin(va_x)*(ire_xy-ire_zx) - vm_x*cos(va_x)*(iim_xy-iim_zx))
     # s_x = s_x,ref
     var(pm, nw, :pd_bus)[load_id] = [
         p_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca),
@@ -1018,20 +1023,20 @@ function constraint_mc_bus_voltage_magnitude_ll(pm::AbstractUnbalancedACPModel, 
     # 3 conductors asserted in template already
     vm_ln = [var(pm, nw, :vm, bus_id)[i] for i in 1:3]
     va_ln = [var(pm, nw, :va, bus_id)[i] for i in 1:3]
-    vr_ll = JuMP.@expression(pm.model, [i in 1:3],
-        (vm_ln[i]*cos(va_ln[i])) - (vm_ln[i%3+1]*cos(va_ln[i%3+1]))
+    vr_ll = JuMP.@NLexpression(pm.model, [i in 1:3],
+        vm_ln[i]*cos(va_ln[i]) - vm_ln[i%3+1]*cos(va_ln[i%3+1])
     )
-    vi_ll = JuMP.@expression(pm.model, [i in 1:3],
-        (vm_ln[i]*sin(va_ln[i])) - (vm_ln[i%3+1]*sin(va_ln[i%3+1]))
+    vi_ll = JuMP.@NLexpression(pm.model, [i in 1:3],
+        vm_ln[i]*sin(va_ln[i]) - vm_ln[i%3+1]*sin(va_ln[i%3+1])
     )
     for c in 1:3
         # factor of 3 is needed because vm_ll bounds are with respect to the
         # LL base, not the LN base
         if vm_ll_min[c] > 0
-            JuMP.@constraint(pm.model, vr_ll[c]^2+vi_ll[c]^2 >= vm_ll_min[c]^2*3)
+            JuMP.@NLconstraint(pm.model, vr_ll[c]^2+vi_ll[c]^2 >= vm_ll_min[c]^2*3)
         end
         if vm_ll_max[c] < Inf
-            JuMP.@constraint(pm.model, vr_ll[c]^2+vi_ll[c]^2 <= vm_ll_max[c]^2*3)
+            JuMP.@NLconstraint(pm.model, vr_ll[c]^2+vi_ll[c]^2 <= vm_ll_max[c]^2*3)
         end
     end
 end
@@ -1078,21 +1083,21 @@ function constraint_mc_load_power_wye(pm::AbstractUnbalancedACPModel, nw::Int, i
         pd_bus = a
         qd_bus = b
     else
-        pd_bus = Vector{JuMP.NonlinearExpr}([])
-        qd_bus = Vector{JuMP.NonlinearExpr}([])
+        pd_bus = Vector{JuMP.NonlinearExpression}([])
+        qd_bus = Vector{JuMP.NonlinearExpression}([])
 
         for (idx, c) in enumerate(connections)
-            crd = JuMP.@expression(pm.model,
-                 (a[idx]*vm[c]*cos(va[c])*(vm[c]^2)^(alpha[idx]/2-1))
-                +(b[idx]*vm[c]*sin(va[c])*(vm[c]^2)^( beta[idx]/2-1))
+            crd = JuMP.@NLexpression(pm.model,
+                 a[idx]*vm[c]*cos(va[c])*(vm[c]^2)^(alpha[idx]/2-1)
+                +b[idx]*vm[c]*sin(va[c])*(vm[c]^2)^( beta[idx]/2-1)
             )
-            cid = JuMP.@expression(pm.model,
-                 (a[idx]*vm[c]*sin(va[c])*(vm[c]^2)^(alpha[idx]/2-1))
-                -(b[idx]*vm[c]*cos(va[c])*(vm[c]^2)^( beta[idx]/2-1))
+            cid = JuMP.@NLexpression(pm.model,
+                 a[idx]*vm[c]*sin(va[c])*(vm[c]^2)^(alpha[idx]/2-1)
+                -b[idx]*vm[c]*cos(va[c])*(vm[c]^2)^( beta[idx]/2-1)
             )
 
-            push!(pd_bus, JuMP.@expression(pm.model, -(vm[c]*cos(va[c])*(-crd))-(vm[c]*sin(va[c])*(-cid))))
-            push!(qd_bus, JuMP.@expression(pm.model,  (vm[c]*cos(va[c])*(-cid))-(vm[c]*sin(va[c])*(-crd))))
+            push!(pd_bus, JuMP.@NLexpression(pm.model,  vm[c]*cos(va[c])*crd+vm[c]*sin(va[c])*cid))
+            push!(qd_bus, JuMP.@NLexpression(pm.model, -vm[c]*cos(va[c])*cid+vm[c]*sin(va[c])*crd))
         end
     end
 
@@ -1106,12 +1111,12 @@ function constraint_mc_load_power_wye(pm::AbstractUnbalancedACPModel, nw::Int, i
         sol(pm, nw, :load, id)[:pd_bus] = pd_bus
         sol(pm, nw, :load, id)[:qd_bus] = qd_bus
 
-        pd = Vector{JuMP.NonlinearExpr}([])
-        qd = Vector{JuMP.NonlinearExpr}([])
+        pd = Vector{JuMP.NonlinearExpression}([])
+        qd = Vector{JuMP.NonlinearExpression}([])
 
         for (idx,c) in enumerate(connections)
-            push!(pd, JuMP.@expression(pm.model, a[idx]*vm[c]^alpha[idx] ))
-            push!(qd, JuMP.@expression(pm.model, b[idx]*vm[c]^beta[idx]  ))
+            push!(pd, JuMP.@NLexpression(pm.model, a[idx]*vm[c]^alpha[idx] ))
+            push!(qd, JuMP.@NLexpression(pm.model, b[idx]*vm[c]^beta[idx]  ))
         end
         sol(pm, nw, :load, id)[:pd] = JuMP.Containers.DenseAxisArray(pd, connections)
         sol(pm, nw, :load, id)[:qd] = JuMP.Containers.DenseAxisArray(qd, connections)
@@ -1134,20 +1139,20 @@ function constraint_mc_load_power_delta(pm::AbstractUnbalancedACPModel, nw::Int,
     vrd = Dict()
     vid = Dict()
     for (idx, c) in enumerate(connections)
-        vrd[c] = JuMP.@expression(pm.model, (vm[c]*cos(va[c]))-(vm[next[c]]*cos(va[next[c]])))
-        vid[c] = JuMP.@expression(pm.model, (vm[c]*sin(va[c]))-(vm[next[c]]*sin(va[next[c]])))
+        vrd[c] = JuMP.@NLexpression(pm.model, vm[c]*cos(va[c])-vm[next[c]]*cos(va[next[c]]))
+        vid[c] = JuMP.@NLexpression(pm.model, vm[c]*sin(va[c])-vm[next[c]]*sin(va[next[c]]))
     end
 
     crd = Dict()
     cid = Dict()
     for (idx, c) in enumerate(connections)
-        crd[c] = JuMP.@expression(pm.model,
-             (a[idx]*vrd[c]*(vrd[c]^2+vid[c]^2)^(alpha[idx]/2-1))
-            +(b[idx]*vid[c]*(vrd[c]^2+vid[c]^2)^(beta[idx]/2 -1))
+        crd[c] = JuMP.@NLexpression(pm.model,
+             a[idx]*vrd[c]*(vrd[c]^2+vid[c]^2)^(alpha[idx]/2-1)
+            +b[idx]*vid[c]*(vrd[c]^2+vid[c]^2)^(beta[idx]/2 -1)
         )
-        cid[c] = JuMP.@expression(pm.model,
-             (a[idx]*vid[c]*(vrd[c]^2+vid[c]^2)^(alpha[idx]/2-1))
-            -(b[idx]*vrd[c]*(vrd[c]^2+vid[c]^2)^(beta[idx]/2 -1))
+        cid[c] = JuMP.@NLexpression(pm.model,
+             a[idx]*vid[c]*(vrd[c]^2+vid[c]^2)^(alpha[idx]/2-1)
+            -b[idx]*vrd[c]*(vrd[c]^2+vid[c]^2)^(beta[idx]/2 -1)
         )
     end
 
@@ -1155,19 +1160,19 @@ function constraint_mc_load_power_delta(pm::AbstractUnbalancedACPModel, nw::Int,
     cid_bus = Dict()
     for (idx, c) in enumerate(conn_bus)
         if is_triplex
-            crd_bus[c] = JuMP.@expression(pm.model, (-1.0)^(c-1)*crd[1])
-            cid_bus[c] = JuMP.@expression(pm.model, (-1.0)^(c-1)*cid[1])
+            crd_bus[c] = JuMP.@NLexpression(pm.model, (-1.0)^(c-1)*crd[1])
+            cid_bus[c] = JuMP.@NLexpression(pm.model, (-1.0)^(c-1)*cid[1])
         else
-            crd_bus[c] = JuMP.@expression(pm.model, crd[c]-crd[prev[c]])
-            cid_bus[c] = JuMP.@expression(pm.model, cid[c]-cid[prev[c]])
+            crd_bus[c] = JuMP.@NLexpression(pm.model, crd[c]-crd[prev[c]])
+            cid_bus[c] = JuMP.@NLexpression(pm.model, cid[c]-cid[prev[c]])
         end
     end
 
-    pd_bus = Vector{JuMP.NonlinearExpr}([])
-    qd_bus = Vector{JuMP.NonlinearExpr}([])
+    pd_bus = Vector{JuMP.NonlinearExpression}([])
+    qd_bus = Vector{JuMP.NonlinearExpression}([])
     for (idx,c) in enumerate(conn_bus)
-        push!(pd_bus, JuMP.@expression(pm.model, -(vm[c]*cos(va[c])*(-crd_bus[c]))-(vm[c]*sin(va[c])*(-cid_bus[c]))))
-        push!(qd_bus, JuMP.@expression(pm.model,  (vm[c]*cos(va[c])*(-cid_bus[c]))-(vm[c]*sin(va[c])*(-crd_bus[c]))))
+        push!(pd_bus, JuMP.@NLexpression(pm.model,  vm[c]*cos(va[c])*crd_bus[c]+vm[c]*sin(va[c])*cid_bus[c]))
+        push!(qd_bus, JuMP.@NLexpression(pm.model, -vm[c]*cos(va[c])*cid_bus[c]+vm[c]*sin(va[c])*crd_bus[c]))
     end
 
     pd_bus = JuMP.Containers.DenseAxisArray(pd_bus, conn_bus)
@@ -1183,8 +1188,8 @@ function constraint_mc_load_power_delta(pm::AbstractUnbalancedACPModel, nw::Int,
         pd = []
         qd = []
         for (idx,c) in enumerate(connections)
-            push!(pd, JuMP.@expression(pm.model, a[idx]*(vrd[c]^2+vid[c]^2)^(alpha[idx]/2) ))
-            push!(qd, JuMP.@expression(pm.model, b[idx]*(vrd[c]^2+vid[c]^2)^(beta[idx]/2)  ))
+            push!(pd, JuMP.@NLexpression(pm.model, a[idx]*(vrd[c]^2+vid[c]^2)^(alpha[idx]/2) ))
+            push!(qd, JuMP.@NLexpression(pm.model, b[idx]*(vrd[c]^2+vid[c]^2)^(beta[idx]/2)  ))
         end
         sol(pm, nw, :load, id)[:pd] = pd
         sol(pm, nw, :load, id)[:qd] = qd
@@ -1209,34 +1214,34 @@ function constraint_mc_generator_power_delta(pm::AbstractUnbalancedACPModel, nw:
     vrg = Dict()
     vig = Dict()
     for c in connections
-        vrg[c] = JuMP.@expression(pm.model, (vm[c]*cos(va[c]))-(vm[next[c]]*cos(va[next[c]])))
-        vig[c] = JuMP.@expression(pm.model, (vm[c]*sin(va[c]))-(vm[next[c]]*sin(va[next[c]])))
+        vrg[c] = JuMP.@NLexpression(pm.model, vm[c]*cos(va[c])-vm[next[c]]*cos(va[next[c]]))
+        vig[c] = JuMP.@NLexpression(pm.model, vm[c]*sin(va[c])-vm[next[c]]*sin(va[next[c]]))
     end
 
     crg = Dict()
     cig = Dict()
     for c in connections
-        crg[c] = JuMP.@expression(pm.model, ((pg[c]*vrg[c])+(qg[c]*vig[c]))/(vrg[c]^2+vig[c]^2) )
-        cig[c] = JuMP.@expression(pm.model, ((pg[c]*vig[c])-(qg[c]*vrg[c]))/(vrg[c]^2+vig[c]^2) )
+        crg[c] = JuMP.@NLexpression(pm.model, (pg[c]*vrg[c]+qg[c]*vig[c])/(vrg[c]^2+vig[c]^2) )
+        cig[c] = JuMP.@NLexpression(pm.model, (pg[c]*vig[c]-qg[c]*vrg[c])/(vrg[c]^2+vig[c]^2) )
     end
 
     crg_bus = Dict()
     cig_bus = Dict()
     for c in conn_bus
         if is_triplex
-            crg_bus[c] = JuMP.@expression(pm.model, (-1.0)^(c-1)*crg[1])
-            cig_bus[c] = JuMP.@expression(pm.model, (-1.0)^(c-1)*cig[1])
+            crg_bus[c] = JuMP.@NLexpression(pm.model, (-1.0)^(c-1)*crg[1])
+            cig_bus[c] = JuMP.@NLexpression(pm.model, (-1.0)^(c-1)*cig[1])
         else
-            crg_bus[c] = JuMP.@expression(pm.model, crg[c]-crg[prev[c]])
-            cig_bus[c] = JuMP.@expression(pm.model, cig[c]-cig[prev[c]])
+            crg_bus[c] = JuMP.@NLexpression(pm.model, crg[c]-crg[prev[c]])
+            cig_bus[c] = JuMP.@NLexpression(pm.model, cig[c]-cig[prev[c]])
         end
     end
 
-    pg_bus = Vector{JuMP.NonlinearExpr}([])
-    qg_bus = Vector{JuMP.NonlinearExpr}([])
+    pg_bus = Vector{JuMP.NonlinearExpression}([])
+    qg_bus = Vector{JuMP.NonlinearExpression}([])
     for c in conn_bus
-        push!(pg_bus, JuMP.@expression(pm.model, -(vm[c]*cos(va[c])*(-crg_bus[c]))-(vm[c]*sin(va[c])*(-cig_bus[c]))))
-        push!(qg_bus, JuMP.@expression(pm.model,  (vm[c]*cos(va[c])*(-cig_bus[c]))-(vm[c]*sin(va[c])*(-crg_bus[c]))))
+        push!(pg_bus, JuMP.@NLexpression(pm.model,  vm[c]*cos(va[c])*crg_bus[c]+vm[c]*sin(va[c])*cig_bus[c]))
+        push!(qg_bus, JuMP.@NLexpression(pm.model, -vm[c]*cos(va[c])*cig_bus[c]+vm[c]*sin(va[c])*crg_bus[c]))
     end
     pg_bus = JuMP.Containers.DenseAxisArray(pg_bus, conn_bus)
     qg_bus = JuMP.Containers.DenseAxisArray(qg_bus, conn_bus)
@@ -1260,19 +1265,16 @@ function constraint_mc_storage_losses(pm::AbstractUnbalancedACPModel, n::Int, i:
     sd = var(pm, n, :sd, i)
     qsc = var(pm, n, :qsc, i)
 
-    JuMP.@constraint(pm.model,
-        -sum(-ps[c] for c in connections) + (sd - sc)
-        - p_loss
-        - (r * sum((ps[c]^2 + qs[c]^2)/vm[c]^2 for c in connections))
-        == 0.0
+    JuMP.@NLconstraint(pm.model,
+        sum(ps[c] for c in connections) + (sd - sc)
+        ==
+        p_loss + r * sum((ps[c]^2 + qs[c]^2)/vm[c]^2 for c in connections)
     )
 
-    JuMP.@constraint(pm.model,
-        -sum(-qs[c] for c in connections)
-        - qsc
-        - q_loss
-        - (x * sum((ps[c]^2 + qs[c]^2)/vm[c]^2 for c in connections))
-        == 0.0
+    JuMP.@NLconstraint(pm.model,
+        sum(qs[c] for c in connections)
+        ==
+        qsc + q_loss + x * sum((ps[c]^2 + qs[c]^2)/vm[c]^2 for c in connections)
     )
 end
 

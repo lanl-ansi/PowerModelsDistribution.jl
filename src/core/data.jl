@@ -811,6 +811,31 @@ function _make_full_matrix_variable(diag::Vector{T}, lowertriangle::Vector{T}, u
     return matrix
 end
 
+# TODO refactor into several functions
+"helper to determine if expession has any Nonlinear terms"
+function _has_nl_expression(x)::Bool
+    if isa(x, JuMP.NonlinearExpression)
+        return true
+    elseif isa(x, Array)
+        if any(_has_nl_expression.(x))
+            return true
+        end
+    elseif isa(x, Dict)
+        for i in values(x)
+            if _has_nl_expression(i)
+                return true
+            end
+        end
+    elseif isa(x, JuMP.Containers.DenseAxisArray)
+        for i in values(x.data)
+            if _has_nl_expression(i)
+                return true
+            end
+        end
+    end
+    return false
+end
+
 
 """
     correct_mc_voltage_angle_differences!(data::Dict{String,<:Any}, default_pad::Real=deg2rad(10.0))
