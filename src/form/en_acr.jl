@@ -64,11 +64,11 @@ function constraint_mc_generator_power_wye(pm::AbstractExplicitNeutralACRModel, 
             ( pg[idx]*vi_pn[idx] - qg[idx]*vr_pn[idx] )/( vr_pn[idx]^2 + vi_pn[idx]^2 )
         )
         pg_bus_unmerged = [
-            [JuMP.@expression(pm.model, vr[p]*crg[idx]+vi[p]*cig[idx]) for (idx,p) in enumerate(phases)]...,
+            [JuMP.@expression(pm.model, -vr[p]*-crg[idx]-vi[p]*-cig[idx]) for (idx,p) in enumerate(phases)]...,
             JuMP.@expression(pm.model, vr[n]*sum(-crg[idx] for idx in 1:P)+vi[n]*sum(-cig[idx] for idx in 1:P))
         ]
         qg_bus_unmerged = [
-            [JuMP.@expression(pm.model, -vr[p]*cig[idx]+vi[p]*crg[idx]) for (idx,p) in enumerate(phases)]...,
+            [JuMP.@expression(pm.model, vr[p]*-cig[idx]-vi[p]*-crg[idx]) for (idx,p) in enumerate(phases)]...,
             JuMP.@expression(pm.model, -vr[n]*sum(-cig[idx] for idx in 1:P)+vi[n]*sum(-crg[idx] for idx in 1:P))
         ]
     end
@@ -124,8 +124,8 @@ function constraint_mc_generator_power_delta(pm::AbstractExplicitNeutralACRModel
     crg_bus = JuMP.@expression(pm.model, [idx in 1:P], crg[idx] - crg[idxs_prev[idx]])
     cig_bus = JuMP.@expression(pm.model, [idx in 1:P], cig[idx] - cig[idxs_prev[idx]])
 
-    pg_bus_unmerged = [JuMP.@expression(pm.model,  vr[p]*crg_bus[idx]+vi[p]*cig_bus[idx]) for (idx,p) in enumerate(ph)]
-    qg_bus_unmerged = [JuMP.@expression(pm.model, -vr[p]*cig_bus[idx]+vi[p]*crg_bus[idx]) for (idx,p) in enumerate(ph)]
+    pg_bus_unmerged = [JuMP.@expression(pm.model, -vr[p]*-crg_bus[idx]-vi[p]*-cig_bus[idx]) for (idx,p) in enumerate(ph)]
+    qg_bus_unmerged = [JuMP.@expression(pm.model,  vr[p]*-cig_bus[idx]-vi[p]*-crg_bus[idx]) for (idx,p) in enumerate(ph)]
 
     var(pm, nw, :pg_bus)[id] = pg_bus = _merge_bus_flows(pm, pg_bus_unmerged, connections)
     var(pm, nw, :qg_bus)[id] = qg_bus = _merge_bus_flows(pm, qg_bus_unmerged, connections)

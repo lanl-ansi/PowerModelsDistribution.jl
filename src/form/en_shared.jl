@@ -138,7 +138,7 @@ function constraint_mc_current_balance(pm::RectangularVoltageExplicitNeutralMode
                                     + sum(crsw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
                                     + sum(crt[a_trans][t] for (a_trans, conns) in bus_arcs_trans if t in conns)
                                     ==
-                                      sum(crg[g][t]         for (g, conns) in bus_gens if t in conns)
+                                    - sum(-crg[g][t]         for (g, conns) in bus_gens if t in conns)
                                     - sum(crs[s][t]         for (s, conns) in bus_storage if t in conns)
                                     - sum(crd[d][t]         for (d, conns) in bus_loads if t in conns)
                                     - sum( Gt[idx,jdx]*vr[u] -Bt[idx,jdx]*vi[u] for (jdx,u) in ungrounded_terminals) # shunts
@@ -148,7 +148,7 @@ function constraint_mc_current_balance(pm::RectangularVoltageExplicitNeutralMode
                                     + sum(cisw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
                                     + sum(cit[a_trans][t] for (a_trans, conns) in bus_arcs_trans if t in conns)
                                     ==
-                                      sum(cig[g][t]         for (g, conns) in bus_gens if t in conns)
+                                    - sum(-cig[g][t]         for (g, conns) in bus_gens if t in conns)
                                     - sum(cis[s][t]         for (s, conns) in bus_storage if t in conns)
                                     - sum(cid[d][t]         for (d, conns) in bus_loads if t in conns)
                                     - sum( Gt[idx,jdx]*vi[u] +Bt[idx,jdx]*vr[u] for (jdx,u) in ungrounded_terminals) # shunts
@@ -206,7 +206,7 @@ function constraint_mc_power_balance(pm::RectangularVoltageExplicitNeutralModels
             + sum(psw[arc][t] for (arc, conns) in bus_arcs_sw if t in conns)
             + sum( pt[arc][t] for (arc, conns) in bus_arcs_trans if t in conns)
             ==
-              sum(pg[gen][t] for (gen, conns) in bus_gens if t in conns)
+            - sum(-pg[gen][t] for (gen, conns) in bus_gens if t in conns)
             - sum(ps[strg][t] for (strg, conns) in bus_storage if t in conns)
             - sum(pd[load][t] for (load, conns) in bus_loads if t in conns)
             + ( -vr[t] * sum(Gt[idx,jdx]*vr[u]-Bt[idx,jdx]*vi[u] for (jdx,u) in ungrounded_terminals)
@@ -220,7 +220,7 @@ function constraint_mc_power_balance(pm::RectangularVoltageExplicitNeutralModels
             + sum(qsw[arc][t] for (arc, conns) in bus_arcs_sw if t in conns)
             + sum( qt[arc][t] for (arc, conns) in bus_arcs_trans if t in conns)
             ==
-              sum(qg[gen][t] for (gen, conns) in bus_gens if t in conns)
+            - sum(-qg[gen][t] for (gen, conns) in bus_gens if t in conns)
             - sum(qd[load][t] for (load, conns) in bus_loads if t in conns)
             - sum(qs[strg][t] for (strg, conns) in bus_storage if t in conns)
             + ( vr[t] * sum(Gt[idx,jdx]*vi[u]+Bt[idx,jdx]*vr[u] for (jdx,u) in ungrounded_terminals)
