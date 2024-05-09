@@ -11,21 +11,9 @@ function _IM.solution_preprocessor(pm::AbstractUnbalancedPowerModel, solution::D
 end
 
 
-"custom `build_solution_values` for multiconductor (vector) variables"
-function _IM.build_solution_values(var::JuMP.Containers.DenseAxisArray{<:JuMP.VariableRef,1})
-    return JuMP.value.(var.data)
-end
-
-
-"custom `build_solution_values` for multiconductor (vector) nonlinear expressions"
-function _IM.build_solution_values(var::JuMP.Containers.DenseAxisArray{<:JuMP.NonlinearExpression,1})
-    return JuMP.value.(var.data)
-end
-
-
-"custom `build_solution_values` for multiconductor (vector) generic affine expressions"
-function _IM.build_solution_values(var::JuMP.Containers.DenseAxisArray{<:JuMP.GenericAffExpr,1})
-    return JuMP.value.(var.data)
+"custom `build_solution_values` for multiconductor (vector) JuMP expressions"
+function _IM.build_solution_values(var::JuMP.AbstractJuMPScalar)
+    return JuMP.value(var)
 end
 
 
