@@ -7,8 +7,8 @@ function _merge_bus_flows(pm::ExplicitNeutralModels, flows::Vector, connections:
         flows_t = flows[idxs]
         if length(flows_t)==1
             flows_merged_t = flows_t[1]
-        elseif any(isa(a, JuMP.NonlinearExpression) for a in flows_t)
-            flows_merged_t = JuMP.@NLexpression(pm.model, sum(flows_t[i] for i in 1:length(flows_t)))
+        elseif any(isa(a, JuMP.NonlinearExpr) for a in flows_t)
+            flows_merged_t = JuMP.@expression(pm.model, sum(flows_t[i] for i in 1:length(flows_t)))
         else
             flows_merged_t = sum(flows_t)
         end

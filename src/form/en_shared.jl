@@ -133,7 +133,7 @@ function constraint_mc_current_balance(pm::RectangularVoltageExplicitNeutralMode
     ungrounded_terminals = [(idx,t) for (idx,t) in enumerate(terminals) if !grounded[idx]]
 
     for (idx, t) in ungrounded_terminals
-        @smart_constraint(pm.model,  [cr, crd, crg, crs, crsw, crt, vr],
+        JuMP.@constraint(pm.model,
                                       sum(cr[a][t] for (a, conns) in bus_arcs if t in conns)
                                     + sum(crsw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
                                     + sum(crt[a_trans][t] for (a_trans, conns) in bus_arcs_trans if t in conns)
@@ -143,7 +143,7 @@ function constraint_mc_current_balance(pm::RectangularVoltageExplicitNeutralMode
                                     - sum(crd[d][t]         for (d, conns) in bus_loads if t in conns)
                                     - sum( Gt[idx,jdx]*vr[u] -Bt[idx,jdx]*vi[u] for (jdx,u) in ungrounded_terminals) # shunts
                                     )
-        @smart_constraint(pm.model, [ci, cid, cig, cis, cisw, cit, vi],
+        JuMP.@constraint(pm.model,
                                       sum(ci[a][t] for (a, conns) in bus_arcs if t in conns)
                                     + sum(cisw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
                                     + sum(cit[a_trans][t] for (a_trans, conns) in bus_arcs_trans if t in conns)
@@ -201,7 +201,7 @@ function constraint_mc_power_balance(pm::RectangularVoltageExplicitNeutralModels
 
     # pd/qd can be NLexpressions, so cannot be vectorized
     for (idx, t) in ungrounded_terminals
-        cp = @smart_constraint(pm.model, [p, q, pg, qg, ps, qs, psw, qsw, pt, qt, pd, qd, vr, vi],
+        cp = JuMP.@constraint(pm.model,
               sum(  p[arc][t] for (arc, conns) in bus_arcs if t in conns)
             + sum(psw[arc][t] for (arc, conns) in bus_arcs_sw if t in conns)
             + sum( pt[arc][t] for (arc, conns) in bus_arcs_trans if t in conns)
@@ -215,7 +215,7 @@ function constraint_mc_power_balance(pm::RectangularVoltageExplicitNeutralModels
         )
         push!(cstr_p, cp)
 
-        cq = @smart_constraint(pm.model, [p, q, pg, qg, ps, qs, psw, qsw, pt, qt, pd, qd, vr, vi],
+        cq = JuMP.@constraint(pm.model,
               sum(  q[arc][t] for (arc, conns) in bus_arcs if t in conns)
             + sum(qsw[arc][t] for (arc, conns) in bus_arcs_sw if t in conns)
             + sum( qt[arc][t] for (arc, conns) in bus_arcs_trans if t in conns)

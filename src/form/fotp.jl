@@ -821,8 +821,8 @@ function constraint_mc_generator_power_delta(pm::FOTPUPowerModel, nw::Int, id::I
             crg_bus[c] = JuMP.@expression(pm.model, (-1.0)^(c-1)*crg[1])
             cig_bus[c] = JuMP.@expression(pm.model, (-1.0)^(c-1)*cig[1])
         else
-            crg_bus[c] = JuMP.@NLexpression(pm.model, crg[c]-crg[prev[c]])
-            cig_bus[c] = JuMP.@NLexpression(pm.model, cig[c]-cig[prev[c]])
+            crg_bus[c] = JuMP.@expression(pm.model, crg[c]-crg[prev[c]])
+            cig_bus[c] = JuMP.@expression(pm.model, cig[c]-cig[prev[c]])
         end
     end
 
