@@ -129,6 +129,49 @@ function instantiate_mc_model(
 end
 
 
+
+function instantiate_mc_model_ravens(
+    data::Dict{String,<:Any},
+    model_type::Type,
+    build_method::Function;
+    ref_extensions::Vector{<:Function}=Function[],
+    multinetwork::Bool=ismultinetwork(data),
+    global_keys::Set{String}=Set{String}(),
+    ravens2math_extensions::Vector{<:Function}=Function[],
+    ravens2math_passthrough::Dict{String,<:Vector{<:String}}=Dict{String,Vector{String}}(),
+    make_pu_extensions::Vector{<:Function}=Function[],
+    kwargs...
+    )
+
+    # @info "$(data)"
+
+    @info "Converting CIM-RAVENS data model to MATHEMATICAL first to build JuMP model"
+
+    data = transform_data_model_ravens(
+            data;
+            multinetwork=multinetwork,
+            global_keys=global_keys,
+            ravens2math_extensions=ravens2math_extensions,
+            ravens2math_passthrough=ravens2math_passthrough,
+            make_pu_extensions=make_pu_extensions,
+        )
+
+    @info "$(data["load"])"
+
+    DEFINIDOEN_instantiate_mc_model
+
+    return _IM.instantiate_model(
+        data,
+        model_type,
+        build_method,
+        ref_add_core!,
+        union(_pmd_math_global_keys, global_keys),
+        pmd_it_sym;
+        ref_extensions=ref_extensions,
+        kwargs...
+    )
+end
+
 """
     solve_mc_model(
         data::Dict{String,<:Any},
