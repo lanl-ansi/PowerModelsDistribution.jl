@@ -223,6 +223,9 @@ function _map_eng2math(
 
     apply_pmd!(_map_eng2math_nw!, data_math, _data_eng; eng2math_passthrough=eng2math_passthrough, eng2math_extensions=eng2math_extensions)
 
+    @info "$(data_math)"
+    gfdgfdgf
+
     if ismultinetwork(data_eng)
         _collect_nw_maps!(data_math)
         _collect_nw_bus_lookups!(data_math)
