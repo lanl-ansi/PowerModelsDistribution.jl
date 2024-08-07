@@ -349,155 +349,6 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
     _data_ravens_transformer = data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]
 
     for (name, ravens_obj) in get(_data_ravens_transformer, "PowerTransformer", Dict{Any,Dict{String,Any}}())
-
-        # Build map first, so we can update it as we decompose the transformer
-        push!(data_math["map"], Dict{String,Any}(
-            "from" => name,
-            "to" => String[],
-            "unmap_function" => "_map_math2ravens_transformer!",
-        ))
-
-        to_map = data_math["map"][end]["to"]
-
-        # _apply_xfmrcode!(ravens_obj, data_ravens)
-
-        # PowerTransformerTank
-        if haskey(ravens_obj, "PowerTransformer.TransformerTank")
-
-            @info "PowerTransformerTank ENTER"
-            @assert all(haskey(ravens_obj, k) for k in ["f_bus", "t_bus", "f_connections", "t_connections"]) "Incomplete definition of AL2W tranformer $name, aborting ravens2math conversion"
-
-            nphases = length(ravens_obj["f_connections"])
-
-            math_obj = Dict{String,Any}(
-                "name" => name,
-                "source_id" => ravens_obj["source_id"],
-                "f_bus" => data_math["bus_lookup"][ravens_obj["f_bus"]],
-                "t_bus" => data_math["bus_lookup"][ravens_obj["t_bus"]],
-                "f_connections" => ravens_obj["f_connections"],
-                "t_connections" => ravens_obj["t_connections"],
-                "configuration" => get(ravens_obj, "configuration", WYE),
-                "tm_nom" => get(ravens_obj, "tm_nom", 1.0),
-                "tm_set" => get(ravens_obj, "tm_set", fill(1.0, nphases)),
-                "tm_fix" => get(ravens_obj, "tm_fix", fill(true, nphases)),
-                "polarity" => get(ravens_obj, "polarity", -1),
-                "sm_ub" => get(ravens_obj, "sm_ub", Inf),
-                "cm_ub" => get(ravens_obj, "cm_ub", Inf),
-                "status" => Int(get(ravens_obj, "status", ENABLED)),
-                "index" => length(data_math["transformer"])+1
-            )
-
-            for k in [["tm_lb", "tm_ub"]; pass_props]
-                if haskey(ravens_obj, k)
-                    math_obj[k] = ravens_obj[k]
-                end
-            end
-
-            data_math["transformer"]["$(math_obj["index"])"] = math_obj
-
-            push!(to_map, "transformer.$(math_obj["index"])")
-
-
-        # PowerTransformerEnd
-        else
-
-            nrw = length(ravens_obj["bus"])
-
-            for w in 1:length(ravens_obj["PowerTransformer.PowerTransformerEnd"])
-
-                vnom = ravens_obj["PowerTransformer.PowerTransformerEnd"][w]["PowerTransformerEnd.ratedU"]
-                snom = ravens_obj["PowerTransformer.PowerTransformerEnd"][w]["PowerTransformerEnd.ratedS"]
-
-                # calculate zbase in which the data is specified, and convert to SI
-                zbase = (vnom.^2) ./ snom
-
-                # x_sc is specified with respect to first winding
-                x_sc = ravens_obj["xsc"] .* zbase[1]
-
-                # rs is specified with respect to each winding
-                r_s = ravens_obj["rw"] .* zbase
-
-                g_sh =  (ravens_obj["noloadloss"]*snom[1])/vnom[1]^2
-                b_sh = -(ravens_obj["cmag"]*snom[1])/vnom[1]^2
-
-                # data is measured externally, but we now refer it to the internal side
-                ratios = vnom/data_ravens["settings"]["voltage_scale_factor"]
-                x_sc = x_sc./ratios[1]^2
-                r_s = r_s./ratios.^2
-                g_sh = g_sh*ratios[1]^2
-                b_sh = b_sh*ratios[1]^2
-
-                # convert x_sc from list of upper triangle elements to an explicit dict
-                y_sh = g_sh + im*b_sh
-                z_sc = Dict([(key, im*x_sc[i]) for (i,key) in enumerate([(i,j) for i in 1:nrw for j in i+1:nrw])])
-
-                dims = length(ravens_obj["tm_set"][1])
-                transformer_t_bus_w = _build_loss_model!(data_math, name, to_map, r_s, z_sc, y_sh,ravens_obj["connections"][1]; nphases=dims, status=Int(ravens_obj["status"] == ENABLED))
-
-                # 2-WINDING TRANSFORMER
-                # make virtual bus and mark it for reduction
-                tm_nom = ravens_obj["configuration"][w]==DELTA ? ravens_obj["vm_nom"][w]*sqrt(3) : ravens_obj["vm_nom"][w]
-                transformer_2wa_obj = Dict{String,Any}(
-                    "name"          => "_virtual_transformer.$name.$w",
-                    "source_id"     => "_virtual_transformer.$(ravens_obj["source_id"]).$w",
-                    "f_bus"         => data_math["bus_lookup"][ravens_obj["bus"][w]],
-                    "t_bus"         => transformer_t_bus_w[w],
-                    "tm_nom"        => tm_nom,
-                    "f_connections" => ravens_obj["connections"][w],
-                    "t_connections" => get(data_math, "is_kron_reduced", false) ? ravens_obj["connections"][1] : collect(1:dims+1),
-                    "configuration" => ravens_obj["configuration"][w],
-                    "polarity"      => ravens_obj["polarity"][w],
-                    "tm_set"        => ravens_obj["tm_set"][w],
-                    "tm_fix"        => ravens_obj["tm_fix"][w],
-                    "sm_ub"         => get(ravens_obj, "sm_ub", Inf),
-                    "cm_ub"         => get(ravens_obj, "cm_ub", Inf),
-                    "status"        => ravens_obj["status"] == DISABLED ? 0 : 1,
-                    "index"         => length(data_math["transformer"])+1
-                )
-
-                for prop in [["tm_lb", "tm_ub", "tm_step"]; pass_props]
-                    if haskey(ravens_obj, prop)
-                        transformer_2wa_obj[prop] = ravens_obj[prop][w]
-                    end
-                end
-
-                data_math["transformer"]["$(transformer_2wa_obj["index"])"] = transformer_2wa_obj
-
-                # add regcontrol items to math model
-                if haskey(ravens_obj,"controls") && !all(data_math["transformer"]["$(transformer_2wa_obj["index"])"]["tm_fix"])
-                    reg_obj = Dict{String,Any}(
-                        "vreg" => ravens_obj["controls"]["vreg"][w],
-                        "band" => ravens_obj["controls"]["band"][w],
-                        "ptratio" => ravens_obj["controls"]["ptratio"][w],
-                        "ctprim" => ravens_obj["controls"]["ctprim"][w],
-                        "r" => ravens_obj["controls"]["r"][w],
-                        "x" => ravens_obj["controls"]["x"][w],
-                    )
-                    data_math["transformer"]["$(transformer_2wa_obj["index"])"]["controls"] = reg_obj
-                end
-
-                if w==3 && ravens_obj["polarity"][w]==-1 # identify center-tapped transformer and mark all secondary-side nodes as triplex by adding va_start
-                    default_va = [0, -120, 120][ravens_obj["connections"][1][1]]
-                    data_math["bus"]["$(transformer_2wa_obj["f_bus"])"]["va_start"] = haskey(data_ravens["bus"][ravens_obj["bus"][w]],"va_start") ? data_ravens["bus"][ravens_obj["bus"][w]]["va_start"] : [default_va, (default_va+180)]
-                    idx = 0
-                    bus_ids = []
-                    t_bus = haskey(data_ravens, "line") ? [data["t_bus"] for (_,data) in data_ravens["line"] if data["f_bus"] == ravens_obj["bus"][w]] : []
-                    while length(t_bus)>0 || idx<length(bus_ids)
-                        for bus_idx in t_bus
-                            bus_id = data_math["bus_lookup"]["$bus_idx"]
-                            push!(bus_ids, bus_id)
-                            default_va = [0, -120, 120][ravens_obj["connections"][1][1]]
-                            data_math["bus"]["$bus_id"]["va_start"] = haskey(data_ravens["bus"]["$bus_idx"],"va_start") ? data_ravens["bus"]["$bus_idx"]["va_start"] : [default_va, (default_va+180)]
-                        end
-                        idx += 1
-                        t_bus = [data["t_bus"] for (_,data) in data_ravens["line"] if data["f_bus"] == data_math["bus"]["$(bus_ids[idx])"]["name"]]
-                    end
-                end
-
-                push!(to_map, "transformer.$(transformer_2wa_obj["index"])")
-
-            end
-        end
     end
 end
 
@@ -509,6 +360,7 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
     _data_ravens_energyconnection = data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"]
     _power_scale_factor = data_math["settings"]["power_scale_factor"]
     _voltage_scale_factor = data_math["settings"]["voltage_scale_factor"]
+    _voltage_scale_factor_sqrt3 = _voltage_scale_factor*sqrt(3)
 
     for (name, ravens_obj) in get(_data_ravens_energyconnection, "EnergyConsumer", Dict{Any,Dict{String,Any}}())
 
@@ -553,19 +405,16 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
 
         # Vnom
         base_voltage_ref = replace(split(ravens_obj["ConductingEquipment.BaseVoltage"], "::")[2], "'" => "")
-        math_obj["vnom_kv"] = (data_ravens["BaseVoltage"][base_voltage_ref]["BaseVoltage.nominalVoltage"]/_voltage_scale_factor)/(sqrt(3)/2)
+        base_voltage = data_ravens["BaseVoltage"][base_voltage_ref]["BaseVoltage.nominalVoltage"]
+        math_obj["vnom_kv"] = (base_voltage/_voltage_scale_factor)/(sqrt(3)/2)
 
         # Get voltage bounds for specific bus connected (TODO: see if it can be coverted to standalone function to avoid repetition)
         bus_info = string(math_obj["load_bus"])
         bus_conn = data_math["bus"][bus_info]
 
-        base_voltage_id = replace(split(ravens_obj["ConductingEquipment.BaseVoltage"], "::")[2], "'" => "")
-        base_voltage = data_ravens["BaseVoltage"][base_voltage_id]["BaseVoltage.nominalVoltage"]
         op_limit_id = replace(split(data_ravens["ConnectivityNode"][connectivity_node]["ConnectivityNode.OperationalLimitSet"], "::")[2], "'" => "")
-        # op_limit_max = data_ravens["OperationalLimitSet"][op_limit_id]["OperationalLimitSet.OperationalLimitValue"][1]["VoltageLimit.value"]./base_voltage
-        # op_limit_min = data_ravens["OperationalLimitSet"][op_limit_id]["OperationalLimitSet.OperationalLimitValue"][2]["VoltageLimit.value"]./base_voltage
-        op_limit_max = data_ravens["OperationalLimitSet"][op_limit_id]["OperationalLimitSet.OperationalLimitValue"][1]["VoltageLimit.value"]
-        op_limit_min = data_ravens["OperationalLimitSet"][op_limit_id]["OperationalLimitSet.OperationalLimitValue"][2]["VoltageLimit.value"]
+        op_limit_max = data_ravens["OperationalLimitSet"][op_limit_id]["OperationalLimitSet.OperationalLimitValue"][1]["VoltageLimit.value"]./_voltage_scale_factor_sqrt3
+        op_limit_min = data_ravens["OperationalLimitSet"][op_limit_id]["OperationalLimitSet.OperationalLimitValue"][2]["VoltageLimit.value"]./_voltage_scale_factor_sqrt3
 
         _connections = Vector{Int64}()
         if haskey(ravens_obj, "EnergyConsumer.EnergyConsumerPhase")
@@ -645,7 +494,7 @@ function _map_ravens2math_energy_source!(data_math::Dict{String,<:Any}, data_rav
 
     _data_ravens_energyconnection = data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"]
     _voltage_scale_factor = data_math["settings"]["voltage_scale_factor"]
-    _voltage_scale_factor_sqrt3 = data_math["settings"]["voltage_scale_factor"]*sqrt(3)
+    _voltage_scale_factor_sqrt3 = _voltage_scale_factor*sqrt(3)
 
     for (name, ravens_obj) in get(_data_ravens_energyconnection, "EnergySource", Dict{String,Any}())
 

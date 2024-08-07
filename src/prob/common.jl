@@ -116,9 +116,8 @@ function instantiate_mc_model(
         )
     end
 
-    @info "$(data["load"])"
-
-    DEFINIDOEN_instantiate_mc_model
+    # @info "$(data)"
+    # DEFINIDOEN_instantiate_mc_model
 
     return _IM.instantiate_model(
         data,
@@ -147,8 +146,6 @@ function instantiate_mc_model_ravens(
     kwargs...
     )
 
-    # @info "$(data)"
-
     @info "Converting CIM-RAVENS data model to MATHEMATICAL first to build JuMP model"
 
     data = transform_data_model_ravens(
@@ -160,9 +157,8 @@ function instantiate_mc_model_ravens(
             make_pu_extensions=make_pu_extensions,
         )
 
-    @info "$(data["load"])"
-
-    DEFINIDOEN_instantiate_mc_model_ravens
+    # @info "$(data["bus"])"
+    # DEFINIDOEN_instantiate_mc_model_ravens
 
     return _IM.instantiate_model(
         data,
