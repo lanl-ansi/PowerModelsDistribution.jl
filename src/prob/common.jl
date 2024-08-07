@@ -116,6 +116,10 @@ function instantiate_mc_model(
         )
     end
 
+    @info "$(data["load"])"
+
+    DEFINIDOEN_instantiate_mc_model
+
     return _IM.instantiate_model(
         data,
         model_type,
@@ -158,7 +162,7 @@ function instantiate_mc_model_ravens(
 
     @info "$(data["load"])"
 
-    DEFINIDOEN_instantiate_mc_model
+    DEFINIDOEN_instantiate_mc_model_ravens
 
     return _IM.instantiate_model(
         data,

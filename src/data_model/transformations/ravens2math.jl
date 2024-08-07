@@ -134,10 +134,6 @@ function _map_ravens2math(
 
     apply_pmd!(_map_ravens2math_nw!, data_math, _data_ravens; ravens2math_passthrough=ravens2math_passthrough, ravens2math_extensions=ravens2math_extensions)
 
-
-    @info "$(data_math["branch"])"
-    gfdgfdgf
-
     if ismultinetwork(data_ravens)
         _collect_nw_maps!(data_math)
         _collect_nw_bus_lookups!(data_math)
@@ -193,7 +189,7 @@ end
 "converts ravens connectivity_node components into mathematical bus components"
 function _map_ravens2math_connectivity_node!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[])
 
-    _voltage_scale_factor = data_math["settings"]["voltage_scale_factor"]*sqrt(3)
+    _voltage_scale_factor_sqrt3 = data_math["settings"]["voltage_scale_factor"]*sqrt(3)
 
     for (name, ravens_obj) in get(data_ravens, "ConnectivityNode", Dict{String,Any}())
 
@@ -226,7 +222,7 @@ function _map_ravens2math_connectivity_node!(data_math::Dict{String,<:Any}, data
         # end
 
         if haskey(ravens_obj, "SvVoltage.v")
-            math_obj["vm"] = (ravens_obj["SvVoltage.v"]/_voltage_scale_factor)
+            math_obj["vm"] = (ravens_obj["SvVoltage.v"]/_voltage_scale_factor_sqrt3)
         end
 
         if haskey(ravens_obj, "SvVoltage.angle")
@@ -511,6 +507,8 @@ end
 function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[])
 
     _data_ravens_energyconnection = data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"]
+    _power_scale_factor = data_math["settings"]["power_scale_factor"]
+    _voltage_scale_factor = data_math["settings"]["voltage_scale_factor"]
 
     for (name, ravens_obj) in get(_data_ravens_energyconnection, "EnergyConsumer", Dict{Any,Dict{String,Any}}())
 
@@ -548,14 +546,14 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
             math_obj["model"] = POWER
 
             # P and Q consumption
-            math_obj["pd"] = [ravens_obj["EnergyConsumer.p"]]
-            math_obj["qd"] = [ravens_obj["EnergyConsumer.q"]]
+            math_obj["pd"] = [ravens_obj["EnergyConsumer.p"]/_power_scale_factor]
+            math_obj["qd"] = [ravens_obj["EnergyConsumer.q"]/_power_scale_factor]
 
         end
 
         # Vnom
         base_voltage_ref = replace(split(ravens_obj["ConductingEquipment.BaseVoltage"], "::")[2], "'" => "")
-        math_obj["vnom_kv"] = data_ravens["BaseVoltage"][base_voltage_ref]["BaseVoltage.nominalVoltage"]
+        math_obj["vnom_kv"] = (data_ravens["BaseVoltage"][base_voltage_ref]["BaseVoltage.nominalVoltage"]/_voltage_scale_factor)/(sqrt(3)/2)
 
         # Get voltage bounds for specific bus connected (TODO: see if it can be coverted to standalone function to avoid repetition)
         bus_info = string(math_obj["load_bus"])
@@ -646,7 +644,8 @@ end
 function _map_ravens2math_energy_source!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[])
 
     _data_ravens_energyconnection = data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"]
-    _voltage_scale_factor = data_math["settings"]["voltage_scale_factor"]*sqrt(3)
+    _voltage_scale_factor = data_math["settings"]["voltage_scale_factor"]
+    _voltage_scale_factor_sqrt3 = data_math["settings"]["voltage_scale_factor"]*sqrt(3)
 
     for (name, ravens_obj) in get(_data_ravens_energyconnection, "EnergySource", Dict{String,Any}())
 
@@ -698,18 +697,18 @@ function _map_ravens2math_energy_source!(data_math::Dict{String,<:Any}, data_rav
         # Vnom and add vbases_default from energy source
         base_voltage_ref = replace(split(ravens_obj["ConductingEquipment.BaseVoltage"], "::")[2], "'" => "")
         vnom = data_ravens["BaseVoltage"][base_voltage_ref]["BaseVoltage.nominalVoltage"] / sqrt(nphases)
-        data_math["settings"]["vbases_default"][connectivity_node] = vnom
+        data_math["settings"]["vbases_default"][connectivity_node] = vnom/_voltage_scale_factor
 
         # P, Q, Vg, etc.
         math_obj["pg"] = get(ravens_obj, "EnergySource.activePower", fill(0.0, nphases)).*fill(1.0, nphases)
         math_obj["qg"] = get(ravens_obj, "EnergySource.reactivePower", fill(0.0, nphases)).*fill(1.0, nphases)
-        math_obj["vg"] = fill(get(ravens_obj, "EnergySource.voltageMagnitude", _voltage_scale_factor)/_voltage_scale_factor, nphases)
+        math_obj["vg"] = fill(get(ravens_obj, "EnergySource.voltageMagnitude", _voltage_scale_factor_sqrt3)/_voltage_scale_factor_sqrt3, nphases)
         math_obj["pmin"] = get(ravens_obj, "EnergySource.pMin", fill(-Inf, nphases)).*fill(1.0, nphases)
         math_obj["pmax"] = get(ravens_obj, "EnergySource.pMax", fill( Inf, nphases)).*fill(1.0, nphases)
         math_obj["qmin"] = get(ravens_obj, "EnergySource.qMin", fill(-Inf, nphases)).*fill(1.0, nphases)
         math_obj["qmax"] = get(ravens_obj, "EnergySource.qMax", fill( Inf, nphases)).*fill(1.0, nphases)
 
-        #TODO: how to define configuration from terminals or add a connectionKind parameter? add to RAVENS schema?
+        # configuration
         math_obj["configuration"] = get(ravens_obj, "EnergySource.connectionKind", WYE)
 
         # TODO: Do we need a control_mode parameter for this? add to RAVENS schema
@@ -736,10 +735,10 @@ function _map_ravens2math_energy_source!(data_math::Dict{String,<:Any}, data_rav
                 "grounded" => Bool[0, 0, 0],
                 "name" => "_virtual_bus.energy_source.$name",
                 "bus_type" => status == 0 ? 4 : control_mode == Int(ISOCHRONOUS) ? 3 : 2,
-                "vm" => fill(ravens_obj["EnergySource.voltageMagnitude"]/_voltage_scale_factor, nphases),
+                "vm" => fill(ravens_obj["EnergySource.voltageMagnitude"]/_voltage_scale_factor_sqrt3, nphases),
                 "va" => rad2deg.(_wrap_to_pi.([-2*pi/nphases*(i-1)+deg2rad(ravens_obj["EnergySource.voltageAngle"]) for i in 1:nphases])),
-                "vmin" => fill(ravens_obj["EnergySource.voltageMagnitude"]/_voltage_scale_factor, nphases),
-                "vmax" => fill(ravens_obj["EnergySource.voltageMagnitude"]/_voltage_scale_factor, nphases),
+                "vmin" => fill(ravens_obj["EnergySource.voltageMagnitude"]/_voltage_scale_factor_sqrt3, nphases),
+                "vmax" => fill(ravens_obj["EnergySource.voltageMagnitude"]/_voltage_scale_factor_sqrt3, nphases),
                 "vm_pair_lb" => deepcopy(get(ravens_obj, "EnergySource.vpairMin", Tuple{Any,Any,Real}[])),
                 "vm_pair_ub" => deepcopy(get(ravens_obj, "EnergySource.vpairMax", Tuple{Any,Any,Real}[])),
                 "source_id" => "energy_source.$name",
@@ -763,17 +762,14 @@ function _map_ravens2math_energy_source!(data_math::Dict{String,<:Any}, data_rav
                 "source_id" => "energy_source.$name",
                 "f_bus" => bus_obj["bus_i"],
                 "t_bus" => data_math["bus_lookup"][connectivity_node],
-                # TODO:
                 "f_connections" => math_obj["connections"],
                 "t_connections" => math_obj["connections"],
                 "angmin" => fill(-10.0, nconductors),
                 "angmax" => fill( 10.0, nconductors),
                 "c_rating_a" => fill(Inf, nconductors),
                 "br_status" => status,
-                # "br_r" => _impedance_conversion_ravens(data_ravens, ravens_obj, "rs"),
-                # "br_x" => _impedance_conversion_ravens(data_ravens, ravens_obj, "xs"),
-                "br_r" => ravens_obj["EnergySource.r"],
-                "br_x" => ravens_obj["EnergySource.x"],
+                "br_r" => _impedance_conversion_ravens_energy_source(data_ravens, ravens_obj, "EnergySource.r", "EnergySource.r0"),
+                "br_x" => _impedance_conversion_ravens_energy_source(data_ravens, ravens_obj, "EnergySource.x", "EnergySource.x0"),
                 "g_fr" => zeros(nconductors, nconductors),
                 "g_to" => zeros(nconductors, nconductors),
                 "b_fr" => zeros(nconductors, nconductors),
@@ -790,7 +786,7 @@ function _map_ravens2math_energy_source!(data_math::Dict{String,<:Any}, data_rav
 
             data_math["bus"]["$gen_bus"]["vmin"] = [vm_lb..., [0.0 for n in 1:(nconductors-nphases)]...]
             data_math["bus"]["$gen_bus"]["vmax"] = [vm_ub..., [Inf for n in 1:(nconductors-nphases)]...]
-            data_math["bus"]["$gen_bus"]["vm"] = [ravens_obj["EnergySource.voltageMagnitude"]/_voltage_scale_factor..., [0.0 for n in 1:(nconductors-nphases)]...]
+            data_math["bus"]["$gen_bus"]["vm"] = [ravens_obj["EnergySource.voltageMagnitude"]/_voltage_scale_factor_sqrt3..., [0.0 for n in 1:(nconductors-nphases)]...]
             data_math["bus"]["$gen_bus"]["va"] = [ravens_obj["EnergySource.voltageAngle"]..., [0.0 for n in 1:(nconductors-nphases)]...]
 
             bus_type = data_math["bus"]["$gen_bus"]["bus_type"]

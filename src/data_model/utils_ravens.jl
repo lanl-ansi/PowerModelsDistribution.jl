@@ -31,6 +31,30 @@ function _impedance_conversion_ravens(data_eng::Dict{String,Any}, eng_obj::Dict{
 end
 
 
+"converts impendance in Ohm/m by multiplying by length"
+function _impedance_conversion_ravens_energy_source(data_eng::Dict{String,Any}, eng_obj::Dict{String,Any}, key1::String, key2::String)
+    # Default energy sources considered 3 phases
+    nphases = 3
+    _impedance_matrix = zeros(Float64, nphases, nphases)
+
+    z = get(eng_obj, key1, 0.0)
+    z0 = get(eng_obj, key2, 0.0)
+
+    for i in 1:nphases
+        for j in 1:i
+            if(i==j)
+                _impedance_matrix[i, j] =  z + ((z0 - z)/3)
+            else
+                _impedance_matrix[i, j] = (z0 - z)/3
+                _impedance_matrix[j, i] = (z0 - z)/3
+            end
+        end
+    end
+
+    return _impedance_matrix .* get(eng_obj, "Conductor.length", 1.0)
+end
+
+
 "converts admittance by multiplying by 2πωl"
 function _admittance_conversion_ravens(data_eng::Dict{String,<:Any}, eng_obj::Dict{String,<:Any}, key::String; freq::Float64=60.0)
 
