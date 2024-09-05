@@ -5,7 +5,7 @@ const _math_to_ravens = Dict{String,String}(
     "switch" => "switch",
     # "shunt" => "shunt_compensator",
     "load" => "energy_consumer",
-    # "generator" => "rotating_machine",
+    "generator" => "rotating_machine",
     # "solar" => "photovoltaic_unit",
     # "storage" => "battery_unit",
     "voltage_source" => "energy_source",
@@ -14,7 +14,7 @@ const _math_to_ravens = Dict{String,String}(
 
 "list of nodal type elements in the ravens model"
 const _ravens_node_elements = String[
-    "energy_consumer", "energy_source"
+    "energy_consumer", "rotating_machine", "energy_source"
 ]
 
 "list of edge type elements in the ravens model"
@@ -247,8 +247,12 @@ function _map_ravens2math_conductor!(data_math::Dict{String,<:Any}, data_ravens:
         math_obj["angmin"] = get(ravens_obj, "vad_lb", fill(-60.0, nphases))
         math_obj["angmax"] = get(ravens_obj, "vad_ub", fill(60.0, nphases))
 
-        oplimitset_id = replace(split(terminals[1]["ACDCTerminal.OperationalLimitSet"], "::")[2], "'" => "")
-        oplimitset = data_ravens["OperationalLimitSet"][oplimitset_id]["OperationalLimitSet.OperationalLimitValue"][2]
+        if (haskey(terminals[1], "ACDCTerminal.OperationalLimitSet"))
+            oplimitset_id = replace(split(terminals[1]["ACDCTerminal.OperationalLimitSet"], "::")[2], "'" => "")
+            oplimitset = data_ravens["OperationalLimitSet"][oplimitset_id]["OperationalLimitSet.OperationalLimitValue"][2]
+        else
+            oplimitset = Dict()
+        end
 
         limit_keys = [("CurrentLimit.value", "c_rating_a"), ("CurrentLimit.value", "c_rating_b"), ("CurrentLimit.value", "c_rating_c"),
                       ("ApparentPowerLimit.value", "rate_a"), ("ApparentPowerLimit.value", "rate_b"), ("ApparentPowerLimit.value", "rate_c")]
@@ -366,7 +370,7 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
         end
 
         # Set status, dispatchable flag, and index
-        math_obj["status"] = ravens_obj["ConductingEquipment.SvStatus"]
+        math_obj["status"] = haskey(ravens_obj, "ConductingEquipment.SvStatus") ? ravens_obj["ConductingEquipment.SvStatus"] : 1
         math_obj["dispatchable"] = 0
         data_math["load"]["$(math_obj["index"])"] = math_obj
 
@@ -423,7 +427,7 @@ function _map_ravens2math_energy_source!(data_math::Dict{String,<:Any}, data_rav
         end
 
         # Generator status and configuration
-        math_obj["gen_status"] = Int(ravens_obj["ConductingEquipment.SvStatus"])
+        math_obj["gen_status"] = haskey(ravens_obj, "ConductingEquipment.SvStatus") ? Int(ravens_obj["ConductingEquipment.SvStatus"]) : 1
         math_obj["configuration"] = get(ravens_obj, "EnergySource.connectionKind", WYE)
 
         # Vnom and vbases_default
@@ -516,6 +520,87 @@ function _map_ravens2math_energy_source!(data_math::Dict{String,<:Any}, data_rav
         ))
     end
 end
+
+
+
+"converts engineering generators into mathematical generators"
+function _map_ravens2math_rotating_machine!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[])
+
+    regulating_cond_eq = data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"]["RegulatingCondEq"]
+    power_scale_factor = data_math["settings"]["power_scale_factor"]
+    voltage_scale_factor = data_math["settings"]["voltage_scale_factor"]
+    voltage_scale_factor_sqrt3 = voltage_scale_factor * sqrt(3)
+
+    for (name, ravens_obj) in get(regulating_cond_eq, "RotatingMachine", Dict{Any,Dict{String,Any}}())
+
+        math_obj = _init_math_obj_ravens("rotating_machine", name, ravens_obj, length(data_math["gen"])+1; pass_props=pass_props)
+
+        # TODO: connections/phases do not exist in the RAVENS-CIM (Need to be added) - should come from terminals
+        connections = [1, 2, 3] # TODO
+        nconductors = length(connections)
+        math_obj["connections"] = connections
+
+        connectivity_node = replace(split(ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.ConnectivityNode"], "::")[2], "'" => "")
+        math_obj["gen_bus"] = data_math["bus_lookup"][connectivity_node]
+        math_obj["gen_status"] = status = Int(get(ravens_obj, "ConductingEquipment.SvStatus", 1))
+
+        # TODO: control mode do not exist in the RAVENS-CIM (Need to be added)
+        math_obj["control_mode"] = control_mode = Int(get(ravens_obj, "control_mode", FREQUENCYDROOP))
+
+        # Set Pmax for generator
+        if !haskey(ravens_obj, "GeneratingUnit.maxOperatingP")
+            math_obj["pmax"] = ((get(ravens_obj, "SynchronousMachine.ratedS", Inf) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
+        else
+            math_obj["pmax"] = ((get(ravens_obj, "GeneratingUnit.maxOperatingP", Inf) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
+        end
+
+        # Set bus type
+        bus_type = data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"]
+        data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"] = _compute_bus_type(bus_type, status, control_mode)
+
+        # Set the nominal voltage
+        base_voltage_ref = replace(split(ravens_obj["ConductingEquipment.BaseVoltage"], "::")[2], "'" => "")
+        nominal_voltage = data_ravens["BaseVoltage"][base_voltage_ref]["BaseVoltage.nominalVoltage"]
+        base_voltage =  nominal_voltage / sqrt(nconductors)
+        math_obj["vbase"] =  base_voltage / voltage_scale_factor
+
+        if control_mode == Int(ISOCHRONOUS) && status == 1
+            data_math["bus"]["$(math_obj["gen_bus"])"]["vm"] = ((get(ravens_obj, "SynchronousMachine.ratedU", nominal_voltage))/nominal_voltage)* ones(nconductors)
+            data_math["bus"]["$(math_obj["gen_bus"])"]["vmax"] = ((get(ravens_obj, "SynchronousMachine.ratedU", nominal_voltage))/nominal_voltage)* ones(nconductors)
+            data_math["bus"]["$(math_obj["gen_bus"])"]["vmin"] = ((get(ravens_obj, "SynchronousMachine.ratedU", nominal_voltage))/nominal_voltage)* ones(nconductors)
+            data_math["bus"]["$(math_obj["gen_bus"])"]["va"] = [0.0, -120, 120, zeros(length(data_math["bus"]["$(math_obj["gen_bus"])"]) - 3)...][data_math["bus"]["$(math_obj["gen_bus"])"]["terminals"]]
+        end
+
+        # Set pmin
+        math_obj["pmin"] = ((get(ravens_obj, "GeneratingUnit.minOperatingP", 0) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
+        # Set qmin
+        math_obj["qmin"] = ((get(ravens_obj, "SynchronousMachine.minQ", -Inf) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
+        # Set qmax
+        math_obj["qmax"] = ((get(ravens_obj, "SynchronousMachine.maxQ", Inf) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
+
+        # Set pg and qg
+        math_obj["pg"] = (get(ravens_obj, "SynchronousMachine.p", 0.0) * ones(nconductors) ./ nconductors)./(power_scale_factor)
+        math_obj["qg"] = (get(ravens_obj, "SynchronousMachine.q", 0.0) * ones(nconductors) ./ nconductors)./(power_scale_factor)
+
+        # TODO: add a polynomial parameters to be added to gen cost
+        _add_gen_cost_model!(math_obj, ravens_obj)
+
+        # TODO: configuration for generators is not available on CIM (yet)
+        math_obj["configuration"] = get(ravens_obj, "configuration", WYE)
+
+        # Set index
+        data_math["gen"]["$(math_obj["index"])"] = math_obj
+
+        push!(data_math["map"], Dict{String,Any}(
+            "from" => name,
+            "to" => "gen.$(math_obj["index"])",
+            "unmap_function" => "_map_math2ravens_rotating_machine!",
+        ))
+    end
+
+
+end
+
 
 
 "converts ravensineering switches into mathematical switches and (if neeed) impedance branches to represent loss model"
