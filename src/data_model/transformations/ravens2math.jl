@@ -14,7 +14,7 @@ const _math_to_ravens = Dict{String,String}(
 
 "list of nodal type elements in the ravens model"
 const _ravens_node_elements = String[
-    "energy_consumer", "rotating_machine", "photovoltaic_unit", "battery_unit", "energy_source"
+    "energy_consumer", "rotating_machine", "power_electronics", "energy_source"
 ]
 
 "list of edge type elements in the ravens model"
@@ -601,8 +601,8 @@ function _map_ravens2math_rotating_machine!(data_math::Dict{String,<:Any}, data_
 end
 
 
-"converts ravens photovoltaic_unit components into mathematical generators"
-function _map_ravens2math_photovoltaic_unit!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[])
+"converts ravens power_electronics units such as PVs and Batteries into mathematical components"
+function _map_ravens2math_power_electronics!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[])
 
     regulating_cond_eq = data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"]["RegulatingCondEq"]
     power_scale_factor = data_math["settings"]["power_scale_factor"]
@@ -613,7 +613,7 @@ function _map_ravens2math_photovoltaic_unit!(data_math::Dict{String,<:Any}, data
         # Get type of PowerElectronicsUnit
         pec_type = get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "Ravens.CimObjectType", "")
 
-        if pec_type == "PhotoVoltaicUnit"
+        if (pec_type == "PhotoVoltaicUnit")
 
             math_obj = _init_math_obj_ravens("photovoltaic_unit", name, ravens_obj, length(data_math["gen"])+1; pass_props=pass_props)
 
@@ -691,25 +691,7 @@ function _map_ravens2math_photovoltaic_unit!(data_math::Dict{String,<:Any}, data
                 "unmap_function" => "_map_math2ravens_photovoltaic_unit!",
             ))
 
-        end
-    end
-end
-
-
-
-"converts engineering storage into mathematical storage"
-function _map_ravens2math_battery_unit!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[])
-
-    regulating_cond_eq = data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"]["RegulatingCondEq"]
-    power_scale_factor = data_math["settings"]["power_scale_factor"]
-    voltage_scale_factor = data_math["settings"]["voltage_scale_factor"]
-
-    for (name, ravens_obj) in get(regulating_cond_eq, "PowerElectronicsConnection", Dict{Any,Dict{String,Any}}())
-
-        # Get type of PowerElectronicsUnit
-        pec_type = get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "Ravens.CimObjectType", "")
-
-        if pec_type == "BatteryUnit"
+        elseif (pec_type == "BatteryUnit")
 
             math_obj = _init_math_obj_ravens("storage", name, ravens_obj, length(data_math["storage"])+1; pass_props=pass_props)
 
