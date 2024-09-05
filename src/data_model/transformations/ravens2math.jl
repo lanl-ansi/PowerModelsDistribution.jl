@@ -6,7 +6,7 @@ const _math_to_ravens = Dict{String,String}(
     # "shunt" => "shunt_compensator",
     "load" => "energy_consumer",
     "generator" => "rotating_machine",
-    # "solar" => "photovoltaic_unit",
+    "solar" => "photovoltaic_unit",
     # "storage" => "battery_unit",
     "voltage_source" => "energy_source",
 )
@@ -14,7 +14,7 @@ const _math_to_ravens = Dict{String,String}(
 
 "list of nodal type elements in the ravens model"
 const _ravens_node_elements = String[
-    "energy_consumer", "rotating_machine", "energy_source"
+    "energy_consumer", "rotating_machine", "photovoltaic_unit", "energy_source"
 ]
 
 "list of edge type elements in the ravens model"
@@ -529,7 +529,6 @@ function _map_ravens2math_rotating_machine!(data_math::Dict{String,<:Any}, data_
     regulating_cond_eq = data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"]["RegulatingCondEq"]
     power_scale_factor = data_math["settings"]["power_scale_factor"]
     voltage_scale_factor = data_math["settings"]["voltage_scale_factor"]
-    voltage_scale_factor_sqrt3 = voltage_scale_factor * sqrt(3)
 
     for (name, ravens_obj) in get(regulating_cond_eq, "RotatingMachine", Dict{Any,Dict{String,Any}}())
 
@@ -601,6 +600,100 @@ function _map_ravens2math_rotating_machine!(data_math::Dict{String,<:Any}, data_
 
 end
 
+
+"converts ravens photovoltaic_unit components into mathematical generators"
+function _map_ravens2math_photovoltaic_unit!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[])
+
+    regulating_cond_eq = data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"]["RegulatingCondEq"]
+    power_scale_factor = data_math["settings"]["power_scale_factor"]
+    voltage_scale_factor = data_math["settings"]["voltage_scale_factor"]
+
+    for (name, ravens_obj) in get(regulating_cond_eq, "PowerElectronicsConnection", Dict{Any,Dict{String,Any}}())
+
+        # Get type of PowerElectronicsUnit
+        pec_type = get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "Ravens.CimObjectType", "")
+
+        if pec_type == "PhotoVoltaicUnit"
+
+            math_obj = _init_math_obj_ravens("photovoltaic_unit", name, ravens_obj, length(data_math["gen"])+1; pass_props=pass_props)
+
+            # TODO: connections/phases do not exist in the RAVENS-CIM (Need to be added) - should come from terminals
+            connections = [1, 2, 3] # TODO
+            nconductors = length(connections)
+            math_obj["connections"] = connections
+
+            connectivity_node = replace(split(ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.ConnectivityNode"], "::")[2], "'" => "")
+            math_obj["gen_bus"] = data_math["bus_lookup"][connectivity_node]
+            math_obj["gen_status"] = status = Int(get(ravens_obj, "ConductingEquipment.SvStatus", 1))
+
+            # TODO: control mode do not exist in the RAVENS-CIM (Need to be added)
+            math_obj["control_mode"] = control_mode = Int(get(ravens_obj, "control_mode", FREQUENCYDROOP))
+
+            # Set bus type
+            bus_type = data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"]
+            data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"] = _compute_bus_type(bus_type, status, control_mode)
+
+            # Set the nominal voltage
+            base_voltage_ref = replace(split(ravens_obj["ConductingEquipment.BaseVoltage"], "::")[2], "'" => "")
+            nominal_voltage = data_ravens["BaseVoltage"][base_voltage_ref]["BaseVoltage.nominalVoltage"]
+            base_voltage =  nominal_voltage / sqrt(nconductors)
+            math_obj["vbase"] =  base_voltage / voltage_scale_factor
+
+            if control_mode == Int(ISOCHRONOUS) && status == 1
+                data_math["bus"]["$(math_obj["gen_bus"])"]["vm"] = ((get(ravens_obj, "PowerElectronicsConnection.ratedU", nominal_voltage))/nominal_voltage)* ones(nconductors)
+                data_math["bus"]["$(math_obj["gen_bus"])"]["vmax"] = ((get(ravens_obj, "PowerElectronicsConnection.ratedU", nominal_voltage))/nominal_voltage)* ones(nconductors)
+                data_math["bus"]["$(math_obj["gen_bus"])"]["vmin"] = ((get(ravens_obj, "PowerElectronicsConnection.ratedU", nominal_voltage))/nominal_voltage)* ones(nconductors)
+                data_math["bus"]["$(math_obj["gen_bus"])"]["va"] = [0.0, -120, 120, zeros(length(data_math["bus"]["$(math_obj["gen_bus"])"]) - 3)...][data_math["bus"]["$(math_obj["gen_bus"])"]["terminals"]]
+                data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"] = 3
+            end
+
+            # Set vg
+            for (fr_k, to_k) in [("PowerElectronicsConnection.ratedU", "vg")]
+                if haskey(ravens_obj, fr_k)
+                    math_obj[to_k] = (ravens_obj[fr_k]/nominal_voltage)*ones(nconductors)/voltage_scale_factor
+                end
+            end
+
+            # TODO: configuration for generators is not available on CIM (yet)
+            math_obj["configuration"] = get(ravens_obj, "configuration", WYE)
+
+
+            # TODO: refactor the calculation of N when connections and configuration issues are solved.
+            N = math_obj["configuration"]==DELTA && length(connections)==1 ? 1 : _infer_int_dim(connections,  math_obj["configuration"], false) # if solar is delta-connected to triplex node, N can be equal to 1
+
+            # Set pmax
+            if !haskey(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "PowerElectronicsUnit.maxP")
+                math_obj["pmax"] = ((get(ravens_obj, "PowerElectronicsConnection.ratedS", Inf) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
+            else
+                math_obj["pmax"] = ((get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "PowerElectronicsUnit.maxP", Inf) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
+            end
+            # Set pmin
+            math_obj["pmin"] = ((get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "PowerElectronicsUnit.minP", 0) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
+            # Set qmin
+            math_obj["qmin"] = ((get(ravens_obj, "PowerElectronicsConnection.minQ", -0) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
+            # Set qmax
+            math_obj["qmax"] = ((get(ravens_obj, "PowerElectronicsConnection.maxQ", 0) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
+
+
+            # Set pg and qg
+            math_obj["pg"] = (get(ravens_obj, "PowerElectronicsConnection.p", 0.0) * ones(nconductors) ./ nconductors)./(power_scale_factor)
+            math_obj["qg"] = (get(ravens_obj, "PowerElectronicsConnection.q", 0.0) * ones(nconductors) ./ nconductors)./(power_scale_factor)
+
+            # TODO: add a polynomial parameters to be added to gen cost
+            _add_gen_cost_model!(math_obj, ravens_obj)
+
+            # Set index
+            data_math["gen"]["$(math_obj["index"])"] = math_obj
+
+            push!(data_math["map"], Dict{String,Any}(
+                "from" => name,
+                "to" => "gen.$(math_obj["index"])",
+                "unmap_function" => "_map_math2ravens_photovoltaic_unit!",
+            ))
+
+        end
+    end
+end
 
 
 "converts ravensineering switches into mathematical switches and (if neeed) impedance branches to represent loss model"
