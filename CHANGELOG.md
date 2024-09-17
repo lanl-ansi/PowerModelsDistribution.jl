@@ -1,7 +1,12 @@
 # PowerModelsDistribution.jl Change Log
 
-## staged
+## v0.16.0
 
+- Updated to use the new `NonlinearExpr` syntax in JuMP v1.15. In most cases,
+  there should be no user-visible changes. However, if you access the internal
+  JuMP model object, the constraints are now `NonlinearExpr` objects instead of
+  `NLPBlock`. In addition, you may encounter small numerical differences in the
+  solution due to a different ordering of the constraints.
 - Indicated broken tests in `"2w_dy_lead"` and `"3-bus SOCConicUBF opf_bf"` by using `@test_skip`
 
 ## v0.15.2
