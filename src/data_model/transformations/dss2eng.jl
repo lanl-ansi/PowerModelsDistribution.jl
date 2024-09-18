@@ -502,15 +502,9 @@ function _dss2eng_line!(data_eng::Dict{String,<:Any}, data_dss::OpenDssDataModel
             delete!(eng_obj, "linecode")
 
             # ENGINEERING model switches are zero-length objects
-            for k in ["b_fr", "b_to", "g_fr", "g_to"]
+            for k in ["b_fr", "b_to", "g_fr", "g_to", "rs", "xs"]
                 if haskey(eng_obj, k)
-                    _admittance_conversion(data_eng, eng_obj, k)
-                end
-            end
-
-            for k in ["rs", "xs"]
-                if haskey(eng_obj, k)
-                    eng_obj[k] = _impedance_conversion(data_eng, eng_obj, k)
+                    eng_obj[k] .*= get(eng_obj, length, 1.0)
                 end
             end
             delete!(eng_obj, "length")

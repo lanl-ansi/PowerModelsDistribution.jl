@@ -30,12 +30,12 @@
     @testset "solve_mc_opf_oltc" begin
         result_mn = PowerModelsDistribution.solve_mn_mc_opf_oltc(IEEE13_Feeder_engr, ACPUPowerModel, ipopt_solver)
         @test result_mn["termination_status"] == LOCALLY_SOLVED
-        
+
         @test all(isapprox.(result_mn["solution"]["nw"]["1"]["voltage_source"]["source"]["pg"], [738.58786, 788.38272, 787.79729]; atol=1e-5))
         @test all(isapprox.(result_mn["solution"]["nw"]["1"]["voltage_source"]["source"]["qg"], [237.68517, 209.61208, 266.77223]; atol=1e-5))
         @test all(isapprox.(result_mn["solution"]["nw"]["8"]["voltage_source"]["source"]["pg"], [847.77707, 889.87745, 918.34146]; atol=1e-5))
         @test all(isapprox.(result_mn["solution"]["nw"]["8"]["voltage_source"]["source"]["qg"], [284.46267, 227.28860, 292.33564]; atol=1e-5))
-        
+
         @test all(isapprox.(result_mn["solution"]["nw"]["1"]["transformer"]["reg1"]["tap"][2], [1.02358, 1.01724, 1.02169]; atol=1e-5))
         @test all(isapprox.(result_mn["solution"]["nw"]["8"]["transformer"]["reg1"]["tap"][2], [1.02719, 1.01984, 1.02414]; atol=1e-5))
     end
