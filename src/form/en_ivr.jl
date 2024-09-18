@@ -132,12 +132,12 @@ function constraint_mc_generator_power_wye(pm::AbstractNLExplicitNeutralIVRModel
     phases = connections[1:end-1]
     n      = connections[end]
 
-    pg = Vector{JuMP.NonlinearExpression}([])
-    qg = Vector{JuMP.NonlinearExpression}([])
+    pg = JuMP.NonlinearExpr[]
+    qg = JuMP.NonlinearExpr[]
 
     for (idx, p) in enumerate(phases)
-        push!(pg, JuMP.@NLexpression(pm.model,  (vr[p]-vr[n])*crg[idx]+(vi[p]-vi[n])*cig[idx]))
-        push!(qg, JuMP.@NLexpression(pm.model, -(vr[p]-vr[n])*cig[idx]+(vi[p]-vi[n])*crg[idx]))
+        push!(pg, JuMP.@expression(pm.model,  (vr[p]-vr[n])*crg[idx]+(vi[p]-vi[n])*cig[idx]))
+        push!(qg, JuMP.@expression(pm.model, -(vr[p]-vr[n])*cig[idx]+(vi[p]-vi[n])*crg[idx]))
     end
 
     for (idx, p) in enumerate(phases)
@@ -194,21 +194,22 @@ function constraint_mc_generator_power_delta(pm::AbstractNLExplicitNeutralIVRMod
     vrg = Dict()
     vig = Dict()
     for (idx,c,d) in zip(1:nph, connections, [connections[2:end]..., connections[1]])
-        vrg[idx] = JuMP.@NLexpression(pm.model, vr[c]-vr[d])
-        vig[idx] = JuMP.@NLexpression(pm.model, vi[c]-vi[d])
+        vrg[idx] = JuMP.@expression(pm.model, vr[c]-vr[d])
+        vig[idx] = JuMP.@expression(pm.model, vi[c]-vi[d])
     end
 
-    pg = Vector{JuMP.NonlinearExpression}([])
-    qg = Vector{JuMP.NonlinearExpression}([])
+    pg = JuMP.NonlinearExpr[]
+    qg = JuMP.NonlinearExpr[]
     for idx in 1:nph
-        push!(pg, JuMP.@NLexpression(pm.model,  vrg[idx]*crg[idx]+vig[idx]*cig[idx]))
-        push!(qg, JuMP.@NLexpression(pm.model, -vrg[idx]*cig[idx]+vig[idx]*crg[idx]))
+        push!(pg, JuMP.@expression(pm.model,  vrg[idx]*crg[idx]+vig[idx]*cig[idx]))
+        push!(qg, JuMP.@expression(pm.model, -vrg[idx]*cig[idx]+vig[idx]*crg[idx]))
     end
 
-    JuMP.@NLconstraint(pm.model, [i in 1:nph], pmin[i] <= pg[i])
-    JuMP.@NLconstraint(pm.model, [i in 1:nph], pmax[i] >= pg[i])
-    JuMP.@NLconstraint(pm.model, [i in 1:nph], qmin[i] <= qg[i])
-    JuMP.@NLconstraint(pm.model, [i in 1:nph], qmax[i] >= qg[i])
+    # TODO(odow): refactor as pmin[i] <= pg[i] <= pmax[i]
+    JuMP.@constraint(pm.model, [i in 1:nph], pmin[i] <= pg[i])
+    JuMP.@constraint(pm.model, [i in 1:nph], pmax[i] >= pg[i])
+    JuMP.@constraint(pm.model, [i in 1:nph], qmin[i] <= qg[i])
+    JuMP.@constraint(pm.model, [i in 1:nph], qmax[i] >= qg[i])
 
     var(pm, nw, :pg)[id] = JuMP.Containers.DenseAxisArray(pg, connections)
     var(pm, nw, :qg)[id] = JuMP.Containers.DenseAxisArray(qg, connections)
@@ -499,18 +500,18 @@ function constraint_mc_load_current_wye(pm::AbstractExplicitNeutralIVRModel, nw:
     vr = var(pm, nw, :vr, bus_id)
     vi = var(pm, nw, :vi, bus_id)
 
-    crd = Vector{JuMP.NonlinearExpression}([])
-    cid = Vector{JuMP.NonlinearExpression}([])
+    crd = JuMP.NonlinearExpr[]
+    cid = JuMP.NonlinearExpr[]
 
     phases = connections[1:end-1]
     n      = connections[end]
 
     for (idx, p) in enumerate(phases)
-        push!(crd, JuMP.@NLexpression(pm.model,
+        push!(crd, JuMP.@expression(pm.model,
              a[idx]*(vr[p]-vr[n])*((vr[p]-vr[n])^2+(vi[p]-vi[n])^2)^(alpha[idx]/2-1)
             +b[idx]*(vi[p]-vi[n])*((vr[p]-vr[n])^2+(vi[p]-vi[n])^2)^(beta[idx]/2 -1)
         ))
-        push!(cid, JuMP.@NLexpression(pm.model,
+        push!(cid, JuMP.@expression(pm.model,
              a[idx]*(vi[p]-vi[n])*((vr[p]-vr[n])^2+(vi[p]-vi[n])^2)^(alpha[idx]/2-1)
             -b[idx]*(vr[p]-vr[n])*((vr[p]-vr[n])^2+(vi[p]-vi[n])^2)^(beta[idx]/2 -1)
         ))
@@ -519,18 +520,18 @@ function constraint_mc_load_current_wye(pm::AbstractExplicitNeutralIVRModel, nw:
     var(pm, nw, :crd)[id] = crd
     var(pm, nw, :cid)[id] = cid
 
-    crd_bus_n = JuMP.@NLexpression(pm.model, -sum(crd[i] for i in 1:length(phases)))
-    cid_bus_n = JuMP.@NLexpression(pm.model, -sum(cid[i] for i in 1:length(phases)))
+    crd_bus_n = JuMP.@expression(pm.model, -sum(crd[i] for i in 1:length(phases)))
+    cid_bus_n = JuMP.@expression(pm.model, -sum(cid[i] for i in 1:length(phases)))
 
     var(pm, nw, :crd_bus)[id] = crd_bus = _merge_bus_flows(pm, [crd..., crd_bus_n], connections)
     var(pm, nw, :cid_bus)[id] = cid_bus = _merge_bus_flows(pm, [cid..., cid_bus_n], connections)
 
     if report
-        pd_bus = Vector{JuMP.NonlinearExpression}([])
-        qd_bus = Vector{JuMP.NonlinearExpression}([])
+        pd_bus = JuMP.NonlinearExpr[]
+        qd_bus = JuMP.NonlinearExpr[]
         for (idx,c) in enumerate(connections)
-            push!(pd_bus, JuMP.@NLexpression(pm.model,  vr[c]*crd_bus[c]+vi[c]*cid_bus[c]))
-            push!(qd_bus, JuMP.@NLexpression(pm.model, -vr[c]*cid_bus[c]+vi[c]*crd_bus[c]))
+            push!(pd_bus, JuMP.@expression(pm.model,  vr[c]*crd_bus[c]+vi[c]*cid_bus[c]))
+            push!(qd_bus, JuMP.@expression(pm.model, -vr[c]*cid_bus[c]+vi[c]*crd_bus[c]))
         end
 
         sol(pm, nw, :load, id)[:pd_bus] = JuMP.Containers.DenseAxisArray(pd_bus, connections)
@@ -542,11 +543,11 @@ function constraint_mc_load_current_wye(pm::AbstractExplicitNeutralIVRModel, nw:
         sol(pm, nw, :load, id)[:crd_bus] = crd_bus
         sol(pm, nw, :load, id)[:cid_bus] = cid_bus
 
-        pd = Vector{JuMP.NonlinearExpression}([])
-        qd = Vector{JuMP.NonlinearExpression}([])
+        pd = JuMP.NonlinearExpr[]
+        qd = JuMP.NonlinearExpr[]
         for (idx, p) in enumerate(phases)
-            push!(pd, JuMP.@NLexpression(pm.model, a[idx]*(vr[p]^2+vi[p]^2)^(alpha[idx]/2) ))
-            push!(qd, JuMP.@NLexpression(pm.model, b[idx]*(vr[p]^2+vi[p]^2)^(beta[idx]/2)  ))
+            push!(pd, JuMP.@expression(pm.model, a[idx]*(vr[p]^2+vi[p]^2)^(alpha[idx]/2) ))
+            push!(qd, JuMP.@expression(pm.model, b[idx]*(vr[p]^2+vi[p]^2)^(beta[idx]/2)  ))
         end
         sol(pm, nw, :load, id)[:pd] = JuMP.Containers.DenseAxisArray(pd, connections)
         sol(pm, nw, :load, id)[:qd] = JuMP.Containers.DenseAxisArray(qd, connections)
@@ -586,30 +587,30 @@ function constraint_mc_load_current_delta(pm::AbstractExplicitNeutralIVRModel, n
     vrd = [vr[c]-vr[d] for (c,d) in zip(ph,ph_next)]
     vid = [vi[c]-vi[d] for (c,d) in zip(ph,ph_next)]
 
-    crd = JuMP.@NLexpression(pm.model, [i in 1:P],
+    crd = JuMP.@expression(pm.model, [i in 1:P],
         a[i]*vrd[i]*(vrd[i]^2+vid[i]^2)^(alpha[i]/2-1)
        +b[i]*vid[i]*(vrd[i]^2+vid[i]^2)^(beta[i]/2 -1)
     )
-    cid = JuMP.@NLexpression(pm.model, [i in 1:P],
+    cid = JuMP.@expression(pm.model, [i in 1:P],
         a[i]*vid[i]*(vrd[i]^2+vid[i]^2)^(alpha[i]/2-1)
        -b[i]*vrd[i]*(vrd[i]^2+vid[i]^2)^(beta[i]/2 -1)
     )
 
-    crd_bus = JuMP.@NLexpression(pm.model, [i in 1:P], crd[i]-crd[idxs_prev[i]])
-    cid_bus = JuMP.@NLexpression(pm.model, [i in 1:P], cid[i]-cid[idxs_prev[i]])
+    crd_bus = JuMP.@expression(pm.model, [i in 1:P], crd[i]-crd[idxs_prev[i]])
+    cid_bus = JuMP.@expression(pm.model, [i in 1:P], cid[i]-cid[idxs_prev[i]])
 
     var(pm, nw, :crd_bus)[id] = _merge_bus_flows(pm, crd_bus, connections)
     var(pm, nw, :cid_bus)[id] = _merge_bus_flows(pm, cid_bus, connections)
 
     if report
-        pd_bus = JuMP.@NLexpression(pm.model, [i in 1:P],  vr[i]*crd_bus[i]+vi[i]*cid_bus[i])
-        qd_bus = JuMP.@NLexpression(pm.model, [i in 1:P], -vr[i]*cid_bus[i]+vi[i]*crd_bus[i])
+        pd_bus = JuMP.@expression(pm.model, [i in 1:P],  vr[i]*crd_bus[i]+vi[i]*cid_bus[i])
+        qd_bus = JuMP.@expression(pm.model, [i in 1:P], -vr[i]*cid_bus[i]+vi[i]*crd_bus[i])
 
         sol(pm, nw, :load, id)[:pd_bus] = pd_bus
         sol(pm, nw, :load, id)[:qd_bus] = qd_bus
 
-        pd = JuMP.@NLexpression(pm.model, [i in 1:P], a[i]*(vrd[i]^2+vid[i]^2)^(alpha[i]/2) )
-        qd = JuMP.@NLexpression(pm.model, [i in 1:P], b[i]*(vrd[i]^2+vid[i]^2)^(beta[i]/2)  )
+        pd = JuMP.@expression(pm.model, [i in 1:P], a[i]*(vrd[i]^2+vid[i]^2)^(alpha[i]/2) )
+        qd = JuMP.@expression(pm.model, [i in 1:P], b[i]*(vrd[i]^2+vid[i]^2)^(beta[i]/2)  )
         sol(pm, nw, :load, id)[:pd] = pd
         sol(pm, nw, :load, id)[:qd] = qd
     end
@@ -1101,14 +1102,14 @@ function constraint_mc_transformer_thermal_limit(pm::AbstractNLExplicitNeutralIV
     vit_to = [vi_to[p]-vi_to[n_to] for p in P_to]
 
     idxs = [1:length(vrt_fr)...]
-    pt_fr = JuMP.@NLexpression(pm.model, [i in idxs],  vrt_fr[i]*crt_fr[i] + vit_fr[i]*cit_fr[i])
-    qt_fr = JuMP.@NLexpression(pm.model, [i in idxs], -vrt_fr[i]*cit_fr[i] + vit_fr[i]*crt_fr[i])
-    pt_to = JuMP.@NLexpression(pm.model, [i in idxs],  vrt_to[i]*crt_to[i] + vit_to[i]*cit_to[i])
-    qt_to = JuMP.@NLexpression(pm.model, [i in idxs], -vrt_to[i]*cit_to[i] + vit_to[i]*crt_to[i])
+    pt_fr = JuMP.@expression(pm.model, [i in idxs],  vrt_fr[i]*crt_fr[i] + vit_fr[i]*cit_fr[i])
+    qt_fr = JuMP.@expression(pm.model, [i in idxs], -vrt_fr[i]*cit_fr[i] + vit_fr[i]*crt_fr[i])
+    pt_to = JuMP.@expression(pm.model, [i in idxs],  vrt_to[i]*crt_to[i] + vit_to[i]*cit_to[i])
+    qt_to = JuMP.@expression(pm.model, [i in idxs], -vrt_to[i]*cit_to[i] + vit_to[i]*crt_to[i])
 
     if sm_ub<Inf
-        JuMP.@NLconstraint(pm.model, sum(pt_fr[i] for i in idxs)^2 + sum(qt_fr[i] for i in idxs)^2 <= sm_ub^2)
-        JuMP.@NLconstraint(pm.model, sum(pt_to[i] for i in idxs)^2 + sum(qt_to[i] for i in idxs)^2 <= sm_ub^2)
+        JuMP.@constraint(pm.model, sum(pt_fr[i] for i in idxs)^2 + sum(qt_fr[i] for i in idxs)^2 <= sm_ub^2)
+        JuMP.@constraint(pm.model, sum(pt_to[i] for i in idxs)^2 + sum(qt_to[i] for i in idxs)^2 <= sm_ub^2)
     end
 
     if report
@@ -1116,8 +1117,8 @@ function constraint_mc_transformer_thermal_limit(pm::AbstractNLExplicitNeutralIV
         sol(pm, nw, :transformer, id)[:qf] = qt_fr
         sol(pm, nw, :transformer, id)[:pt] = pt_to
         sol(pm, nw, :transformer, id)[:qt] = qt_to
-        sol(pm, nw, :transformer, id)[:smtot_fr] = JuMP.@NLexpression(pm.model, sqrt(sum(pt_fr[i] for i in idxs)^2 + sum(qt_fr[i] for i in idxs)^2))
-        sol(pm, nw, :transformer, id)[:smtot_to] = JuMP.@NLexpression(pm.model, sqrt(sum(pt_to[i] for i in idxs)^2 + sum(qt_to[i] for i in idxs)^2))
+        sol(pm, nw, :transformer, id)[:smtot_fr] = JuMP.@expression(pm.model, sqrt(sum(pt_fr[i] for i in idxs)^2 + sum(qt_fr[i] for i in idxs)^2))
+        sol(pm, nw, :transformer, id)[:smtot_to] = JuMP.@expression(pm.model, sqrt(sum(pt_to[i] for i in idxs)^2 + sum(qt_to[i] for i in idxs)^2))
     end
 end
 
@@ -1430,10 +1431,10 @@ function constraint_mc_thermal_limit_from(pm::AbstractExplicitNeutralIVRModel, n
 
     for idx in 1:length(rate_a)
         if rate_a[idx]<Inf
-            pf_idx = JuMP.@NLexpression(pm.model,  vr_fr[idx]*cr_fr[idx] + vi_fr[idx]*ci_fr[idx])
-            qf_idx = JuMP.@NLexpression(pm.model, -vr_fr[idx]*ci_fr[idx] + vi_fr[idx]*cr_fr[idx])
+            pf_idx = JuMP.@expression(pm.model,  vr_fr[idx]*cr_fr[idx] + vi_fr[idx]*ci_fr[idx])
+            qf_idx = JuMP.@expression(pm.model, -vr_fr[idx]*ci_fr[idx] + vi_fr[idx]*cr_fr[idx])
 
-            JuMP.@NLconstraint(pm.model, pf_idx^2 + qf_idx^2 <= rate_a[idx]^2)
+            JuMP.@constraint(pm.model, pf_idx^2 + qf_idx^2 <= rate_a[idx]^2)
         end
     end
 end
@@ -1459,10 +1460,10 @@ function constraint_mc_thermal_limit_to(pm::AbstractExplicitNeutralIVRModel, nw:
 
     for idx in 1:length(rate_a)
         if rate_a[idx]<Inf
-            pt_idx = JuMP.@NLexpression(pm.model,  vr_to[idx]*cr_to[idx] + vi_to[idx]*ci_to[idx])
-            qt_idx = JuMP.@NLexpression(pm.model, -vr_to[idx]*ci_to[idx] + vi_to[idx]*cr_to[idx])
+            pt_idx = JuMP.@expression(pm.model,  vr_to[idx]*cr_to[idx] + vi_to[idx]*ci_to[idx])
+            qt_idx = JuMP.@expression(pm.model, -vr_to[idx]*ci_to[idx] + vi_to[idx]*cr_to[idx])
 
-            JuMP.@NLconstraint(pm.model, pt_idx^2 + qt_idx^2 <= rate_a[idx]^2)
+            JuMP.@constraint(pm.model, pt_idx^2 + qt_idx^2 <= rate_a[idx]^2)
         end
     end
 end
@@ -1719,10 +1720,10 @@ function constraint_mc_switch_thermal_limit(pm::AbstractNLExplicitNeutralIVRMode
     mu_sm_fr = JuMP.ConstraintRef[]
     for idx in 1:length(rating)
         if rating[idx] < Inf
-            psw_fr_idx = JuMP.@NLexpression(pm.model,  vr_fr[idx]*crsw_fr[idx] + vi_fr[idx]*cisw_fr[idx])
-            qsw_fr_idx = JuMP.@NLexpression(pm.model, -vr_fr[idx]*cisw_fr[idx] + vi_fr[idx]*crsw_fr[idx])
+            psw_fr_idx = JuMP.@expression(pm.model,  vr_fr[idx]*crsw_fr[idx] + vi_fr[idx]*cisw_fr[idx])
+            qsw_fr_idx = JuMP.@expression(pm.model, -vr_fr[idx]*cisw_fr[idx] + vi_fr[idx]*crsw_fr[idx])
 
-            push!(mu_sm_fr, JuMP.@NLconstraint(pm.model, psw_fr_idx^2 + qsw_fr_idx^2 <= rating[idx]^2))
+            push!(mu_sm_fr, JuMP.@constraint(pm.model, psw_fr_idx^2 + qsw_fr_idx^2 <= rating[idx]^2))
         end
     end
 
