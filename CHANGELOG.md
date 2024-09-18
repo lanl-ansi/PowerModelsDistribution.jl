@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed creation of switch objects from dss, where ENGINEERING switches are expected to be zero-length objects (#462)
 - Fixed typo in single phase line parameters, should have been `line.c0 = line.c1` (#468)
 - Fixed missing `npts` property in loadshape in case3_balanced.dss (#466)
 - Fixed typo in unit tests 'blanced' to 'balanced' (#461)
