@@ -81,7 +81,7 @@
 
     @testset "3-bus balanced no linecode basefreq defined acp pf" begin
         result1 = solve_mc_pf(case3_balanced, ACPUPowerModel, ipopt_solver)
-        result2 = solve_mc_pf(case3_blanced_basefreq, ACPUPowerModel, ipopt_solver)
+        result2 = solve_mc_pf(case3_balanced_basefreq, ACPUPowerModel, ipopt_solver)
 
         @test all(all(isapprox.(result1["solution"]["bus"]["sourcebus"]["vm"], result2["solution"]["bus"]["sourcebus"]["vm"]; atol=1e-8)) for (i, bus) in result1["solution"]["bus"])
         @test all(all(isapprox.(result1["solution"]["bus"]["sourcebus"]["va"], result2["solution"]["bus"]["sourcebus"]["va"]; atol=1e-8)) for (i, bus) in result1["solution"]["bus"])

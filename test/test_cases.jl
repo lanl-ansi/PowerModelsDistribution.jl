@@ -10,7 +10,7 @@ case3_balanced_cap = parse_file("../test/data/opendss/case3_balanced_cap.dss")
 case3_balanced_isc = parse_file("../test/data/opendss/case3_balanced_isc.dss")
 case3_balanced_pv = parse_file("../test/data/opendss/case3_balanced_pv.dss")
 case3_unbalanced_1phase_pv = parse_file("../test/data/opendss/case3_unbalanced_1phase-pv.dss")
-case3_blanced_basefreq = parse_file("../test/data/opendss/case3_balanced_basefreq.dss")
+case3_balanced_basefreq = parse_file("../test/data/opendss/case3_balanced_basefreq.dss")
 case3_balanced_battery = parse_file("../test/data/opendss/case3_balanced_battery.dss")
 case3_balanced_switch = parse_file("../test/data/opendss/case3_balanced_switch.dss")
 
