@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed unstable test "3-bus unbalanced lpubfdiag opf_bf with delta loads" by bounding objective
 - Fixed typo in `create_transformer`, `create_xfmrcode` and ENGINEERING model documentation, `configurations` -> `configuration` and `buses` -> `bus` on transformer objects (#463)
 - Fixed creation of switch objects from dss, where ENGINEERING switches are expected to be zero-length objects (#462)
 - Fixed typo in single phase line parameters, should have been `line.c0 = line.c1` (#468)

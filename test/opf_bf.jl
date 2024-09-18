@@ -33,14 +33,12 @@
             data = deepcopy(case3_unbalanced_delta_loads)
             apply_voltage_bounds!(data; vm_lb=0.95, vm_ub=1.05)
 
-            solver = optimizer_with_attributes(
-                Ipopt.Optimizer,
-                "sb"=>"yes",
-                "print_level"=>0,
-                "warm_start_init_point"=>"yes",
-                "mu_strategy"=>"adaptive"
-            )
-            result = solve_mc_opf(data, LPUBFDiagPowerModel, solver; solution_processors=[sol_data_model!])
+            # to fix unbounded objective ipopt issue
+            data["voltage_source"]["source"]["pg_lb"] = zeros(3)
+            data["voltage_source"]["source"]["qg_lb"] = zeros(3)
+            data["voltage_source"]["source"]["pg_ub"] = fill(50.0, 3)
+
+            result = solve_mc_opf(data, LPUBFDiagPowerModel, ipopt_solver; solution_processors=[sol_data_model!])
 
             @test result["termination_status"] == LOCALLY_SOLVED
 
