@@ -49,7 +49,7 @@ function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}
     if line.phases == 1
         line.r0 = line.r1
         line.x0 = line.x1
-        line.c0 = line.c0
+        line.c0 = line.c1
         line.b0 = line.b1
     else
         if :b0 ∈ raw_fields
