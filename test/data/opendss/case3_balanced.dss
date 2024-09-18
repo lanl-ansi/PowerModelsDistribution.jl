@@ -23,7 +23,7 @@ New Line.OHLine  bus1=sourcebus.1.2.3  Primary.1.2.3  linecode = 556MCM   length
 New Line.Quad    Bus1=Primary.1.2.3  loadbus.1.2.3  linecode = 4/0QUAD  length=1   ! 100 ft
 
 !Loads - single phase
-New Loadshape.ls1 pmult=(file=./load_profile.csv)
+New Loadshape.ls1 npts=10 pmult=(file=./load_profile.csv)
 
 New Load.L1 phases=1  loadbus.1.0   ( 0.4 3 sqrt / )   kW=6   kvar=3  model=1  daily=ls1
 New Load.L2 phases=1  loadbus.2.0   ( 0.4 3 sqrt / )   kW=6   kvar=3  model=1  daily=ls1

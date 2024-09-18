@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed missing `npts` property in loadshape in case3_balanced.dss (#466)
 - Fixed typo in unit tests 'blanced' to 'balanced' (#461)
 
 ## v0.16.0
