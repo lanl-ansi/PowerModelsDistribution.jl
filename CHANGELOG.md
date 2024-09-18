@@ -1,5 +1,9 @@
 # PowerModelsDistribution.jl Change Log
 
+## staged
+
+- Fixed typo in unit tests 'blanced' to 'balanced' (#461)
+
 ## v0.16.0
 
 - Updated to use the new `NonlinearExpr` syntax in JuMP v1.15. In most cases,
