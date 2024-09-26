@@ -19,7 +19,7 @@ const _ravens_node_elements = String[
 
 "list of edge type elements in the ravens model"
 const _ravens_edge_elements = String[
-    "conductor"
+    "conductor", "switch"
 ]
 
 "list of all ravens asset types"
@@ -834,10 +834,132 @@ function _map_ravens2math_power_electronics!(data_math::Dict{String,<:Any}, data
 end
 
 
-"converts ravensineering switches into mathematical switches and (if neeed) impedance branches to represent loss model"
+"converts ravens switches into mathematical switches and (if neeed) impedance branches to represent loss model"
 function _map_ravens2math_switch!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[])
+
     # TODO enable real switches (right now only using vitual lines)
-    for (name, ravens_obj) in get(data_ravens, "switch", Dict{Any,Dict{String,Any}}())
-      # TODO
+    if haskey(data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"], "Switch")
+
+        conducting_equipment = data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]
+
+        for (name, ravens_obj) in get(conducting_equipment, "Switch", Dict{Any,Dict{String,Any}}())
+
+            math_obj = _init_math_obj_ravens("switch", name, ravens_obj, length(data_math["switch"])+1; pass_props=pass_props)
+
+            # Terminals and phases
+            terminals = ravens_obj["ConductingEquipment.Terminals"]
+
+            # TODO: refactor - Loop through terminals and verify connections
+            f_conns = [0,0,0]
+            t_conns = [0,0,0]
+            for term in terminals
+                if haskey(term, "Terminal.phases")
+                    phasecode = term["Terminal.phases"]
+                    if (phasecode == "PhaseCode.ABC")
+                        if term["ACDCTerminal.sequenceNumber"] == 1
+                            f_conns = [1, 2, 3]
+                        else
+                            t_conns = [1, 2, 3]
+                        end
+                    elseif (phasecode == "PhaseCode.AB")
+                        if term["ACDCTerminal.sequenceNumber"] == 1
+                            f_conns = [1, 2]
+                        else
+                            t_conns = [1, 2]
+                        end
+                    elseif (phasecode == "PhaseCode.AC")
+                        if term["ACDCTerminal.sequenceNumber"] == 1
+                            f_conns = [1, 3]
+                        else
+                            t_conns = [1, 3]
+                        end
+                    elseif (phasecode == "PhaseCode.BC")
+                        if term["ACDCTerminal.sequenceNumber"] == 1
+                            f_conns = [2, 3]
+                        else
+                            t_conns = [2, 3]
+                        end
+                    elseif (phasecode == "PhaseCode.A")
+                        if term["ACDCTerminal.sequenceNumber"] == 1
+                            f_conns = [1]
+                        else
+                            t_conns = [1]
+                        end
+                    elseif (phasecode == "PhaseCode.B")
+                        if term["ACDCTerminal.sequenceNumber"] == 1
+                            f_conns = [2]
+                        else
+                            t_conns = [2]
+                        end
+                    elseif (phasecode == "PhaseCode.C")
+                        if term["ACDCTerminal.sequenceNumber"] == 1
+                            f_conns = [3]
+                        else
+                            t_conns = [3]
+                        end
+                    else
+                        @error("PhaseCode not supported yet!")
+                    end
+                else
+                    f_conns = [1, 2, 3]
+                    t_conns = [1, 2, 3]
+                end
+            end
+
+            # Verify connections are correct.
+            if (f_conns != t_conns )
+                @error("f_conns are not equal to t_conns!. Revise connections/phases in Switch terminals")
+            end
+
+            # Phases
+            nphases = length(f_conns)
+
+            # Connectivity Nodes
+            f_node = replace(split(terminals[1]["Terminal.ConnectivityNode"], "::")[2], "'" => "")
+            t_node = replace(split(terminals[2]["Terminal.ConnectivityNode"], "::")[2], "'" => "")
+            math_obj["f_bus"] = data_math["bus_lookup"][f_node]
+            math_obj["t_bus"] = data_math["bus_lookup"][t_node]
+
+            # TODO: Status
+            math_obj["status"] = get(ravens_obj, "ConductingEquipment.SvStatus", 1)
+
+            # State
+            sw_state = get(ravens_obj, "Switch.open", "false")
+            sw_state = sw_state == "false" ? CLOSED : OPEN
+            math_obj["state"] = Int(sw_state)
+
+            # TODO: Dispatchable
+            math_obj["dispatchable"] = Int(get(ravens_obj, "dispatchable", YES))
+
+            # TODO: OPF bounds - Do we really need all of these values?
+            for (f_key, t_key) in [("Switch.ratedCurrent", "current_rating"), ("cm_ub_b", "c_rating_b"), ("cm_ub_c", "c_rating_c"),
+                ("sm_ub", "thermal_rating"), ("sm_ub_b", "rate_b"), ("sm_ub_c", "rate_c")]
+                math_obj[t_key] = haskey(ravens_obj, f_key) ? fill(ravens_obj[f_key], nphases) : fill(Inf, nphases)
+
+                @info "$(math_obj[t_key])"
+
+            end
+
+            # Map index
+            map_to = "switch.$(math_obj["index"])"
+
+            # TODO: Apply linecode? No information is given in CIM related to linecodes
+
+
+            # TODO: Create virtual bus
+
+
+            # Push Mapping
+            data_math["switch"]["$(math_obj["index"])"] = math_obj
+
+            push!(data_math["map"], Dict{String,Any}(
+                "from" => name,
+                "to" => map_to,
+                "unmap_function" => "_map_math2ravens_switch!",
+            ))
+
+        end
+
     end
+
 end
