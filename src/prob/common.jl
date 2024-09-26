@@ -116,8 +116,8 @@ function instantiate_mc_model(
         )
     end
 
-    # @info "$(data["branch"])"
-    # DEFINIDOEN_instantiate_mc_model
+    @info "$(data["switch"])"
+    DEFINIDOEN_instantiate_mc_model
 
     return _IM.instantiate_model(
         data,
@@ -157,8 +157,8 @@ function instantiate_mc_model_ravens(
             make_pu_extensions=make_pu_extensions,
         )
 
-    # @info "$(data["branch"])"
-    # DEFINIDOEN_instantiate_mc_model_ravens
+    @info "$(data["switch"])"
+    DEFINIDOEN_instantiate_mc_model_ravens
 
     return _IM.instantiate_model(
         data,
