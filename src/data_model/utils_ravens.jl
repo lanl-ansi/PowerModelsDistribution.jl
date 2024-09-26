@@ -18,13 +18,12 @@ function _impedance_conversion_ravens(data_eng::Dict{String,Any}, eng_obj::Dict{
     _conductor_count =  data_eng["PerLengthPhaseImpedance.conductorCount"]
     _impedance_matrix = zeros(Float64, _conductor_count, _conductor_count)
 
-    _index = 1
-    for i in 1:_conductor_count
-        for j in 1:i
-            _impedance_matrix[i, j] =  get(data_eng["PerLengthPhaseImpedance.PhaseImpedanceData"][_index], key, 0.0)
-            _impedance_matrix[j, i] = get(data_eng["PerLengthPhaseImpedance.PhaseImpedanceData"][_index], key, 0.0)
-            _index += 1
-        end
+    for obj in data_eng["PerLengthPhaseImpedance.PhaseImpedanceData"]
+        row = obj["PhaseImpedanceData.row"]
+        col = obj["PhaseImpedanceData.column"]
+        value = get(obj, key, 0.0)
+        _impedance_matrix[row, col] = value
+        _impedance_matrix[col, row] = value
     end
 
     return _impedance_matrix .* get(eng_obj, "Conductor.length", 1.0)
@@ -61,13 +60,12 @@ function _admittance_conversion_ravens(data_eng::Dict{String,<:Any}, eng_obj::Di
     _conductor_count =  data_eng["PerLengthPhaseImpedance.conductorCount"]
     _admittance_matrix = zeros(Float64, _conductor_count, _conductor_count)
 
-    _index = 1
-    for i in 1:_conductor_count
-        for j in 1:i
-            _admittance_matrix[i, j] =  get(data_eng["PerLengthPhaseImpedance.PhaseImpedanceData"][_index], key, 0.0)
-            _admittance_matrix[j, i] = get(data_eng["PerLengthPhaseImpedance.PhaseImpedanceData"][_index], key, 0.0)
-            _index += 1
-        end
+    for obj in data_eng["PerLengthPhaseImpedance.PhaseImpedanceData"]
+        row = obj["PhaseImpedanceData.row"]
+        col = obj["PhaseImpedanceData.column"]
+        value = get(obj, key, 0.0)
+        _admittance_matrix[row, col] = value
+        _admittance_matrix[col, row] = value
     end
 
     return _admittance_matrix .* get(eng_obj, "Conductor.length", 1.0) .* freq ./ 1e2 # divide by 2 to get both sides _to and _fr

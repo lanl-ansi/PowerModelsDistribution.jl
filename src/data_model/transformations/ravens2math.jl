@@ -335,10 +335,25 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
         # Set voltage bounds for the bus connected
         bus_info = string(math_obj["load_bus"])
         bus_conn = data_math["bus"][bus_info]
-        op_limit_id = replace(split(data_ravens["ConnectivityNode"][connectivity_node]["ConnectivityNode.OperationalLimitSet"], "::")[2], "'" => "")
-        op_limits = data_ravens["OperationalLimitSet"][op_limit_id]["OperationalLimitSet.OperationalLimitValue"]
-        op_limit_max = op_limits[1]["VoltageLimit.value"] / voltage_scale_factor_sqrt3
-        op_limit_min = op_limits[2]["VoltageLimit.value"] / voltage_scale_factor_sqrt3
+
+        if haskey(data_ravens["ConnectivityNode"][connectivity_node], "ConnectivityNode.OperationalLimitSet")
+            op_limit_id = replace(split(data_ravens["ConnectivityNode"][connectivity_node]["ConnectivityNode.OperationalLimitSet"], "::")[2], "'" => "")
+            op_limits = data_ravens["OperationalLimitSet"][op_limit_id]["OperationalLimitSet.OperationalLimitValue"]
+
+            # Loop through op. limits
+            for lim in op_limits
+                lim_type = lim["OperationalLimit.OperationalLimitType"]["OperationalLimitType.direction"]
+                if lim_type == "OperationalLimitDirectionKind.high"
+                    op_limit_max = lim["VoltageLimit.value"] / voltage_scale_factor_sqrt3
+                elseif lim_type == "OperationalLimitDirectionKind.low"
+                    op_limit_min = lim["VoltageLimit.value"] / voltage_scale_factor_sqrt3
+                end
+            end
+
+        else
+            op_limit_max = Inf
+            op_limit_min = 0.0
+        end
 
         # Handle phase-specific or three-phase connection
         phase_map = Dict("SinglePhaseKind.A" => 1, "SinglePhaseKind.B" => 2, "SinglePhaseKind.C" => 3)
@@ -423,7 +438,29 @@ function _map_ravens2math_energy_source!(data_math::Dict{String,<:Any}, data_rav
             end
             math_obj["connections"] = connections
         else
-            math_obj["connections"] = bus_conn["terminals"]
+            # Terminal Phases
+            if haskey(ravens_obj["ConductingEquipment.Terminals"][1], "Terminal.phases")
+                phasecode = ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.phases"]
+                if (phasecode == "PhaseCode.ABC")
+                    math_obj["connections"] = [1, 2, 3]
+                elseif (phasecode == "PhaseCode.AB")
+                    math_obj["connections"] = [1, 2]
+                elseif (phasecode == "PhaseCode.AC")
+                    math_obj["connections"] = [1, 3]
+                elseif (phasecode == "PhaseCode.BC")
+                    math_obj["connections"] = [2, 3]
+                elseif (phasecode == "PhaseCode.A")
+                    math_obj["connections"] = [1]
+                elseif (phasecode == "PhaseCode.B")
+                    math_obj["connections"] = [2]
+                elseif (phasecode == "PhaseCode.C")
+                    math_obj["connections"] = [3]
+                else
+                    @error("PhaseCode not supported yet!")
+                end
+            else
+                math_obj["connections"] = bus_conn["terminals"]
+            end
         end
 
         # Generator status and configuration
@@ -534,8 +571,30 @@ function _map_ravens2math_rotating_machine!(data_math::Dict{String,<:Any}, data_
 
         math_obj = _init_math_obj_ravens("rotating_machine", name, ravens_obj, length(data_math["gen"])+1; pass_props=pass_props)
 
-        # TODO: connections/phases do not exist in the RAVENS-CIM (Need to be added) - should come from terminals
-        connections = [1, 2, 3] # TODO
+        # Connections/phases obtained from Terminals
+        if haskey(ravens_obj["ConductingEquipment.Terminals"][1], "Terminal.phases")
+            phasecode = ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.phases"]
+            if (phasecode == "PhaseCode.ABC")
+                connections = [1, 2, 3]
+            elseif (phasecode == "PhaseCode.AB")
+                connections = [1, 2]
+            elseif (phasecode == "PhaseCode.AC")
+                connections = [1, 3]
+            elseif (phasecode == "PhaseCode.BC")
+                connections = [2, 3]
+            elseif (phasecode == "PhaseCode.A")
+                connections = [1]
+            elseif (phasecode == "PhaseCode.B")
+                connections = [2]
+            elseif (phasecode == "PhaseCode.C")
+                connections = [3]
+            else
+                @error("PhaseCode not supported yet!")
+            end
+        else
+            connections = [1, 2, 3] # default
+        end
+
         nconductors = length(connections)
         math_obj["connections"] = connections
 
@@ -548,7 +607,7 @@ function _map_ravens2math_rotating_machine!(data_math::Dict{String,<:Any}, data_
 
         # Set Pmax for generator
         if !haskey(ravens_obj, "GeneratingUnit.maxOperatingP")
-            math_obj["pmax"] = ((get(ravens_obj, "SynchronousMachine.ratedS", Inf) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
+            math_obj["pmax"] = ((get(ravens_obj, "RotatingMachine.ratedS", Inf) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
         else
             math_obj["pmax"] = ((get(ravens_obj, "GeneratingUnit.maxOperatingP", Inf) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
         end
@@ -564,22 +623,22 @@ function _map_ravens2math_rotating_machine!(data_math::Dict{String,<:Any}, data_
         math_obj["vbase"] =  base_voltage / voltage_scale_factor
 
         if control_mode == Int(ISOCHRONOUS) && status == 1
-            data_math["bus"]["$(math_obj["gen_bus"])"]["vm"] = ((get(ravens_obj, "SynchronousMachine.ratedU", nominal_voltage))/nominal_voltage)* ones(nconductors)
-            data_math["bus"]["$(math_obj["gen_bus"])"]["vmax"] = ((get(ravens_obj, "SynchronousMachine.ratedU", nominal_voltage))/nominal_voltage)* ones(nconductors)
-            data_math["bus"]["$(math_obj["gen_bus"])"]["vmin"] = ((get(ravens_obj, "SynchronousMachine.ratedU", nominal_voltage))/nominal_voltage)* ones(nconductors)
+            data_math["bus"]["$(math_obj["gen_bus"])"]["vm"] = ((get(ravens_obj, "RotatingMachine.ratedU", nominal_voltage))/nominal_voltage)* ones(nconductors)
+            data_math["bus"]["$(math_obj["gen_bus"])"]["vmax"] = ((get(ravens_obj, "RotatingMachine.ratedU", nominal_voltage))/nominal_voltage)* ones(nconductors)
+            data_math["bus"]["$(math_obj["gen_bus"])"]["vmin"] = ((get(ravens_obj, "RotatingMachine.ratedU", nominal_voltage))/nominal_voltage)* ones(nconductors)
             data_math["bus"]["$(math_obj["gen_bus"])"]["va"] = [0.0, -120, 120, zeros(length(data_math["bus"]["$(math_obj["gen_bus"])"]) - 3)...][data_math["bus"]["$(math_obj["gen_bus"])"]["terminals"]]
         end
 
         # Set pmin
         math_obj["pmin"] = ((get(ravens_obj, "GeneratingUnit.minOperatingP", 0) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
         # Set qmin
-        math_obj["qmin"] = ((get(ravens_obj, "SynchronousMachine.minQ", -Inf) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
+        math_obj["qmin"] = ((get(ravens_obj, "RotatingMachine.minQ", -Inf) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
         # Set qmax
-        math_obj["qmax"] = ((get(ravens_obj, "SynchronousMachine.maxQ", Inf) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
+        math_obj["qmax"] = ((get(ravens_obj, "RotatingMachine.maxQ", Inf) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
 
         # Set pg and qg
-        math_obj["pg"] = (get(ravens_obj, "SynchronousMachine.p", 0.0) * ones(nconductors) ./ nconductors)./(power_scale_factor)
-        math_obj["qg"] = (get(ravens_obj, "SynchronousMachine.q", 0.0) * ones(nconductors) ./ nconductors)./(power_scale_factor)
+        math_obj["pg"] = (get(ravens_obj, "RotatingMachine.p", 0.0) * ones(nconductors) ./ nconductors)./(power_scale_factor)
+        math_obj["qg"] = (get(ravens_obj, "RotatingMachine.q", 0.0) * ones(nconductors) ./ nconductors)./(power_scale_factor)
 
         # TODO: add a polynomial parameters to be added to gen cost
         _add_gen_cost_model!(math_obj, ravens_obj)
