@@ -342,7 +342,9 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
 
             # Loop through op. limits
             for lim in op_limits
-                lim_type = lim["OperationalLimit.OperationalLimitType"]["OperationalLimitType.direction"]
+                lim_type_name = replace(split(lim["OperationalLimit.OperationalLimitType"], "::")[2], "'" => "")
+                lim_type = data_ravens["OperationalLimitType"][lim_type_name]["OperationalLimitType.direction"]
+
                 if lim_type == "OperationalLimitDirectionKind.high"
                     op_limit_max = lim["VoltageLimit.value"] / voltage_scale_factor_sqrt3
                 elseif lim_type == "OperationalLimitDirectionKind.low"
