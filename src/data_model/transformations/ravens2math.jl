@@ -261,7 +261,7 @@ function _map_ravens2math_conductor!(data_math::Dict{String,<:Any}, data_ravens:
             math_obj[t_key] = haskey(oplimitset, f_key) ? fill(oplimitset[f_key], nphases) : fill(Inf, nphases)
         end
 
-        math_obj["br_status"] = get(ravens_obj, "ConductingEquipment.SvStatus", 1)
+        math_obj["br_status"] = get(ravens_obj, "Equipment.inService", "true") == "true" ? 1 : 0
         data_math["branch"]["$(math_obj["index"])"] = math_obj
 
         push!(data_math["map"], Dict{String,Any}(
@@ -387,7 +387,8 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
         end
 
         # Set status, dispatchable flag, and index
-        math_obj["status"] = haskey(ravens_obj, "ConductingEquipment.SvStatus") ? ravens_obj["ConductingEquipment.SvStatus"] : 1
+        math_obj["status"] = haskey(ravens_obj, "Equipment.inService") ? ravens_obj["Equipment.inService"] : "true"
+        math_obj["status"] = math_obj["status"] == "true" ? 1 : 0
         math_obj["dispatchable"] = 0
         data_math["load"]["$(math_obj["index"])"] = math_obj
 
@@ -466,7 +467,9 @@ function _map_ravens2math_energy_source!(data_math::Dict{String,<:Any}, data_rav
         end
 
         # Generator status and configuration
-        math_obj["gen_status"] = haskey(ravens_obj, "ConductingEquipment.SvStatus") ? Int(ravens_obj["ConductingEquipment.SvStatus"]) : 1
+        math_obj["gen_status"] = haskey(ravens_obj, "Equipment.inService") ? ravens_obj["Equipment.inService"] : "true"
+        math_obj["gen_status"] = math_obj["gen_status"] == "true" ? 1 : 0
+
         math_obj["configuration"] = get(ravens_obj, "EnergySource.connectionKind", WYE)
 
         # Vnom and vbases_default
@@ -604,7 +607,8 @@ function _map_ravens2math_rotating_machine!(data_math::Dict{String,<:Any}, data_
 
         connectivity_node = _extract_name(ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.ConnectivityNode"])
         math_obj["gen_bus"] = data_math["bus_lookup"][connectivity_node]
-        math_obj["gen_status"] = status = Int(get(ravens_obj, "ConductingEquipment.SvStatus", 1))
+        math_obj["gen_status"] = get(ravens_obj, "Equipment.inService", "true")
+        math_obj["gen_status"] = status = math_obj["gen_status"] == "true" ? 1 : 0
 
         # TODO: control mode do not exist in the RAVENS-CIM (Need to be added)
         math_obj["control_mode"] = control_mode = Int(get(ravens_obj, "control_mode", FREQUENCYDROOP))
@@ -690,7 +694,8 @@ function _map_ravens2math_power_electronics!(data_math::Dict{String,<:Any}, data
 
                 connectivity_node = _extract_name(ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.ConnectivityNode"])
                 math_obj["gen_bus"] = data_math["bus_lookup"][connectivity_node]
-                math_obj["gen_status"] = status = Int(get(ravens_obj, "ConductingEquipment.SvStatus", 1))
+                math_obj["gen_status"] = get(ravens_obj, "Equipment.inService", "true")
+                math_obj["gen_status"] = status = math_obj["gen_status"] == "true" ? 1 : 0
 
                 # TODO: control mode do not exist in the RAVENS-CIM (Need to be added)
                 math_obj["control_mode"] = control_mode = Int(get(ravens_obj, "control_mode", FREQUENCYDROOP))
@@ -769,7 +774,8 @@ function _map_ravens2math_power_electronics!(data_math::Dict{String,<:Any}, data
                 # Set the bus
                 connectivity_node = _extract_name(ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.ConnectivityNode"])
                 math_obj["storage_bus"] = data_math["bus_lookup"][connectivity_node]
-                math_obj["status"] = status = Int(get(ravens_obj, "ConductingEquipment.SvStatus", 1))
+                math_obj["status"] = get(ravens_obj, "Equipment.inService", "true")
+                math_obj["status"] = status = math_obj["status"] == "true" ? 1 : 0
 
                 # TODO: configuration for generators is not available on CIM (yet)
                 math_obj["configuration"] = get(ravens_obj, "configuration", WYE)
@@ -923,7 +929,8 @@ function _map_ravens2math_switch!(data_math::Dict{String,<:Any}, data_ravens::Di
             math_obj["t_bus"] = data_math["bus_lookup"][t_node]
 
             # TODO: Status
-            math_obj["status"] = get(ravens_obj, "ConductingEquipment.SvStatus", 1)
+            math_obj["status"] = get(ravens_obj, "Equipment.inService", "true")
+            math_obj["status"] = status = math_obj["status"] == "true" ? 1 : 0
 
             # State
             sw_state = get(ravens_obj, "Switch.open", "false")
