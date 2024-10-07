@@ -780,14 +780,14 @@ function _map_ravens2math_power_electronics!(data_math::Dict{String,<:Any}, data
                 if !haskey(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "InefficientBatteryUnit.limitEnergy")
                     math_obj["energy_rating"] = ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"]["BatteryUnit.ratedE"]/power_scale_factor
                 else
-                    math_obj["energy_rating"] = ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"]["InefficientBatteryUnit.limitEnergy"]/power_scale_factor
+                    math_obj["energy_rating"] = ((ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"]["InefficientBatteryUnit.limitEnergy"]/100)*ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"]["BatteryUnit.ratedE"])/power_scale_factor
                 end
 
                 if !haskey(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "PowerElectronicsUnit.maxP")
-                    math_obj["charge_rating"] = (get(ravens_obj, "PowerElectronicsConnection.ratedS", Inf))./(power_scale_factor)
+                    math_obj["charge_rating"] = -(get(ravens_obj, "PowerElectronicsConnection.ratedS", Inf))./(power_scale_factor)
                     math_obj["discharge_rating"] = math_obj["charge_rating"]
                 else
-                    math_obj["charge_rating"] = (get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "PowerElectronicsUnit.maxP", Inf))./(power_scale_factor)
+                    math_obj["charge_rating"] = -(get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "PowerElectronicsUnit.maxP", Inf))./(power_scale_factor)
                     math_obj["discharge_rating"] = math_obj["charge_rating"]
                 end
 
