@@ -215,8 +215,8 @@ function _map_ravens2math_conductor!(data_math::Dict{String,<:Any}, data_ravens:
         nphases = length(ravens_obj["ACLineSegment.ACLineSegmentPhase"])
         terminals = ravens_obj["ConductingEquipment.Terminals"]
 
-        f_node = replace(split(terminals[1]["Terminal.ConnectivityNode"], "::")[2], "'" => "")
-        t_node = replace(split(terminals[2]["Terminal.ConnectivityNode"], "::")[2], "'" => "")
+        f_node = _extract_name(terminals[1]["Terminal.ConnectivityNode"])
+        t_node = _extract_name(terminals[2]["Terminal.ConnectivityNode"])
 
         math_obj["f_bus"] = data_math["bus_lookup"][f_node]
         math_obj["t_bus"] = data_math["bus_lookup"][t_node]
@@ -233,7 +233,7 @@ function _map_ravens2math_conductor!(data_math::Dict{String,<:Any}, data_ravens:
         math_obj["f_connections"] = bus_terminals
         math_obj["t_connections"] = bus_terminals
 
-        impedance_name = replace(split(ravens_obj["ACLineSegment.PerLengthImpedance"], "::")[2], "'" => "")
+        impedance_name = _extract_name(ravens_obj["ACLineSegment.PerLengthImpedance"])
         impedance_data = data_ravens["PerLengthLineParameter"]["PerLengthImpedance"]["PerLengthPhaseImpedance"][impedance_name]
 
         math_obj["br_r"] = _impedance_conversion_ravens(impedance_data, ravens_obj, "PhaseImpedanceData.r")
@@ -248,7 +248,7 @@ function _map_ravens2math_conductor!(data_math::Dict{String,<:Any}, data_ravens:
         math_obj["angmax"] = get(ravens_obj, "vad_ub", fill(60.0, nphases))
 
         if (haskey(terminals[1], "ACDCTerminal.OperationalLimitSet"))
-            oplimitset_id = replace(split(terminals[1]["ACDCTerminal.OperationalLimitSet"], "::")[2], "'" => "")
+            oplimitset_id = _extract_name(terminals[1]["ACDCTerminal.OperationalLimitSet"])
             oplimitset = data_ravens["OperationalLimitSet"][oplimitset_id]["OperationalLimitSet.OperationalLimitValue"][2]
         else
             oplimitset = Dict()
@@ -298,11 +298,11 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
         math_obj = _init_math_obj_ravens("energy_consumer", name, ravens_obj, length(data_math["load"]) + 1; pass_props=pass_props)
 
         # Set the load bus based on connectivity node
-        connectivity_node = replace(split(ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.ConnectivityNode"], "::")[2], "'" => "")
+        connectivity_node = _extract_name(ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.ConnectivityNode"])
         math_obj["load_bus"] = data_math["bus_lookup"][connectivity_node]
 
         # Handle Load Response Characteristics
-        load_response_characts = replace(split(ravens_obj["EnergyConsumer.LoadResponseCharacteristic"], "::")[2], "'" => "")
+        load_response_characts = _extract_name(ravens_obj["EnergyConsumer.LoadResponseCharacteristic"])
         if load_response_characts == "Constant Z"
             math_obj["model"] = IMPEDANCE
         elseif load_response_characts == "Motor"
@@ -328,7 +328,7 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
         math_obj["qd"] = [ravens_obj["EnergyConsumer.q"] / power_scale_factor]
 
         # Set the nominal voltage
-        base_voltage_ref = replace(split(ravens_obj["ConductingEquipment.BaseVoltage"], "::")[2], "'" => "")
+        base_voltage_ref = _extract_name(ravens_obj["ConductingEquipment.BaseVoltage"])
         base_voltage = data_ravens["BaseVoltage"][base_voltage_ref]["BaseVoltage.nominalVoltage"]
         math_obj["vnom_kv"] = (base_voltage / voltage_scale_factor) / (sqrt(3) / 2)
 
@@ -337,12 +337,12 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
         bus_conn = data_math["bus"][bus_info]
 
         if haskey(data_ravens["ConnectivityNode"][connectivity_node], "ConnectivityNode.OperationalLimitSet")
-            op_limit_id = replace(split(data_ravens["ConnectivityNode"][connectivity_node]["ConnectivityNode.OperationalLimitSet"], "::")[2], "'" => "")
+            op_limit_id = _extract_name(data_ravens["ConnectivityNode"][connectivity_node]["ConnectivityNode.OperationalLimitSet"])
             op_limits = data_ravens["OperationalLimitSet"][op_limit_id]["OperationalLimitSet.OperationalLimitValue"]
 
             # Loop through op. limits
             for lim in op_limits
-                lim_type_name = replace(split(lim["OperationalLimit.OperationalLimitType"], "::")[2], "'" => "")
+                lim_type_name = _extract_name(lim["OperationalLimit.OperationalLimitType"])
                 lim_type = data_ravens["OperationalLimitType"][lim_type_name]["OperationalLimitType.direction"]
 
                 if lim_type == "OperationalLimitDirectionKind.high"
@@ -422,7 +422,7 @@ function _map_ravens2math_energy_source!(data_math::Dict{String,<:Any}, data_rav
         math_obj["name"] = "_virtual_gen.energy_source.$name"
 
         # Get connectivity node info (bus info)
-        connectivity_node = replace(split(ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.ConnectivityNode"], "::")[2], "'" => "")
+        connectivity_node = _extract_name(ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.ConnectivityNode"])
         gen_bus = data_math["bus_lookup"][connectivity_node]
         math_obj["gen_bus"] = gen_bus
         bus_conn = data_math["bus"][string(gen_bus)]
@@ -470,7 +470,7 @@ function _map_ravens2math_energy_source!(data_math::Dict{String,<:Any}, data_rav
         math_obj["configuration"] = get(ravens_obj, "EnergySource.connectionKind", WYE)
 
         # Vnom and vbases_default
-        base_voltage_ref = replace(split(ravens_obj["ConductingEquipment.BaseVoltage"], "::")[2], "'" => "")
+        base_voltage_ref = _extract_name(ravens_obj["ConductingEquipment.BaseVoltage"])
         vnom = data_ravens["BaseVoltage"][base_voltage_ref]["BaseVoltage.nominalVoltage"] / sqrt(nconductors)
         data_math["settings"]["vbases_default"][connectivity_node] = vnom / voltage_scale_factor
 
@@ -602,7 +602,7 @@ function _map_ravens2math_rotating_machine!(data_math::Dict{String,<:Any}, data_
         nconductors = length(connections)
         math_obj["connections"] = connections
 
-        connectivity_node = replace(split(ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.ConnectivityNode"], "::")[2], "'" => "")
+        connectivity_node = _extract_name(ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.ConnectivityNode"])
         math_obj["gen_bus"] = data_math["bus_lookup"][connectivity_node]
         math_obj["gen_status"] = status = Int(get(ravens_obj, "ConductingEquipment.SvStatus", 1))
 
@@ -621,7 +621,7 @@ function _map_ravens2math_rotating_machine!(data_math::Dict{String,<:Any}, data_
         data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"] = _compute_bus_type(bus_type, status, control_mode)
 
         # Set the nominal voltage
-        base_voltage_ref = replace(split(ravens_obj["ConductingEquipment.BaseVoltage"], "::")[2], "'" => "")
+        base_voltage_ref = _extract_name(ravens_obj["ConductingEquipment.BaseVoltage"])
         nominal_voltage = data_ravens["BaseVoltage"][base_voltage_ref]["BaseVoltage.nominalVoltage"]
         base_voltage =  nominal_voltage / sqrt(nconductors)
         math_obj["vbase"] =  base_voltage / voltage_scale_factor
@@ -688,7 +688,7 @@ function _map_ravens2math_power_electronics!(data_math::Dict{String,<:Any}, data
                 nconductors = length(connections)
                 math_obj["connections"] = connections
 
-                connectivity_node = replace(split(ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.ConnectivityNode"], "::")[2], "'" => "")
+                connectivity_node = _extract_name(ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.ConnectivityNode"])
                 math_obj["gen_bus"] = data_math["bus_lookup"][connectivity_node]
                 math_obj["gen_status"] = status = Int(get(ravens_obj, "ConductingEquipment.SvStatus", 1))
 
@@ -700,7 +700,7 @@ function _map_ravens2math_power_electronics!(data_math::Dict{String,<:Any}, data
                 data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"] = _compute_bus_type(bus_type, status, control_mode)
 
                 # Set the nominal voltage
-                base_voltage_ref = replace(split(ravens_obj["ConductingEquipment.BaseVoltage"], "::")[2], "'" => "")
+                base_voltage_ref = _extract_name(ravens_obj["ConductingEquipment.BaseVoltage"])
                 nominal_voltage = data_ravens["BaseVoltage"][base_voltage_ref]["BaseVoltage.nominalVoltage"]
                 base_voltage =  nominal_voltage / sqrt(nconductors)
                 math_obj["vbase"] =  base_voltage / voltage_scale_factor
@@ -767,7 +767,7 @@ function _map_ravens2math_power_electronics!(data_math::Dict{String,<:Any}, data
                 math_obj["connections"] = connections
 
                 # Set the bus
-                connectivity_node = replace(split(ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.ConnectivityNode"], "::")[2], "'" => "")
+                connectivity_node = _extract_name(ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.ConnectivityNode"])
                 math_obj["storage_bus"] = data_math["bus_lookup"][connectivity_node]
                 math_obj["status"] = status = Int(get(ravens_obj, "ConductingEquipment.SvStatus", 1))
 
@@ -917,8 +917,8 @@ function _map_ravens2math_switch!(data_math::Dict{String,<:Any}, data_ravens::Di
             nphases = length(f_conns)
 
             # Connectivity Nodes
-            f_node = replace(split(terminals[1]["Terminal.ConnectivityNode"], "::")[2], "'" => "")
-            t_node = replace(split(terminals[2]["Terminal.ConnectivityNode"], "::")[2], "'" => "")
+            f_node = _extract_name(terminals[1]["Terminal.ConnectivityNode"])
+            t_node = _extract_name(terminals[2]["Terminal.ConnectivityNode"])
             math_obj["f_bus"] = data_math["bus_lookup"][f_node]
             math_obj["t_bus"] = data_math["bus_lookup"][t_node]
 

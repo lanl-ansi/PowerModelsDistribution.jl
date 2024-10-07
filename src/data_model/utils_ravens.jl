@@ -70,3 +70,10 @@ function _admittance_conversion_ravens(data_eng::Dict{String,<:Any}, eng_obj::Di
 
     return _admittance_matrix .* get(eng_obj, "Conductor.length", 1.0) .* freq ./ 1e2 # divide by 2 to get both sides _to and _fr
 end
+
+"extracts the name from a ravens reference string"
+function _extract_name(element)
+
+    name = replace(split(element, "::")[2], "'" => "")
+    return name
+end
