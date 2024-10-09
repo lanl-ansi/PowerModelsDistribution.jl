@@ -492,8 +492,22 @@ function _dss2eng_line!(data_eng::Dict{String,<:Any}, data_dss::OpenDssDataModel
         end
 
         if dss_obj["switch"]
-            eng_obj["state"] = CLOSED
-            eng_obj["dispatchable"] = YES
+            eng_obj["state"] = eng_obj["status"] == ENABLED ? CLOSED : OPEN
+            eng_obj["dispatchable"] = YES # default
+            eng_obj["status"] = ENABLED
+
+            if haskey(eng_obj, "linecode")
+                _apply_linecode!(eng_obj, data_eng)
+            end
+            delete!(eng_obj, "linecode")
+
+            # ENGINEERING model switches are zero-length objects
+            for k in ["b_fr", "b_to", "g_fr", "g_to", "rs", "xs"]
+                if haskey(eng_obj, k)
+                    eng_obj[k] .*= get(eng_obj, "length", 1.0)
+                end
+            end
+            delete!(eng_obj, "length")
 
             _add_eng_obj!(data_eng, "switch", id, eng_obj)
         else

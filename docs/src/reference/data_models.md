@@ -1,4 +1,3 @@
-
 # [Data Models](@id DataModelAPI)
 
 ## Parsers
@@ -33,7 +32,7 @@ transform_solution
 Modules = [PowerModelsDistribution]
 Private = false
 Order = [:function]
-Pages = ["transformations.jl"]
+Pages = ["transformations.jl", "reduce.jl", "kron.jl", "bounds.jl"]
 ```
 
 ## Multinetworks

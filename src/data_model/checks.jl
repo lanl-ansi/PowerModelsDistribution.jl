@@ -2,22 +2,22 @@
 const _eng_model_checks = Dict{Symbol,Symbol}(
     :bus => :_check_bus,
     :linecode => :_check_linecode,
-    # :xfmrcode => :_check_xfmrcode,
+    :xfmrcode => :_check_xfmrcode,
     :line => :_check_line,
     :transformer => :_check_transformer,
-    # :switch => :_check_switch,
+    :switch => :_check_switch,
     :load => :_check_load,
     :shunt => :_check_shunt,
     :generator => :_check_generator,
     :voltage_source => :_check_voltage_source,
-    # :solar => :_check_solar,
-    # :storage => :_check_storage,
+    :solar => :_check_solar,
+    :storage => :_check_storage,
 )
 
 "Data types of accepted fields in the engineering data model"
 const _eng_model_dtypes = Dict{Symbol,Dict{Symbol,Type}}(
     :bus => Dict{Symbol,Type}(
-        :status => Int,
+        :status => Status,
         :terminals => Vector{Any},
         :phases => Vector{Any},
         :neutral => Any,
@@ -34,7 +34,7 @@ const _eng_model_dtypes = Dict{Symbol,Dict{Symbol,Type}}(
         :va => Vector{<:Real},
     ),
     :line => Dict{Symbol,Type}(
-        :status => Int,
+        :status => Status,
         :f_bus => Any,
         :t_bus => Any,
         :f_connections => Vector{Any},
@@ -53,12 +53,12 @@ const _eng_model_dtypes = Dict{Symbol,Dict{Symbol,Type}}(
         :b_to => Matrix{<:Real},
     ),
     :transformer => Dict{Symbol,Type}(
-        :status => Int,
+        :status => Status,
         :bus => Vector{Any},
-        :connections => Vector{Any},
+        :connections => Vector{Int},
         :vnom => Vector{<:Real},
         :snom => Vector{<:Real},
-        :configuration => Vector{String},
+        :configuration => Vector{ConnConfig},
         :polarity => Vector{Int},
         :xsc => Vector{<:Real},
         :rs => Vector{<:Real},
@@ -74,13 +74,13 @@ const _eng_model_dtypes = Dict{Symbol,Dict{Symbol,Type}}(
         :t_bus => Any,
         :f_connections => Vector{Any},
         :t_connections => Vector{Any},
-        :configuration => String,
+        :configuration => ConnConfig,
         :xfmrcode => String,
     ),
     :switch => Dict{Symbol,Type}(
-        :status => Int,
-        :f_bus => Any,
-        :t_bus => Any,
+        :status => Status,
+        :f_bus => String,
+        :t_bus => String,
         :f_connections => Vector{Any},
         :t_connections => Vector{Any},
         :cm_ub => Vector{<:Real},
@@ -91,10 +91,10 @@ const _eng_model_dtypes = Dict{Symbol,Dict{Symbol,Type}}(
         :b_fr => Matrix{<:Real},
         :g_to => Matrix{<:Real},
         :b_to => Matrix{<:Real},
-        :state => Int,
+        :state => SwitchState,
     ),
     :fuse => Dict{Symbol,Type}(
-        :status => Int,
+        :status => Status,
         :f_bus => Any,
         :t_bus => Any,
         :f_connections => Vector{Any},
@@ -114,36 +114,36 @@ const _eng_model_dtypes = Dict{Symbol,Dict{Symbol,Type}}(
     :line_reactor => Dict{Symbol,Type}(),
     :series_capacitor => Dict{Symbol,Type}(),
     :shunt => Dict{Symbol,Type}(
-        :status => Int,
+        :status => Status,
         :bus => Any,
-        :connections => Vector{Any},
-        :configuration => String,
+        :connections => Vector{Int},
+        :configuration => ConnConfig,
         :gs => Matrix{<:Real},
         :bs => Matrix{<:Real},
         :vnom => Real,
     ),
     :shunt_capacitor => Dict{Symbol,Type}(
-        :status => Int,
+        :status => Status,
         :bus => Any,
-        :connections => Vector{Any},
-        :configuration => String,
+        :connections => Vector{Int},
+        :configuration => ConnConfig,
         :bs => Matrix{<:Real},
         :vnom => Real,
     ),
     :shunt_reactor => Dict{Symbol,Type}(
-        :status => Int,
+        :status => Status,
         :bus => Any,
-        :connections => Vector{Any},
-        :configuration => String,
+        :connections => Vector{Int},
+        :configuration => ConnConfig,
         :bs => Matrix{<:Real},
         :vnom => Real,
     ),
     :load => Dict{Symbol,Type}(
-        :status => Int,
+        :status => Status,
         :bus => Any,
-        :connections => Vector{Any},
-        :configuration => String,
-        :model => String,
+        :connections => Vector{Int},
+        :configuration => ConnConfig,
+        :model => LoadModel,
         :pd_nom => Vector{<:Real},
         :qd_nom => Vector{<:Real},
         :vnom => Real,
@@ -157,10 +157,10 @@ const _eng_model_dtypes = Dict{Symbol,Dict{Symbol,Type}}(
         :qd_nom_p => Real,
     ),
     :generator => Dict{Symbol,Type}(
-        :status => Int,
+        :status => Status,
         :bus => Any,
-        :connections => Vector{Any},
-        :configuration => String,
+        :connections => Vector{Int},
+        :configuration => ConnConfig,
         :model => Int,
         :pg => Vector{<:Real},
         :qg => Vector{<:Real},
@@ -172,10 +172,10 @@ const _eng_model_dtypes = Dict{Symbol,Dict{Symbol,Type}}(
         :cost_pg_model => Int,
     ),
     :solar => Dict{Symbol,Type}(
-        :status => Int,
+        :status => Status,
         :bus => Any,
-        :connections => Vector{Any},
-        :configuration => String,
+        :connections => Vector{Int},
+        :configuration => ConnConfig,
         :pg => Vector{<:Real},
         :qg => Vector{<:Real},
         :pg_lb => Vector{<:Real},
@@ -186,10 +186,10 @@ const _eng_model_dtypes = Dict{Symbol,Dict{Symbol,Type}}(
         :cost_pg_model => Int,
     ),
     :storage => Dict{Symbol,Type}(
-        :status => Int,
+        :status => Status,
         :bus => Any,
-        :connections => Vector{Any},
-        :configuration => String,
+        :connections => Vector{Int},
+        :configuration => ConnConfig,
         :energy => Real,
         :energy_ub => Real,
         :charge_ub => Real,
@@ -205,10 +205,10 @@ const _eng_model_dtypes = Dict{Symbol,Dict{Symbol,Type}}(
         :qex => Real,
     ),
     :voltage_source => Dict{Symbol,Type}(
-        :status => Int,
+        :status => Status,
         :bus => Any,
-        :connections => Vector{Any},
-        :configuration => String,
+        :connections => Vector{Int},
+        :configuration => ConnConfig,
         :vm => Vector{<:Real},
         :va => Real,
         :rs => Matrix{<:Real},
@@ -223,7 +223,7 @@ const _eng_model_dtypes = Dict{Symbol,Dict{Symbol,Type}}(
         :b_to => Matrix{<:Real}
     ),
     :xfmrcode => Dict{Symbol,Type}(
-        :configurations => Vector{String},
+        :configurations => Vector{ConnConfig},
         :xsc => Vector{<:Real},
         :rs => Vector{<:Real},
         :tm_nom => Vector{<:Real},
@@ -241,11 +241,6 @@ const _eng_model_dtypes = Dict{Symbol,Dict{Symbol,Type}}(
         :values => Vector{<:Real},
         :replace => Bool,
     ),
-    # Future Components
-    # :ev => Dict{Symbol,Type}(),
-    # :wind => Dict{Symbol,Type}(),
-    # :autotransformer => Dict{Symbol,Type}(),
-    # :meter => Dict{Symbol,Type}()
 )
 
 "required fields in the engineering data model"
@@ -306,12 +301,6 @@ const _eng_model_req_fields= Dict{Symbol,Vector{Symbol}}(
         :tm_min, :tm_max, :tm_step,
     ],
     :grounding => Symbol[],
-
-    # Future Components
-    # :ev => Symbol[],
-    # :wind => Symbol[],
-    # :autotransformer => Symbol[],
-    # :meter => Symbol[]
 )
 
 

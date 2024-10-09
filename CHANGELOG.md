@@ -2,6 +2,27 @@
 
 ## staged
 
+- Fixed `_eng_model_dtypes` checks (#465)
+- Fixed unstable test "3-bus unbalanced lpubfdiag opf_bf with delta loads" by bounding objective
+- Fixed typo in `create_transformer`, `create_xfmrcode` and ENGINEERING model documentation, `configurations` -> `configuration` and `buses` -> `bus` on transformer objects (#463)
+- Fixed creation of switch objects from dss, where ENGINEERING switches are expected to be zero-length objects (#462)
+- Fixed typo in single phase line parameters, should have been `line.c0 = line.c1` (#468)
+- Fixed missing `npts` property in loadshape in case3_balanced.dss (#466)
+- Fixed typo in unit tests 'blanced' to 'balanced' (#461)
+
+## v0.16.0
+
+- Updated to use the new `NonlinearExpr` syntax in JuMP v1.15. In most cases,
+  there should be no user-visible changes. However, if you access the internal
+  JuMP model object, the constraints are now `NonlinearExpr` objects instead of
+  `NLPBlock`. In addition, you may encounter small numerical differences in the
+  solution due to a different ordering of the constraints.
+- Indicated broken tests in `"2w_dy_lead"` and `"3-bus SOCConicUBF opf_bf"` by using `@test_skip`
+
+## v0.15.2
+
+- Added transformation `reduce_line_series!` which will reduce lines that consist of only buses with no additional connections to a single line.
+- Added function `solve_mn_mc_opf_oltc` for multi-networks
 - Fixed bug in `DssLine` parser where `c1` was being set to `c0`
 - Fixed native pf unit tests, which assume no virtual branches from switches (applied `make_lossless!` before test)
 - Added `g_fr`, `g_to`, `b_fr`, `b_to` to switches in `dss2eng` and `eng2math`

@@ -133,7 +133,7 @@
 
     @testset "opendss parse switch length verify" begin
         @testset "branches with switches" begin
-            @test eng["switch"]["_l4"]["length"] == 0.001
+            @test dss["line"]["_l4"]["length"] == 0.001
             @test !all(get(br, "switch", false) for (_,br) in math["branch"] if !startswith(br["name"],"_virtual_branch.switch"))
         end
     end

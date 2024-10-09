@@ -29,6 +29,7 @@ module PowerModelsDistribution
     import Statistics: mean, std
     import SparseArrays: spzeros
 
+    import Graphs
 
     const _IM = InfrastructureModels
 
@@ -69,6 +70,7 @@ module PowerModelsDistribution
     include("data_model/transformations/eng2math.jl")
     include("data_model/transformations/math2eng.jl")
     include("data_model/transformations/utils.jl")
+    include("data_model/transformations/reduce.jl")
 
     include("core/data.jl")
     include("core/ref.jl")
