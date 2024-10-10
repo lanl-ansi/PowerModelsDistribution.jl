@@ -1,7 +1,7 @@
 "cim-ravens to math object mapping"
 const _math_to_ravens = Dict{String,String}(
     "bus" => "connectivity_node",
-    "transformer" => "power_transformer",   # TODO
+    "transformer" => "power_transformer",
     "switch" => "switch",                   # TODO
     # "shunt" => "shunt_compensator",
     "load" => "energy_consumer",
@@ -19,7 +19,7 @@ const _ravens_node_elements = String[
 
 "list of edge type elements in the ravens model"
 const _ravens_edge_elements = String[
-    "conductor", "switch"
+    "conductor", "switch", "power_transformer"
 ]
 
 "list of all ravens asset types"
@@ -56,6 +56,8 @@ function transform_data_model_ravens(
         ravens2math_passthrough=ravens2math_passthrough,
         global_keys=global_keys,
     )
+
+    @info "$(data_math)"
 
     # TODO: Correct network data transforms a lot of the values of lines/branches (other values maybe too)
     correct_network_data && correct_network_data!(data_math; make_pu=make_pu, make_pu_extensions=make_pu_extensions)
@@ -275,12 +277,203 @@ end
 
 
 # TODO: Transformers need a lot of changes/refactors!!!
-"converts ravensineering n-winding transformers into mathematical ideal 2-winding lossless transformer branches and impedance branches to represent the loss model"
+"converts ravens n-winding transformers into mathematical ideal 2-winding lossless transformer branches and impedance branches to represent the loss model"
 function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[])
 
-    _data_ravens_transformer = data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]
+    conducting_equipment = data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]
+    power_scale_factor = data_math["settings"]["power_scale_factor"]
+    voltage_scale_factor = data_math["settings"]["voltage_scale_factor"]
+    voltage_scale_factor_sqrt3 = voltage_scale_factor * sqrt(3)
 
-    for (name, ravens_obj) in get(_data_ravens_transformer, "PowerTransformer", Dict{Any,Dict{String,Any}}())
+    for (name, ravens_obj) in get(conducting_equipment, "PowerTransformer", Dict{Any,Dict{String,Any}}())
+
+        # Build map first, so we can update it as we decompose the transformer
+        push!(data_math["map"], Dict{String,Any}(
+            "from" => name,
+            "to" => String[],
+            "unmap_function" => "_map_math2ravens_transformer!",
+        ))
+
+        to_map = data_math["map"][end]["to"]
+
+        # TODO: Check if we still need this function (or a similar function)
+        # _apply_xfmrcode!(ravens_obj, data_ravens)
+
+        # Get nrw: number of windings
+        wdgs = ravens_obj["PowerTransformer.PowerTransformerEnd"]
+        nrw = length(wdgs)
+
+        # Loop through Windings
+        wdg1_data = 0
+        wdg2_data = 0
+        wdgN_data = 0
+        # connections
+        connections = Vector{Int64}[]
+        # Nodes
+        f_node = ""
+        t_node = ""
+        for wdg in wdgs
+
+            # wdg phasecode
+            wdg_terminals = wdg["ConductingEquipment.Terminals"][1]
+            wdg_phasecode = wdg_terminals["Terminal.phases"]
+
+            if (wdg_phasecode == "PhaseCode.ABC")
+                push!(connections, [1, 2, 3])
+            elseif (wdg_phasecode == "PhaseCode.AB")
+                push!(connections, [1, 2])
+            elseif (wdg_phasecode == "PhaseCode.AC")
+                push!(connections, [1, 3])
+            elseif (wdg_phasecode == "PhaseCode.BC")
+                push!(connections, [2, 3])
+            elseif (wdg_phasecode == "PhaseCode.A")
+                push!(connections, [1])
+            elseif (wdg_phasecode == "PhaseCode.B")
+                push!(connections, [2])
+            elseif (wdg_phasecode == "PhaseCode.C")
+                push!(connections, [3])
+            else
+                @error("PhaseCode not supported yet!")
+            end
+
+            # wdg endNumber
+            wdg_endNumber = wdg["TransformerEnd.endNumber"]
+
+            # nphases
+            nphases = length(connections[1])
+
+            # Get Winding 1 information & create bus
+            if wdg_endNumber == 1
+                wdg1_data = wdg
+                f_node = _extract_name(wdg_terminals["Terminal.ConnectivityNode"])
+                f_bus = data_math["bus_lookup"][f_node]
+                data_math["bus"][string(f_bus)]["terminals"] = connections[wdg_endNumber]
+                data_math["bus"][string(f_bus)]["vmin"] = fill(0.0, nphases)
+                data_math["bus"][string(f_bus)]["vmax"] = fill(Inf, nphases)
+            # Get Winding 2 information & create bus
+            elseif wdg_endNumber == 2
+                wdg2_data = wdg
+                t_node = _extract_name(wdg_terminals["Terminal.ConnectivityNode"])
+                t_bus= data_math["bus_lookup"][t_node]
+                data_math["bus"][string(t_bus)]["terminals"] = connections[wdg_endNumber]
+                data_math["bus"][string(t_bus)]["vmin"] = fill(0.0, nphases)
+                data_math["bus"][string(t_bus)]["vmax"] = fill(Inf, nphases)
+            else
+                wdgN_data = wdg
+            end
+        end
+
+        # nphases
+        nphases = length(connections[1])
+
+        # vnom and snom
+        vnom = [wdg1_data["PowerTransformerEnd.ratedU"], wdg2_data["PowerTransformerEnd.ratedU"]]
+        snom = [wdg1_data["PowerTransformerEnd.ratedS"], wdg2_data["PowerTransformerEnd.ratedS"]]
+
+        # calculate zbase in which the data is specified, and convert to SI
+        zbase = (vnom.^2) ./ snom
+
+        # x_sc is specified with respect to first winding
+        x_sc = [wdg1_data["TransformerEnd.MeshImpedance"]["TransformerMeshImpedance.x"]]
+
+        # rs is specified with respect to each winding
+        r_s = [wdg1_data["PowerTransformerEnd.r"], wdg2_data["PowerTransformerEnd.r"]]
+
+        g_sh =  (wdg1_data["TransformerEnd.CoreAdmittance"]["TransformerCoreAdmittance.g"])
+        b_sh = -(wdg1_data["TransformerEnd.CoreAdmittance"]["TransformerCoreAdmittance.b"])
+
+        # data is measured externally, but we now refer it to the internal side
+        ratios = vnom/voltage_scale_factor
+        x_sc = x_sc./ratios[1]^2
+        r_s = r_s./ratios.^2
+        g_sh = g_sh*ratios[1]^2
+        b_sh = b_sh*ratios[1]^2
+
+        # convert x_sc from list of upper triangle elements to an explicit dict
+        y_sh = g_sh + im*b_sh
+        z_sc = Dict([(key, im*x_sc[i]) for (i,key) in enumerate([(i,j) for i in 1:nrw for j in i+1:nrw])])
+
+        # TODO: RatioTapChanger
+        if haskey(wdg1_data, "TransformerEnd.RatioTapChanger") || haskey(wdg2_data, "TransformerEnd.RatioTapChanger")
+        else # default
+            tm_set = Vector{Vector{Float64}}(fill(fill(1.0, nphases), nrw))
+            tm_lb = Vector{Vector{Float64}}(fill(fill(0.9, nphases), nrw))
+            tm_ub = Vector{Vector{Float64}}(fill(fill(1.1, nphases), nrw))
+            tm_fix = Vector{Vector{Bool}}(fill(ones(Bool, nphases), nrw))
+            tm_step = Vector{Vector{Float64}}(fill(fill(1/32, nphases), nrw))
+        end
+
+        dims = length(tm_set[1])
+
+
+        # TODO: Polarity
+        polarity = fill(1, nrw)
+
+        # Status
+        status = haskey(ravens_obj, "Equipment.inService") ? ravens_obj["Equipment.inService"] : "true"
+        status = status == "true" ? 1 : 0
+
+        # Build loss model
+        transformer_t_bus_w = _build_loss_model!(data_math, name, to_map, r_s, z_sc, y_sh, connections[1]; nphases=dims, status=Int(status == ENABLED))
+
+        # Mathematical model for transformer
+        for w in 1:nrw
+            # 2-WINDING TRANSFORMER
+
+            # Configuration
+            if wdgs[w]["PowerTransformerEnd.connectionKind"] == "WindingConnection.Y"
+                configuration = WYE
+            elseif wdgs[w]["PowerTransformerEnd.connectionKind"] == "WindingConnection.D"
+                configuration = DELTA
+            else
+                @error("PowerTransformer ConnectionKind not supported yet!")
+            end
+
+            # make virtual bus and mark it for reduction
+            tm_nom = configuration==DELTA ? wdgs[w]["PowerTransformerEnd.ratedU"]*sqrt(3)/voltage_scale_factor : wdgs[w]["PowerTransformerEnd.ratedU"]/voltage_scale_factor
+
+            # Transformer Object
+            transformer_2wa_obj = Dict{String,Any}(
+                "name"          => "_virtual_transformer.$name.$w",
+                "source_id"     => "_virtual_transformer.powertransformer.$name.$w",
+                "f_bus"         => data_math["bus_lookup"][f_node],
+                "t_bus"         => transformer_t_bus_w[w],
+                "tm_nom"        => tm_nom,
+                "f_connections" => connections[w],
+                "t_connections" => connections[w],
+                "configuration" => configuration,
+                "polarity"      => polarity[w],
+                "tm_set"        => tm_set[w],
+                "tm_fix"        => tm_fix[w],
+                "sm_ub"         => get(wdgs[w], "PowerTransformerEnd.ratedS", Inf)/power_scale_factor,
+                "cm_ub"         => get(wdgs[w], "PowerTransformerEnd.ratedI", Inf),
+                "status"        => status,
+                "index"         => length(data_math["transformer"])+1
+            )
+
+            # TODO: RatioTapChanger
+            for prop in [pass_props]
+                if haskey(wdgs[w], prop)
+                    transformer_2wa_obj[prop] = wdgs[w][prop]
+                end
+            end
+            transformer_2wa_obj["tm_lb"] = tm_lb[w]
+            transformer_2wa_obj["tm_ub"] = tm_ub[w]
+            transformer_2wa_obj["tm_step"] = tm_step[w]
+
+            data_math["transformer"]["$(transformer_2wa_obj["index"])"] = transformer_2wa_obj
+
+            ## TODO: Regulator Control
+            # if haskey(eng_obj,"controls") && !all(data_math["transformer"]["$(transformer_2wa_obj["index"])"]["tm_fix"])
+            # end
+
+            # TODO: Center-Tapped Transformers (3 Windings)
+            # if w==3 && eng_obj["polarity"][w]==-1 # identify center-tapped transformer and mark all secondary-side nodes as triplex by adding va_start
+            # end
+
+            push!(to_map, "transformer.$(transformer_2wa_obj["index"])")
+
+        end
     end
 end
 
