@@ -790,11 +790,11 @@ function _map_ravens2math_power_electronics!(data_math::Dict{String,<:Any}, data
                 end
 
                 if !haskey(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "PowerElectronicsUnit.maxP")
-                    math_obj["charge_rating"] = -(get(ravens_obj, "PowerElectronicsConnection.ratedS", Inf))./(power_scale_factor)
+                    math_obj["charge_rating"] = (get(ravens_obj, "PowerElectronicsConnection.ratedS", Inf))./(power_scale_factor)
                     math_obj["discharge_rating"] = math_obj["charge_rating"]
                 else
-                    math_obj["charge_rating"] = -(get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "PowerElectronicsUnit.maxP", Inf))./(power_scale_factor)
-                    math_obj["discharge_rating"] = math_obj["charge_rating"]
+                    math_obj["charge_rating"] = -(get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "PowerElectronicsUnit.minP", Inf))./(power_scale_factor)
+                    math_obj["discharge_rating"] = (get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "PowerElectronicsUnit.maxP", Inf))./(power_scale_factor)
                 end
 
                 math_obj["charge_efficiency"] = get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "InefficientBatteryUnit.efficiencyCharge", 100.0) / 100.0
