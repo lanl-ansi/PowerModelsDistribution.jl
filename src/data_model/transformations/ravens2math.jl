@@ -57,8 +57,6 @@ function transform_data_model_ravens(
         global_keys=global_keys,
     )
 
-    @info "$(data_math)"
-
     # TODO: Correct network data transforms a lot of the values of lines/branches (other values maybe too)
     correct_network_data && correct_network_data!(data_math; make_pu=make_pu, make_pu_extensions=make_pu_extensions)
 
@@ -97,7 +95,7 @@ function _map_ravens2math(
                 n => Dict{String,Any}(
                     "per_unit" => get(_data_ravens, "per_unit", false),
                     "is_projected" => get(nw, "is_projected", false),
-                    "is_kron_reduced" => get(nw, "is_kron_reduced", false),
+                    "is_kron_reduced" => get(nw, "is_kron_reduced", true), # TODO: Kron reduction?
                     "settings" => deepcopy(_settings),
                     "time_elapsed" => get(nw, "time_elapsed", 1.0),
                 ) for (n,nw) in _data_ravens["nw"]
@@ -111,7 +109,7 @@ function _map_ravens2math(
             "per_unit" => get(_data_ravens, "per_unit", false),
             "data_model" => MATHEMATICAL,
             "is_projected" => get(_data_ravens, "is_projected", false),
-            "is_kron_reduced" => get(_data_ravens, "is_kron_reduced", false),
+            "is_kron_reduced" => get(_data_ravens, "is_kron_reduced", true), # TODO: Kron reduction?
             "settings" => deepcopy(_settings),
             "time_elapsed" => get(_data_ravens, "time_elapsed", 1.0),
         )
@@ -414,7 +412,7 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
         status = status == "true" ? 1 : 0
 
         # Build loss model
-        transformer_t_bus_w = _build_loss_model!(data_math, name, to_map, r_s, z_sc, y_sh, connections[1]; nphases=dims, status=Int(status == ENABLED))
+        transformer_t_bus_w = _build_loss_model!(data_math, name, to_map, r_s, z_sc, y_sh, connections[1]; nphases=dims, status=status)
 
         # Mathematical model for transformer
         for w in 1:nrw
@@ -435,7 +433,7 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
             # Transformer Object
             transformer_2wa_obj = Dict{String,Any}(
                 "name"          => "_virtual_transformer.$name.$w",
-                "source_id"     => "_virtual_transformer.powertransformer.$name.$w",
+                "source_id"     => "_virtual_transformer.transformer.$name.$w",
                 "f_bus"         => data_math["bus_lookup"][f_node],
                 "t_bus"         => transformer_t_bus_w[w],
                 "tm_nom"        => tm_nom,

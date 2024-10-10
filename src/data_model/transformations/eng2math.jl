@@ -157,11 +157,6 @@ function transform_data_model(
             eng2math_passthrough=eng2math_passthrough,
             global_keys=global_keys,
         )
-
-        @info "$(data_math)"
-
-        dadadsa
-
         correct_network_data && correct_network_data!(data_math; make_pu=make_pu, make_pu_extensions=make_pu_extensions)
 
         return data_math
