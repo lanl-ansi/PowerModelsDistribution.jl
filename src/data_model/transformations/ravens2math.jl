@@ -430,11 +430,15 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
             # make virtual bus and mark it for reduction
             tm_nom = configuration==DELTA ? wdgs[w]["PowerTransformerEnd.ratedU"]*sqrt(3)/voltage_scale_factor : wdgs[w]["PowerTransformerEnd.ratedU"]/voltage_scale_factor
 
+            # Get correct f_node for winding
+            wdg_term = wdgs[w]["ConductingEquipment.Terminals"][1]
+            f_node_wdgterm = _extract_name(wdg_term["Terminal.ConnectivityNode"])
+
             # Transformer Object
             transformer_2wa_obj = Dict{String,Any}(
                 "name"          => "_virtual_transformer.$name.$w",
                 "source_id"     => "_virtual_transformer.transformer.$name.$w",
-                "f_bus"         => data_math["bus_lookup"][f_node],
+                "f_bus"         => data_math["bus_lookup"][f_node_wdgterm],
                 "t_bus"         => transformer_t_bus_w[w],
                 "tm_nom"        => tm_nom,
                 "f_connections" => connections[w],
