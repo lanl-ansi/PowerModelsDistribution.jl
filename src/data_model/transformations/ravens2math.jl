@@ -310,26 +310,26 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
         # Nodes
         f_node = ""
         t_node = ""
+
+        phasecode_map = Dict(
+            "PhaseCode.ABC" => [1, 2, 3],
+            "PhaseCode.AB" => [1, 2],
+            "PhaseCode.AC" => [1, 3],
+            "PhaseCode.BC" => [2, 3],
+            "PhaseCode.A" => [1],
+            "PhaseCode.B" => [2],
+            "PhaseCode.C" => [3]
+        )
+
         for wdg in wdgs
 
             # wdg phasecode
             wdg_terminals = wdg["ConductingEquipment.Terminals"][1]
             wdg_phasecode = wdg_terminals["Terminal.phases"]
 
-            if (wdg_phasecode == "PhaseCode.ABC")
-                push!(connections, [1, 2, 3])
-            elseif (wdg_phasecode == "PhaseCode.AB")
-                push!(connections, [1, 2])
-            elseif (wdg_phasecode == "PhaseCode.AC")
-                push!(connections, [1, 3])
-            elseif (wdg_phasecode == "PhaseCode.BC")
-                push!(connections, [2, 3])
-            elseif (wdg_phasecode == "PhaseCode.A")
-                push!(connections, [1])
-            elseif (wdg_phasecode == "PhaseCode.B")
-                push!(connections, [2])
-            elseif (wdg_phasecode == "PhaseCode.C")
-                push!(connections, [3])
+            # Connections (based on phasecode_map)
+            if haskey(phasecode_map, wdg_phasecode)
+                push!(connections, phasecode_map[wdg_phasecode])
             else
                 @error("PhaseCode not supported yet!")
             end
@@ -356,8 +356,6 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                 data_math["bus"][string(t_bus)]["terminals"] = connections[wdg_endNumber]
                 data_math["bus"][string(t_bus)]["vmin"] = fill(0.0, nphases)
                 data_math["bus"][string(t_bus)]["vmax"] = fill(Inf, nphases)
-            else
-                wdgN_data = wdg
             end
         end
 
