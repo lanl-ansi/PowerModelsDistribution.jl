@@ -77,3 +77,13 @@ function _extract_name(element)
     name = replace(split(element, "::")[2], "'" => "")
     return name
 end
+
+
+"calculates the shunt admittance matrix based on terminals and b or g"
+function _calc_shunt_admittance_matrix(terminals, b)
+
+    N = length(terminals)
+    _shunt_matrix = b* Matrix(LinearAlgebra.I, N, N)
+    return _shunt_matrix
+
+end

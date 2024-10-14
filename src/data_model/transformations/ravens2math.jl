@@ -2,8 +2,8 @@
 const _math_to_ravens = Dict{String,String}(
     "bus" => "connectivity_node",
     "transformer" => "power_transformer",
-    "switch" => "switch",                   # TODO
-    # "shunt" => "shunt_compensator",
+    "switch" => "switch",
+    "shunt" => "shunt_compensator",
     "load" => "energy_consumer",
     "generator" => "rotating_machine",
     "solar" => "photovoltaic_unit",
@@ -14,7 +14,7 @@ const _math_to_ravens = Dict{String,String}(
 
 "list of nodal type elements in the ravens model"
 const _ravens_node_elements = String[
-    "energy_consumer", "rotating_machine", "power_electronics", "energy_source"
+    "energy_consumer", "shunt_compensator", "rotating_machine", "power_electronics", "energy_source"
 ]
 
 "list of edge type elements in the ravens model"
@@ -1164,4 +1164,82 @@ function _map_ravens2math_switch!(data_math::Dict{String,<:Any}, data_ravens::Di
 
     end
 
+end
+
+
+"converts ravens generic shunt components into mathematical shunt components"
+function _map_ravens2math_shunt_compensator!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[])
+
+    regulating_cond_eq = data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"]["RegulatingCondEq"]
+    power_scale_factor = data_math["settings"]["power_scale_factor"]
+    voltage_scale_factor = data_math["settings"]["voltage_scale_factor"]
+
+    for (name, ravens_obj) in get(regulating_cond_eq, "ShuntCompensator", Dict{Any,Dict{String,Any}}())
+
+        math_obj = _init_math_obj("shunt", name, ravens_obj, length(data_math["shunt"])+1; pass_props=pass_props)
+
+        # Get connectivity node info (bus info)
+        connectivity_node = _extract_name(ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.ConnectivityNode"])
+        math_obj["shunt_bus"] = data_math["bus_lookup"][connectivity_node]
+
+        # Status
+        status = haskey(ravens_obj, "Equipment.inService") ? ravens_obj["Equipment.inService"] : "true"
+        math_obj["status"] = status == "true" ? 1 : 0
+
+        # Connections/phases obtained from Terminals
+        if haskey(ravens_obj["ConductingEquipment.Terminals"][1], "Terminal.phases")
+            phasecode = ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.phases"]
+            if (phasecode == "PhaseCode.ABC")
+                connections = [1, 2, 3]
+            elseif (phasecode == "PhaseCode.AB")
+                connections = [1, 2]
+            elseif (phasecode == "PhaseCode.AC")
+                connections = [1, 3]
+            elseif (phasecode == "PhaseCode.BC")
+                connections = [2, 3]
+            elseif (phasecode == "PhaseCode.A")
+                connections = [1]
+            elseif (phasecode == "PhaseCode.B")
+                connections = [2]
+            elseif (phasecode == "PhaseCode.C")
+                connections = [3]
+            else
+                @error("PhaseCode not supported yet!")
+            end
+        else
+            connections = [1, 2, 3] # default
+        end
+        math_obj["connections"] = connections
+        terminals = connections
+
+        # TODO: dispatchable
+        math_obj["dispatchable"] = 0
+
+        # bs - TODO: make sure b matrix is being calculated correctly
+        b = ravens_obj["LinearShuntCompensator.bPerSection"]
+        B = _calc_shunt_admittance_matrix(terminals, b)
+        math_obj["bs"] = B
+
+        # gs
+        if haskey(ravens_obj, "LinearShuntCompensator.gPerSection")
+            g = ravens_obj["LinearShuntCompensator.gPerSection"]
+            G = _calc_shunt_admittance_matrix(terminals, g)
+            math_obj["gs"] = G
+        else
+            math_obj["gs"] = zeros(size(math_obj["bs"]))
+        end
+
+        # Index
+        data_math["shunt"]["$(math_obj["index"])"] = math_obj
+
+        # TODO: Add CapControl
+        # .....
+
+        push!(data_math["map"], Dict{String,Any}(
+            "from" => name,
+            "to" => "shunt.$(math_obj["index"])",
+            "unmap_function" => "_map_math2ravens_shunt!",
+        ))
+
+    end
 end
