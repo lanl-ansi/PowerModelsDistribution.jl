@@ -535,8 +535,9 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
 
             # Loop through op. limits
             for lim in op_limits
-                lim_type_name = _extract_name(lim["OperationalLimit.OperationalLimitType"])
-                lim_type = data_ravens["OperationalLimitType"][lim_type_name]["OperationalLimitType.direction"]
+                # lim_type_name = _extract_name(lim["OperationalLimit.OperationalLimitType"]) # TODO: separate way of doing where OperationalLimitType is separated
+                # lim_type = data_ravens["OperationalLimitType"][lim_type_name]["OperationalLimitType.direction"]
+                lim_type = lim["OperationalLimit.OperationalLimitType"]["OperationalLimitType.direction"]
 
                 if lim_type == "OperationalLimitDirectionKind.high"
                     op_limit_max = lim["VoltageLimit.value"] / voltage_scale_factor_sqrt3
@@ -1038,7 +1039,7 @@ end
 "converts ravens switches into mathematical switches and (if neeed) impedance branches to represent loss model"
 function _map_ravens2math_switch!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[])
 
-    # TODO enable real switches (right now only using vitual lines)
+    # TODO enable real switches (right now only using virtual lines)
     if haskey(data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"], "Switch")
 
         conducting_equipment = data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]
@@ -1112,6 +1113,9 @@ function _map_ravens2math_switch!(data_math::Dict{String,<:Any}, data_ravens::Di
                 @error("f_conns are not equal to t_conns!. Revise connections/phases in Switch terminals")
             end
 
+            math_obj["f_connections"] = f_conns
+            math_obj["t_connections"] = t_conns
+
             # Phases
             nphases = length(f_conns)
 
@@ -1137,19 +1141,10 @@ function _map_ravens2math_switch!(data_math::Dict{String,<:Any}, data_ravens::Di
             for (f_key, t_key) in [("Switch.ratedCurrent", "current_rating"), ("cm_ub_b", "c_rating_b"), ("cm_ub_c", "c_rating_c"),
                 ("sm_ub", "thermal_rating"), ("sm_ub_b", "rate_b"), ("sm_ub_c", "rate_c")]
                 math_obj[t_key] = haskey(ravens_obj, f_key) ? fill(ravens_obj[f_key], nphases) : fill(Inf, nphases)
-
-                @info "$(math_obj[t_key])"
-
             end
 
             # Map index
             map_to = "switch.$(math_obj["index"])"
-
-            # TODO: Apply linecode? No information is given in CIM related to linecodes
-
-
-            # TODO: Create virtual bus
-
 
             # Push Mapping
             data_math["switch"]["$(math_obj["index"])"] = math_obj
@@ -1170,76 +1165,79 @@ end
 "converts ravens generic shunt components into mathematical shunt components"
 function _map_ravens2math_shunt_compensator!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[])
 
-    regulating_cond_eq = data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"]["RegulatingCondEq"]
-    power_scale_factor = data_math["settings"]["power_scale_factor"]
-    voltage_scale_factor = data_math["settings"]["voltage_scale_factor"]
+    if haskey(data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"], "RegulatingCondEq")
+        regulating_cond_eq = data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"]["RegulatingCondEq"]
+        power_scale_factor = data_math["settings"]["power_scale_factor"]
+        voltage_scale_factor = data_math["settings"]["voltage_scale_factor"]
 
-    for (name, ravens_obj) in get(regulating_cond_eq, "ShuntCompensator", Dict{Any,Dict{String,Any}}())
+        for (name, ravens_obj) in get(regulating_cond_eq, "ShuntCompensator", Dict{Any,Dict{String,Any}}())
 
-        math_obj = _init_math_obj("shunt", name, ravens_obj, length(data_math["shunt"])+1; pass_props=pass_props)
+            math_obj = _init_math_obj("shunt", name, ravens_obj, length(data_math["shunt"])+1; pass_props=pass_props)
 
-        # Get connectivity node info (bus info)
-        connectivity_node = _extract_name(ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.ConnectivityNode"])
-        math_obj["shunt_bus"] = data_math["bus_lookup"][connectivity_node]
+            # Get connectivity node info (bus info)
+            connectivity_node = _extract_name(ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.ConnectivityNode"])
+            math_obj["shunt_bus"] = data_math["bus_lookup"][connectivity_node]
 
-        # Status
-        status = haskey(ravens_obj, "Equipment.inService") ? ravens_obj["Equipment.inService"] : "true"
-        math_obj["status"] = status == "true" ? 1 : 0
+            # Status
+            status = haskey(ravens_obj, "Equipment.inService") ? ravens_obj["Equipment.inService"] : "true"
+            math_obj["status"] = status == "true" ? 1 : 0
 
-        # Connections/phases obtained from Terminals
-        if haskey(ravens_obj["ConductingEquipment.Terminals"][1], "Terminal.phases")
-            phasecode = ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.phases"]
-            if (phasecode == "PhaseCode.ABC")
-                connections = [1, 2, 3]
-            elseif (phasecode == "PhaseCode.AB")
-                connections = [1, 2]
-            elseif (phasecode == "PhaseCode.AC")
-                connections = [1, 3]
-            elseif (phasecode == "PhaseCode.BC")
-                connections = [2, 3]
-            elseif (phasecode == "PhaseCode.A")
-                connections = [1]
-            elseif (phasecode == "PhaseCode.B")
-                connections = [2]
-            elseif (phasecode == "PhaseCode.C")
-                connections = [3]
+            # Connections/phases obtained from Terminals
+            if haskey(ravens_obj["ConductingEquipment.Terminals"][1], "Terminal.phases")
+                phasecode = ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.phases"]
+                if (phasecode == "PhaseCode.ABC")
+                    connections = [1, 2, 3]
+                elseif (phasecode == "PhaseCode.AB")
+                    connections = [1, 2]
+                elseif (phasecode == "PhaseCode.AC")
+                    connections = [1, 3]
+                elseif (phasecode == "PhaseCode.BC")
+                    connections = [2, 3]
+                elseif (phasecode == "PhaseCode.A")
+                    connections = [1]
+                elseif (phasecode == "PhaseCode.B")
+                    connections = [2]
+                elseif (phasecode == "PhaseCode.C")
+                    connections = [3]
+                else
+                    @error("PhaseCode not supported yet!")
+                end
             else
-                @error("PhaseCode not supported yet!")
+                connections = [1, 2, 3] # default
             end
-        else
-            connections = [1, 2, 3] # default
+            math_obj["connections"] = connections
+            terminals = connections
+
+            # TODO: dispatchable
+            math_obj["dispatchable"] = 0
+
+            # bs - TODO: make sure b matrix is being calculated correctly
+            b = ravens_obj["LinearShuntCompensator.bPerSection"]
+            B = _calc_shunt_admittance_matrix(terminals, b)
+            math_obj["bs"] = B
+
+            # gs
+            if haskey(ravens_obj, "LinearShuntCompensator.gPerSection")
+                g = ravens_obj["LinearShuntCompensator.gPerSection"]
+                G = _calc_shunt_admittance_matrix(terminals, g)
+                math_obj["gs"] = G
+            else
+                math_obj["gs"] = zeros(size(math_obj["bs"]))
+            end
+
+            # Index
+            data_math["shunt"]["$(math_obj["index"])"] = math_obj
+
+            # TODO: Add CapControl
+            # .....
+
+            push!(data_math["map"], Dict{String,Any}(
+                "from" => name,
+                "to" => "shunt.$(math_obj["index"])",
+                "unmap_function" => "_map_math2ravens_shunt!",
+            ))
+
         end
-        math_obj["connections"] = connections
-        terminals = connections
-
-        # TODO: dispatchable
-        math_obj["dispatchable"] = 0
-
-        # bs - TODO: make sure b matrix is being calculated correctly
-        b = ravens_obj["LinearShuntCompensator.bPerSection"]
-        B = _calc_shunt_admittance_matrix(terminals, b)
-        math_obj["bs"] = B
-
-        # gs
-        if haskey(ravens_obj, "LinearShuntCompensator.gPerSection")
-            g = ravens_obj["LinearShuntCompensator.gPerSection"]
-            G = _calc_shunt_admittance_matrix(terminals, g)
-            math_obj["gs"] = G
-        else
-            math_obj["gs"] = zeros(size(math_obj["bs"]))
-        end
-
-        # Index
-        data_math["shunt"]["$(math_obj["index"])"] = math_obj
-
-        # TODO: Add CapControl
-        # .....
-
-        push!(data_math["map"], Dict{String,Any}(
-            "from" => name,
-            "to" => "shunt.$(math_obj["index"])",
-            "unmap_function" => "_map_math2ravens_shunt!",
-        ))
 
     end
 end
