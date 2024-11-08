@@ -294,9 +294,6 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
 
         to_map = data_math["map"][end]["to"]
 
-        # TODO: Check if we still need this function (or a similar function)
-        # _apply_xfmrcode!(ravens_obj, data_ravens)
-
         # Get nrw: number of windings
         wdgs = ravens_obj["PowerTransformer.PowerTransformerEnd"]
         nrw = length(wdgs)
@@ -311,25 +308,15 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
         f_node = ""
         t_node = ""
 
-        phasecode_map = Dict(
-            "PhaseCode.ABC" => [1, 2, 3],
-            "PhaseCode.AB" => [1, 2],
-            "PhaseCode.AC" => [1, 3],
-            "PhaseCode.BC" => [2, 3],
-            "PhaseCode.A" => [1],
-            "PhaseCode.B" => [2],
-            "PhaseCode.C" => [3]
-        )
-
         for wdg in wdgs
 
             # wdg phasecode
             wdg_terminals = wdg["ConductingEquipment.Terminals"][1]
             wdg_phasecode = wdg_terminals["Terminal.phases"]
 
-            # Connections (based on phasecode_map)
-            if haskey(phasecode_map, wdg_phasecode)
-                push!(connections, phasecode_map[wdg_phasecode])
+            # Connections (based on _phasecode_map)
+            if haskey(_phasecode_map, wdg_phasecode)
+                push!(connections, _phasecode_map[wdg_phasecode])
             else
                 @error("PhaseCode not supported yet!")
             end
@@ -400,7 +387,6 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
         end
 
         dims = length(tm_set[1])
-
 
         # TODO: Polarity
         polarity = fill(1, nrw)
@@ -535,9 +521,13 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
 
             # Loop through op. limits
             for lim in op_limits
-                # lim_type_name = _extract_name(lim["OperationalLimit.OperationalLimitType"]) # TODO: separate way of doing where OperationalLimitType is separated
-                # lim_type = data_ravens["OperationalLimitType"][lim_type_name]["OperationalLimitType.direction"]
-                lim_type = lim["OperationalLimit.OperationalLimitType"]["OperationalLimitType.direction"]
+
+                if haskey(data_ravens, "OperationalLimitType")
+                    lim_type_name = _extract_name(lim["OperationalLimit.OperationalLimitType"])
+                    lim_type = data_ravens["OperationalLimitType"][lim_type_name]["OperationalLimitType.direction"]
+                else
+                    lim_type = lim["OperationalLimit.OperationalLimitType"]["OperationalLimitType.direction"]
+                end
 
                 if lim_type == "OperationalLimitDirectionKind.high"
                     op_limit_max = lim["VoltageLimit.value"] / voltage_scale_factor_sqrt3
@@ -638,23 +628,7 @@ function _map_ravens2math_energy_source!(data_math::Dict{String,<:Any}, data_rav
             # Terminal Phases
             if haskey(ravens_obj["ConductingEquipment.Terminals"][1], "Terminal.phases")
                 phasecode = ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.phases"]
-                if (phasecode == "PhaseCode.ABC")
-                    math_obj["connections"] = [1, 2, 3]
-                elseif (phasecode == "PhaseCode.AB")
-                    math_obj["connections"] = [1, 2]
-                elseif (phasecode == "PhaseCode.AC")
-                    math_obj["connections"] = [1, 3]
-                elseif (phasecode == "PhaseCode.BC")
-                    math_obj["connections"] = [2, 3]
-                elseif (phasecode == "PhaseCode.A")
-                    math_obj["connections"] = [1]
-                elseif (phasecode == "PhaseCode.B")
-                    math_obj["connections"] = [2]
-                elseif (phasecode == "PhaseCode.C")
-                    math_obj["connections"] = [3]
-                else
-                    @error("PhaseCode not supported yet!")
-                end
+                math_obj["connections"] = _phasecode_map[phasecode]
             else
                 math_obj["connections"] = bus_conn["terminals"]
             end
@@ -775,23 +749,7 @@ function _map_ravens2math_rotating_machine!(data_math::Dict{String,<:Any}, data_
         # Connections/phases obtained from Terminals
         if haskey(ravens_obj["ConductingEquipment.Terminals"][1], "Terminal.phases")
             phasecode = ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.phases"]
-            if (phasecode == "PhaseCode.ABC")
-                connections = [1, 2, 3]
-            elseif (phasecode == "PhaseCode.AB")
-                connections = [1, 2]
-            elseif (phasecode == "PhaseCode.AC")
-                connections = [1, 3]
-            elseif (phasecode == "PhaseCode.BC")
-                connections = [2, 3]
-            elseif (phasecode == "PhaseCode.A")
-                connections = [1]
-            elseif (phasecode == "PhaseCode.B")
-                connections = [2]
-            elseif (phasecode == "PhaseCode.C")
-                connections = [3]
-            else
-                @error("PhaseCode not supported yet!")
-            end
+            connections = _phasecode_map[phasecode]
         else
             connections = [1, 2, 3] # default
         end
@@ -1051,56 +1009,16 @@ function _map_ravens2math_switch!(data_math::Dict{String,<:Any}, data_ravens::Di
             # Terminals and phases
             terminals = ravens_obj["ConductingEquipment.Terminals"]
 
-            # TODO: refactor - Loop through terminals and verify connections
+            # Loop through terminals
             f_conns = [0,0,0]
             t_conns = [0,0,0]
             for term in terminals
                 if haskey(term, "Terminal.phases")
                     phasecode = term["Terminal.phases"]
-                    if (phasecode == "PhaseCode.ABC")
-                        if term["ACDCTerminal.sequenceNumber"] == 1
-                            f_conns = [1, 2, 3]
-                        else
-                            t_conns = [1, 2, 3]
-                        end
-                    elseif (phasecode == "PhaseCode.AB")
-                        if term["ACDCTerminal.sequenceNumber"] == 1
-                            f_conns = [1, 2]
-                        else
-                            t_conns = [1, 2]
-                        end
-                    elseif (phasecode == "PhaseCode.AC")
-                        if term["ACDCTerminal.sequenceNumber"] == 1
-                            f_conns = [1, 3]
-                        else
-                            t_conns = [1, 3]
-                        end
-                    elseif (phasecode == "PhaseCode.BC")
-                        if term["ACDCTerminal.sequenceNumber"] == 1
-                            f_conns = [2, 3]
-                        else
-                            t_conns = [2, 3]
-                        end
-                    elseif (phasecode == "PhaseCode.A")
-                        if term["ACDCTerminal.sequenceNumber"] == 1
-                            f_conns = [1]
-                        else
-                            t_conns = [1]
-                        end
-                    elseif (phasecode == "PhaseCode.B")
-                        if term["ACDCTerminal.sequenceNumber"] == 1
-                            f_conns = [2]
-                        else
-                            t_conns = [2]
-                        end
-                    elseif (phasecode == "PhaseCode.C")
-                        if term["ACDCTerminal.sequenceNumber"] == 1
-                            f_conns = [3]
-                        else
-                            t_conns = [3]
-                        end
+                    if term["ACDCTerminal.sequenceNumber"] == 1
+                        f_conns = _phasecode_map[phasecode]
                     else
-                        @error("PhaseCode not supported yet!")
+                        t_conns = _phasecode_map[phasecode]
                     end
                 else
                     f_conns = [1, 2, 3]
@@ -1185,23 +1103,7 @@ function _map_ravens2math_shunt_compensator!(data_math::Dict{String,<:Any}, data
             # Connections/phases obtained from Terminals
             if haskey(ravens_obj["ConductingEquipment.Terminals"][1], "Terminal.phases")
                 phasecode = ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.phases"]
-                if (phasecode == "PhaseCode.ABC")
-                    connections = [1, 2, 3]
-                elseif (phasecode == "PhaseCode.AB")
-                    connections = [1, 2]
-                elseif (phasecode == "PhaseCode.AC")
-                    connections = [1, 3]
-                elseif (phasecode == "PhaseCode.BC")
-                    connections = [2, 3]
-                elseif (phasecode == "PhaseCode.A")
-                    connections = [1]
-                elseif (phasecode == "PhaseCode.B")
-                    connections = [2]
-                elseif (phasecode == "PhaseCode.C")
-                    connections = [3]
-                else
-                    @error("PhaseCode not supported yet!")
-                end
+                connections = _phasecode_map[phasecode]
             else
                 connections = [1, 2, 3] # default
             end

@@ -1,3 +1,13 @@
+const _phasecode_map = Dict(
+            "PhaseCode.ABC" => [1, 2, 3],
+            "PhaseCode.AB" => [1, 2],
+            "PhaseCode.AC" => [1, 3],
+            "PhaseCode.BC" => [2, 3],
+            "PhaseCode.A" => [1],
+            "PhaseCode.B" => [2],
+            "PhaseCode.C" => [3]
+)
+
 
 "initializes the base math object of any type"
 function _init_math_obj_ravens(obj_type::String, eng_id::Any, eng_obj::Dict{String,<:Any}, index::Int; pass_props::Vector{String}=String[])::Dict{String,Any}
