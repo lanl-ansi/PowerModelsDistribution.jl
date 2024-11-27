@@ -152,7 +152,7 @@ JuMP.@constraint(cp_model, [e in EVs, k in K], cp_P_ek[e,k]<=Pmax_e[e]);
 
 # ╔═╡ eb8479f7-99c6-49c9-b767-43a8d31cc502
 md"""
-Add the objective to the model.
+Add the objective to the cp model.
 """
 
 # ╔═╡ c40088d6-78b7-44dc-ac4f-ab5357490818
