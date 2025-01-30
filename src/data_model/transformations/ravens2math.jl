@@ -43,13 +43,9 @@ function transform_data_model_ravens(
 
     current_data_model = get(data, "data_model", MATHEMATICAL)
 
-    ## TODO
-    # if multinetwork && !ismultinetwork(data)
-    #     data = make_multinetwork(data; global_keys=global_keys)
-    # end
-
     data_math = _map_ravens2math(
         data;
+        multinetwork=multinetwork,
         kron_reduce=kron_reduce,
         phase_project=phase_project,
         ravens2math_extensions=ravens2math_extensions,
@@ -68,6 +64,7 @@ end
 "base function for converting ravens model to mathematical model"
 function _map_ravens2math(
     data_ravens::Dict{String,<:Any};
+    multinetwork::Bool=false,
     kron_reduce::Bool=true,
     phase_project::Bool=false,
     ravens2math_extensions::Vector{<:Function}=Function[],
@@ -86,24 +83,69 @@ function _map_ravens2math(
                     "vbases_default" => Dict{String,Real}()
     )
 
-    ## TODO: Multinetwork
-    if ismultinetwork(data_ravens)
+    # Multinetwork
+    if multinetwork
         data_math = Dict{String,Any}(
             "name" => get(_data_ravens, "name", ""),
             "data_model" => MATHEMATICAL,
-            "nw" => Dict{String,Any}(
-                n => Dict{String,Any}(
-                    "per_unit" => get(_data_ravens, "per_unit", false),
-                    "is_projected" => get(nw, "is_projected", false),
-                    "is_kron_reduced" => get(nw, "is_kron_reduced", true), # TODO: Kron reduction?
-                    "settings" => deepcopy(_settings),
-                    "time_elapsed" => get(nw, "time_elapsed", 1.0),
-                ) for (n,nw) in _data_ravens["nw"]
-            ),
-            "multinetwork" => ismultinetwork(data_ravens),
-            [k => data_ravens[k] for k in global_keys if haskey(data_ravens, k)]...
+            "multinetwork" => multinetwork,
+            "nw" => Dict{String,Any}()
         )
-    else
+
+        if haskey(data_ravens, "BasicIntervalSchedule")
+            schdls = get(data_ravens, "BasicIntervalSchedule", Dict{String,Any}()) # Get schedules/timeseries
+
+            # Check for shortest timeseries. Use that length for mn
+            min_length = Inf
+            for (name, ravens_obj) in schdls
+                if haskey(ravens_obj, "EnergyConsumerSchedule.RegularTimePoints")
+                    points = ravens_obj["EnergyConsumerSchedule.RegularTimePoints"]
+                    length_points = length(points)
+
+                    if length_points < min_length
+                        min_length = length_points
+                    end
+                end
+            end
+
+            # Throw error if no schedule/timeseries is found.
+            if min_length == Inf
+                throw("Minimum length is equal to Inf. Cannot do multinetwork with Inf timepoints.")
+            end
+
+            # Vector to store nws dictionaries
+            nws_vect = Vector{Dict{String,Any}}(undef, min_length)
+
+            # Multithreaded loop to create each nw dictionary. Store them in vector (to allow multithreading)
+            Threads.@threads for n=1:1:min_length
+                nw_dict = Dict{String,Any}(
+                    string(n) => Dict{String,Any}(
+                        "per_unit" => get(_data_ravens, "per_unit", false),
+                        "is_projected" => get(_data_ravens, "is_projected", false),
+                        "is_kron_reduced" => get(_data_ravens, "is_kron_reduced", true), # TODO: Kron reduction?
+                        "settings" => deepcopy(_settings),
+                        "time_elapsed" => get(_data_ravens, "time_elapsed", 1.0),
+                    )
+                )
+
+                # Store nw dict in vector
+                nws_vect[n] = nw_dict
+
+                # Perform conversion ravens2math
+                apply_pmd!(_map_ravens2math_nw!, nws_vect[n], _data_ravens; ravens2math_passthrough=ravens2math_passthrough, ravens2math_extensions=ravens2math_extensions, nw=n)
+
+            end
+
+            # Merge dict in vector into data_math dictionary (other for loop to allow multithreading)
+            for nw_dict in nws_vect
+                merge!(data_math["nw"], nw_dict)
+            end
+
+        else
+            @error("No timeseries and/or multinetwork information detected.")
+        end
+
+    else # No multinetwork
         data_math = Dict{String,Any}(
             "name" => get(_data_ravens, "name", ""),
             "per_unit" => get(_data_ravens, "per_unit", false),
@@ -113,11 +155,11 @@ function _map_ravens2math(
             "settings" => deepcopy(_settings),
             "time_elapsed" => get(_data_ravens, "time_elapsed", 1.0),
         )
+        apply_pmd!(_map_ravens2math_nw!, data_math, _data_ravens; ravens2math_passthrough=ravens2math_passthrough, ravens2math_extensions=ravens2math_extensions)
     end
 
-    apply_pmd!(_map_ravens2math_nw!, data_math, _data_ravens; ravens2math_passthrough=ravens2math_passthrough, ravens2math_extensions=ravens2math_extensions)
-
-    if ismultinetwork(data_ravens)
+    # multinetwork collections
+    if multinetwork
         _collect_nw_maps!(data_math)
         _collect_nw_bus_lookups!(data_math)
     end
@@ -128,32 +170,65 @@ end
 
 """
 """
-function _map_ravens2math_nw!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; ravens2math_passthrough::Dict{String,Vector{String}}=Dict{String,Vector{String}}(), ravens2math_extensions::Vector{<:Function}=Function[])
-    data_math["map"] = Vector{Dict{String,Any}}([
-        Dict{String,Any}("unmap_function" => "_map_math2ravens_root!")
-    ])
+function _map_ravens2math_nw!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; ravens2math_passthrough::Dict{String,Vector{String}}=Dict{String,Vector{String}}(), ravens2math_extensions::Vector{<:Function}=Function[], nw::Int=nw_id_default)
 
-    _init_base_components!(data_math)
+    if nw==0
 
-    ## TODO
-    # for property in get(ravens2math_passthrough, "root", String[])
-    #     if haskey(data_ravens, property)
-    #         data_math[property] = deepcopy(data_ravens[property])
-    #     end
-    # end
+        data_math["map"] = Vector{Dict{String,Any}}([
+            Dict{String,Any}("unmap_function" => "_map_math2ravens_root!")
+        ])
 
-    for type in pmd_ravens_asset_types
-        getfield(PowerModelsDistribution, Symbol("_map_ravens2math_$(type)!"))(data_math, data_ravens; pass_props=get(ravens2math_passthrough, type, String[]))
+        _init_base_components!(data_math)
+
+        ## TODO
+        # for property in get(ravens2math_passthrough, "root", String[])
+        #     if haskey(data_ravens, property)
+        #         data_math[property] = deepcopy(data_ravens[property])
+        #     end
+        # end
+
+        for type in pmd_ravens_asset_types
+            getfield(PowerModelsDistribution, Symbol("_map_ravens2math_$(type)!"))(data_math, data_ravens; pass_props=get(ravens2math_passthrough, type, String[]))
+        end
+
+        # Custom ravens2math transformation functions
+        for ravens2math_func! in ravens2math_extensions
+            ravens2math_func!(data_math, data_ravens)
+        end
+
+        find_conductor_ids!(data_math)
+        _map_conductor_ids!(data_math)
+        _map_settings_vbases_default!(data_math)
+
+    else
+
+        data_math[string(nw)]["map"] = Vector{Dict{String,Any}}([
+            Dict{String,Any}("unmap_function" => "_map_math2ravens_root!")
+        ])
+
+        _init_base_components!(data_math[string(nw)])
+
+        ## TODO
+        # for property in get(ravens2math_passthrough, "root", String[])
+        #     if haskey(data_ravens, property)
+        #         data_math[property] = deepcopy(data_ravens[property])
+        #     end
+        # end
+
+        for type in pmd_ravens_asset_types
+            getfield(PowerModelsDistribution, Symbol("_map_ravens2math_$(type)!"))(data_math[string(nw)], data_ravens; pass_props=get(ravens2math_passthrough, type, String[]), nw=nw)
+        end
+
+        # Custom ravens2math transformation functions
+        for ravens2math_func! in ravens2math_extensions
+            ravens2math_func!(data_math[string(nw)], data_ravens)
+        end
+
+        find_conductor_ids!(data_math[string(nw)])
+        _map_conductor_ids!(data_math[string(nw)])
+        _map_settings_vbases_default!(data_math[string(nw)])
+
     end
-
-    # Custom ravens2math transformation functions
-    for ravens2math_func! in ravens2math_extensions
-        ravens2math_func!(data_math, data_ravens)
-    end
-
-    find_conductor_ids!(data_math)
-    _map_conductor_ids!(data_math)
-    _map_settings_vbases_default!(data_math)
 
 end
 
@@ -161,7 +236,7 @@ end
 """
 Converts ravens connectivity_node components into mathematical bus components.
 """
-function _map_ravens2math_connectivity_node!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[])
+function _map_ravens2math_connectivity_node!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
     voltage_scale_factor_sqrt3 = data_math["settings"]["voltage_scale_factor"] * sqrt(3)
     connectivity_nodes = get(data_ravens, "ConnectivityNode", Dict{String,Any}())
 
@@ -206,7 +281,7 @@ end
 """
 Converts ravens conductors (e.g., ACLineSegments) into mathematical branches.
 """
-function _map_ravens2math_conductor!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[])
+function _map_ravens2math_conductor!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
     conductors = data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["Conductor"]
 
     for (name, ravens_obj) in get(conductors, "ACLineSegment", Dict{Any,Dict{String,Any}}())
@@ -276,7 +351,7 @@ end
 
 # TODO: Transformers need a lot of changes/refactors!!!
 "converts ravens n-winding transformers into mathematical ideal 2-winding lossless transformer branches and impedance branches to represent the loss model"
-function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[])
+function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
 
     conducting_equipment = data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]
     power_scale_factor = data_math["settings"]["power_scale_factor"]
@@ -467,7 +542,7 @@ end
 """
 Converts ravens load components into mathematical load components.
 """
-function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[])
+function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
     energy_connections = data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"]
     power_scale_factor = data_math["settings"]["power_scale_factor"]
     voltage_scale_factor = data_math["settings"]["voltage_scale_factor"]
@@ -502,9 +577,41 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
             math_obj["model"] = POWER
         end
 
-        # Set p and q
-        math_obj["pd"] = [ravens_obj["EnergyConsumer.p"] / power_scale_factor]
-        math_obj["qd"] = [ravens_obj["EnergyConsumer.q"] / power_scale_factor]
+        # Set p and q (w/ multinetwork support)
+
+        if nw==0
+            math_obj["pd"] = [ravens_obj["EnergyConsumer.p"] / power_scale_factor]
+            math_obj["qd"] = [ravens_obj["EnergyConsumer.q"] / power_scale_factor]
+        else
+
+            # Get timeseries schedule
+            if haskey(ravens_obj, "EnergyConsumer.LoadForecast")
+                schdl_name = _extract_name(ravens_obj["EnergyConsumer.LoadForecast"])
+                schdl = data_ravens["BasicIntervalSchedule"][schdl_name]
+
+                # TODO: Define other types of timeseries (e.g., multipliers, etc.)
+                # units and multiplier modifiers
+                value1_multiplier = _multipliers_map[schdl["BasicIntervalSchedule.value1Multiplier"]]
+                value2_multiplier = _multipliers_map[schdl["BasicIntervalSchedule.value2Multiplier"]]
+                value1_unit = schdl["BasicIntervalSchedule.value1Unit"]
+                value2_unit = schdl["BasicIntervalSchedule.value2Unit"]
+
+                if value1_unit == "W"
+                    math_obj["pd"] = [schdl["EnergyConsumerSchedule.RegularTimePoints"][nw]["RegularTimePoint.value1"] * value1_multiplier / power_scale_factor]
+                end
+                if value1_unit == "VAr"
+                    math_obj["qd"] = [schdl["EnergyConsumerSchedule.RegularTimePoints"][nw]["RegularTimePoint.value1"] * value1_multiplier / power_scale_factor]
+                end
+                if value2_unit == "W"
+                    math_obj["pd"] = [schdl["EnergyConsumerSchedule.RegularTimePoints"][nw]["RegularTimePoint.value2"] * value2_multiplier / power_scale_factor]
+                end
+                if value2_unit == "VAr"
+                    math_obj["qd"] = [schdl["EnergyConsumerSchedule.RegularTimePoints"][nw]["RegularTimePoint.value2"] * value2_multiplier / power_scale_factor]
+                end
+            else
+                @error("No timeseries, load forecast or multinetwork information found!")
+            end
+        end
 
         # Set the nominal voltage
         base_voltage_ref = _extract_name(ravens_obj["ConductingEquipment.BaseVoltage"])
@@ -597,7 +704,7 @@ end
 """
 Converts ravens voltage sources into mathematical generators and (if needed) impedance branches to represent the loss model.
 """
-function _map_ravens2math_energy_source!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[])
+function _map_ravens2math_energy_source!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
     energy_connections = data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"]
     voltage_scale_factor = data_math["settings"]["voltage_scale_factor"]
     voltage_scale_factor_sqrt3 = voltage_scale_factor * sqrt(3)
@@ -734,7 +841,7 @@ end
 
 
 "converts engineering generators into mathematical generators"
-function _map_ravens2math_rotating_machine!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[])
+function _map_ravens2math_rotating_machine!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
     energy_connections = data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"]
 
     if haskey(energy_connections, "RegulatingCondEq")
@@ -823,7 +930,7 @@ end
 
 
 "converts ravens power_electronics units such as PVs and Batteries into mathematical components"
-function _map_ravens2math_power_electronics!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[])
+function _map_ravens2math_power_electronics!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
     energy_connections = data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"]
 
     if haskey(energy_connections, "RegulatingCondEq")
@@ -995,7 +1102,7 @@ end
 
 
 "converts ravens switches into mathematical switches and (if neeed) impedance branches to represent loss model"
-function _map_ravens2math_switch!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[])
+function _map_ravens2math_switch!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
     conducting_equipment = data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]
 
     for (name, ravens_obj) in get(conducting_equipment, "Switch", Dict{Any,Dict{String,Any}}())
@@ -1074,7 +1181,7 @@ end
 
 
 "converts ravens generic shunt components into mathematical shunt components"
-function _map_ravens2math_shunt_compensator!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[])
+function _map_ravens2math_shunt_compensator!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
     energy_connections = data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"]
 
     if haskey(energy_connections, "RegulatingCondEq")

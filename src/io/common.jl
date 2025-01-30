@@ -105,22 +105,22 @@ function parse_file(
             )
         end
     elseif filetype == "json"
-        if multinetwork && !ismultinetwork(pmd_data)
-            pmd_data = make_multinetwork(pmd_data; global_keys=global_keys)
-        end
 
-        if data_model == MATHEMATICAL && !ismath(pmd_data)
-            pmd_data = transform_data_model(pmd_data;
-                make_pu=make_pu,
-                make_pu_extensions=make_pu_extensions,
-                kron_reduce=kron_reduce,
-                phase_project=phase_project,
-                multinetwork=multinetwork,
-                global_keys=global_keys,
-                eng2math_extensions=eng2math_extensions,
-                eng2math_passthrough=eng2math_passthrough,
-            )
-        end
+        ## TODO: may not be needed
+        # if data_model == MATHEMATICAL && !ismath(pmd_data)
+        #     pmd_data = transform_data_model(pmd_data;
+        #         make_pu=make_pu,
+        #         make_pu_extensions=make_pu_extensions,
+        #         kron_reduce=kron_reduce,
+        #         phase_project=phase_project,
+        #         multinetwork=multinetwork,
+        #         global_keys=global_keys,
+        #         eng2math_extensions=eng2math_extensions,
+        #         eng2math_passthrough=eng2math_passthrough,
+        #     )
+        # end
+
+
     else
         error("only .dss and .json files are supported")
     end

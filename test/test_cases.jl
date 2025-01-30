@@ -76,3 +76,4 @@ ravens_case3_withsubxf = parse_file("../test/data/ravens/ravens_case3_withsubxf.
 ravens_case3_withcap = parse_file("../test/data/ravens/ravens_case3_withcap.json")
 ravens_test_switch_3w = parse_file("../test/data/ravens/ravens_test_switch_3w.json")
 # ravens_test_switch_1w = parse_file("../test/data/ravens/ravens_test_switch_1w.json")
+ravens_case3_withgens_mn = parse_file("../test/data/ravens/ravens_case3_withgens_mn.json")

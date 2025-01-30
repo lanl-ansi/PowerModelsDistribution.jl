@@ -67,4 +67,16 @@
     #     )
     #     @test result["termination_status"] == LOCALLY_SOLVED
     # end
+
+    @testset "ravens case 3 with gens multinetwork" begin
+        pmd_model = instantiate_mc_model_ravens(ravens_case3_withgens_mn, ACPUPowerModel, build_mn_mc_opf; multinetwork=true)
+        result = optimize_model!(
+            pmd_model,
+            relax_integrality=false,
+            optimizer=ipopt_solver,
+            solution_processors=Function[]
+        )
+        @test result["termination_status"] == LOCALLY_SOLVED
+    end
+
 end

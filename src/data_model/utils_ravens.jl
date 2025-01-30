@@ -9,6 +9,22 @@ const _phasecode_map = Dict(
 )
 
 
+const _multipliers_map = Dict(
+            "m" => 1e-3,
+            "c" => 1e-2,
+            "d" => 1e-1,
+            "da" => 1e1,
+            "h" => 1e2,
+            "k" => 1e3,
+            "M" => 1e6,
+            "G" => 1e9,
+            "T" => 1e12,
+            "P" => 1e15,
+            "E" => 1e18,
+            "Z" => 1e21
+)
+
+
 "initializes the base math object of any type"
 function _init_math_obj_ravens(obj_type::String, eng_id::Any, eng_obj::Dict{String,<:Any}, index::Int; pass_props::Vector{String}=String[])::Dict{String,Any}
     math_obj = Dict{String,Any}(
