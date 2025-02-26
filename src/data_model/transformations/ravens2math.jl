@@ -975,7 +975,7 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                             "polarity"      => polarity[wdg_id],
                             "tm_set"        => tm_set[wdg_id],
                             "tm_fix"        => tm_fix[wdg_id],
-                            "sm_ub"         => get(wdg_info[wdg_id], "TransformerEndInfo.ratedS", Inf)/power_scale_factor,
+                            "sm_ub"         => get(wdg_info[wdg_id], "TransformerEndInfo.emergencyS", Inf)/power_scale_factor,
                             "cm_ub"         => get(wdg_info[wdg_id], "TransformerEndInfo.ratedI", Inf),
                             "status"        => status,
                             "index"         => length(data_math["transformer"])+1
