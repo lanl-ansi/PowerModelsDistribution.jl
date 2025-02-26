@@ -118,7 +118,7 @@ function instantiate_mc_model(
 
     # @info "$(data["bus"])"
 
-    # for i in data["transformer"]
+    # for i in data["bus"]
     #     @info "+++++++++++++++++++++++++++++++++++++++++++++++++++++"
     #     @info "$(i)"
     # end
@@ -165,7 +165,7 @@ function instantiate_mc_model_ravens(
 
     # @info "$(data["bus"])"
 
-    # for i in data["transformer"]
+    # for i in data["bus"]
     #     @info "+++++++++++++++++++++++++++++++++++++++++++++++++++++"
     #     @info "$(i)"
     # end

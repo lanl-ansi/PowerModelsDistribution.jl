@@ -248,7 +248,6 @@ function _map_ravens2math_connectivity_node!(data_math::Dict{String,<:Any}, data
         math_obj["bus_i"] = index
         math_obj["source_id"] = "bus.$name"
         math_obj["bus_type"] = 1  # Default bus_type, will be modified as needed
-        math_obj["grounded"] = Bool[0, 0, 0]
         math_obj["vm_pair_lb"] = Tuple{Any, Any, Real}[]
         math_obj["vm_pair_ub"] = Tuple{Any, Any, Real}[]
 
@@ -305,6 +304,7 @@ function _map_ravens2math_conductor!(data_math::Dict{String,<:Any}, data_ravens:
                 data_math["bus"][string(bus)]["terminals"] = bus_terminals
                 data_math["bus"][string(bus)]["vmin"] = fill(0.0, nphases)
                 data_math["bus"][string(bus)]["vmax"] = fill(Inf, nphases)
+                data_math["bus"][string(bus)]["grounded"] = zeros(Bool, nphases)
             end
 
             math_obj["f_connections"] = bus_terminals
@@ -427,6 +427,7 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                     data_math["bus"][string(bus)]["terminals"] = connections[wdg_endNumber]
                     data_math["bus"][string(bus)]["vmin"] = fill(0.0, nphases)
                     data_math["bus"][string(bus)]["vmax"] = fill(Inf, nphases)
+                    data_math["bus"][string(bus)]["grounded"] = zeros(Bool, nphases)
                 end
 
                 # wdgs configurations
@@ -720,6 +721,7 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                         data_math["bus"][string(bus)]["terminals"] = connections[i]
                         data_math["bus"][string(bus)]["vmin"] = fill(0.0, nphases)
                         data_math["bus"][string(bus)]["vmax"] = fill(Inf, nphases)
+                        data_math["bus"][string(bus)]["grounded"] = zeros(Bool, nphases)
                     end
                 end
 
@@ -859,6 +861,7 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                             data_math["bus"][string(bus)]["terminals"] = wdg_connections
                             data_math["bus"][string(bus)]["vmin"] = fill(0.0, nphases)
                             data_math["bus"][string(bus)]["vmax"] = fill(Inf, nphases)
+                            data_math["bus"][string(bus)]["grounded"] = zeros(Bool, nphases)
                         end
 
                         # transformer tank end info.
@@ -1157,8 +1160,12 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
         data_math["load"]["$(math_obj["index"])"] = math_obj
 
         # Handle grounding
-        if ravens_obj["EnergyConsumer.grounded"] == "true"
-            bus_conn["grounded"] = Bool[0, 0, 0]
+        if !(haskey(bus_conn, "grounded"))
+            if ravens_obj["EnergyConsumer.grounded"] == "true"
+                bus_conn["grounded"] = ones(Bool, length(math_obj["connections"]))
+            else
+                bus_conn["grounded"] = zeros(Bool, length(math_obj["connections"]))
+            end
         end
 
         # Set bus type to PQ bus
@@ -1256,7 +1263,7 @@ function _map_ravens2math_energy_source!(data_math::Dict{String,<:Any}, data_rav
                 "bus_i" => length(data_math["bus"]) + 1,
                 "index" => length(data_math["bus"]) + 1,
                 "terminals" => math_obj["connections"],
-                "grounded" => Bool[0, 0, 0],
+                "grounded" => zeros(Bool, nphases),
                 "name" => "_virtual_bus.energy_source.$name",
                 "bus_type" => math_obj["gen_status"] == 0 ? 4 : math_obj["control_mode"] == Int(ISOCHRONOUS) ? 3 : 2,
                 "vm" => fill(ravens_obj["EnergySource.voltageMagnitude"] / voltage_scale_factor_sqrt3, nphases),
@@ -1589,8 +1596,8 @@ function _map_ravens2math_switch!(data_math::Dict{String,<:Any}, data_ravens::Di
         terminals = ravens_obj["ConductingEquipment.Terminals"]
 
         # Loop through terminals
-        f_conns = [0,0,0]
-        t_conns = [0,0,0]
+        f_conns = []
+        t_conns = []
         for term in terminals
             if haskey(term, "Terminal.phases")
                 phasecode = term["Terminal.phases"]
@@ -1606,9 +1613,7 @@ function _map_ravens2math_switch!(data_math::Dict{String,<:Any}, data_ravens::Di
         end
 
         # Verify connections are correct.
-        if (f_conns != t_conns )
-            @error("f_conns are not equal to t_conns!. Revise connections/phases in Switch terminals")
-        end
+        @assert f_conns == t_conns "f_conns are not equal to t_conns!. Revise connections/phases in Switch terminals"
 
         math_obj["f_connections"] = f_conns
         math_obj["t_connections"] = t_conns
@@ -1627,12 +1632,14 @@ function _map_ravens2math_switch!(data_math::Dict{String,<:Any}, data_ravens::Di
             data_math["bus"][string(math_obj["f_bus"])]["terminals"] = f_conns
             data_math["bus"][string(math_obj["f_bus"])]["vmin"] = fill(0.0, nphases)
             data_math["bus"][string(math_obj["f_bus"])]["vmax"] = fill(Inf, nphases)
+            data_math["bus"][string(math_obj["f_bus"])]["grounded"] = zeros(Bool, nphases)
         end
 
         if !(haskey(data_math["bus"][string(math_obj["t_bus"])], "terminals"))
             data_math["bus"][string(math_obj["t_bus"])]["terminals"] = t_conns
             data_math["bus"][string(math_obj["t_bus"])]["vmin"] = fill(0.0, nphases)
             data_math["bus"][string(math_obj["t_bus"])]["vmax"] = fill(Inf, nphases)
+            data_math["bus"][string(math_obj["t_bus"])]["grounded"] = zeros(Bool, nphases)
         end
 
         # TODO: Status
