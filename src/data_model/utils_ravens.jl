@@ -1,27 +1,32 @@
 const _phasecode_map = Dict(
-            "PhaseCode.ABC" => [1, 2, 3],
-            "PhaseCode.AB" => [1, 2],
-            "PhaseCode.AC" => [1, 3],
-            "PhaseCode.BC" => [2, 3],
-            "PhaseCode.A" => [1],
-            "PhaseCode.B" => [2],
-            "PhaseCode.C" => [3]
+    "PhaseCode.ABC" => [1, 2, 3],
+    "PhaseCode.AB" => [1, 2],
+    "PhaseCode.AC" => [1, 3],
+    "PhaseCode.BC" => [2, 3],
+    "PhaseCode.A" => [1],
+    "PhaseCode.B" => [2],
+    "PhaseCode.C" => [3]
 )
 
+_phase_map = Dict(
+    "SinglePhaseKind.A" => 1,
+    "SinglePhaseKind.B" => 2,
+    "SinglePhaseKind.C" => 3
+)
 
 const _multipliers_map = Dict(
-            "m" => 1e-3,
-            "c" => 1e-2,
-            "d" => 1e-1,
-            "da" => 1e1,
-            "h" => 1e2,
-            "k" => 1e3,
-            "M" => 1e6,
-            "G" => 1e9,
-            "T" => 1e12,
-            "P" => 1e15,
-            "E" => 1e18,
-            "Z" => 1e21
+    "m" => 1e-3,
+    "c" => 1e-2,
+    "d" => 1e-1,
+    "da" => 1e1,
+    "h" => 1e2,
+    "k" => 1e3,
+    "M" => 1e6,
+    "G" => 1e9,
+    "T" => 1e12,
+    "P" => 1e15,
+    "E" => 1e18,
+    "Z" => 1e21
 )
 
 

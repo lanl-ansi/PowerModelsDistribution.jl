@@ -297,8 +297,7 @@ function _map_ravens2math_conductor!(data_math::Dict{String,<:Any}, data_ravens:
             math_obj["f_bus"] = data_math["bus_lookup"][f_node]
             math_obj["t_bus"] = data_math["bus_lookup"][t_node]
 
-            phase_map = Dict("SinglePhaseKind.A" => 1, "SinglePhaseKind.B" => 2, "SinglePhaseKind.C" => 3)
-            bus_terminals = nphases >= 3 ? collect(1:nphases) : [phase_map[phase["ACLineSegmentPhase.phase"]] for phase in ravens_obj["ACLineSegment.ACLineSegmentPhase"]]
+            bus_terminals = nphases >= 3 ? collect(1:nphases) : [_phase_map[phase["ACLineSegmentPhase.phase"]] for phase in ravens_obj["ACLineSegment.ACLineSegmentPhase"]]
 
             for bus in [math_obj["f_bus"], math_obj["t_bus"]]
                 data_math["bus"][string(bus)]["terminals"] = bus_terminals
@@ -1090,18 +1089,17 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
 
         # Handle phase-specific or three-phase connection
         nphases = 0
-        phase_map = Dict("SinglePhaseKind.A" => 1, "SinglePhaseKind.B" => 2, "SinglePhaseKind.C" => 3)
         if haskey(ravens_obj, "EnergyConsumer.EnergyConsumerPhase")
             connections = Vector{Int64}()
             for phase_info in ravens_obj["EnergyConsumer.EnergyConsumerPhase"]
-                phase = phase_map[phase_info["EnergyConsumerPhase.phase"]]
+                phase = _phase_map[phase_info["EnergyConsumerPhase.phase"]]
                 phase_index = findfirst(==(phase), bus_conn["terminals"])
                 bus_conn["vmax"][phase_index] = op_limit_max
                 bus_conn["vmin"][phase_index] = op_limit_min
                 push!(connections, phase)
             end
             math_obj["connections"] = connections
-            nphases = length(bus_conn["terminals"])
+            nphases = length(math_obj["connections"])
         else
             nphases = length(bus_conn["terminals"])
             bus_conn["vmax"] = fill(op_limit_max, nphases)
@@ -1116,12 +1114,26 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
         else
             # Get timeseries schedule
             if haskey(ravens_obj, "EnergyConsumer.LoadProfile")
+
+                # get active (P) and reactive power (Q) of the load
+                active_power = zeros(Float64, nphases)
+                reactive_power = zeros(Float64, nphases)
+
+                if haskey(ravens_obj, "EnergyConsumer.EnergyConsumerPhase")
+                    for id in 1:nphases
+                        phase_info = ravens_obj["EnergyConsumer.EnergyConsumerPhase"][id]
+                        active_power[id] = phase_info["EnergyConsumerPhase.p"]
+                        reactive_power[id] = phase_info["EnergyConsumerPhase.q"]
+                    end
+                else
+                    active_power = fill(get(ravens_obj, "EnergyConsumer.p", 0.0) / power_scale_factor, nphases)
+                    reactive_power = fill(get(ravens_obj, "EnergyConsumer.p", 0.0) / power_scale_factor, nphases)
+                end
+
                 schdl_name = _extract_name(ravens_obj["EnergyConsumer.LoadProfile"])
                 schdl = data_ravens["BasicIntervalSchedule"][schdl_name]
 
-                # TODO: Define other types of timeseries (e.g., multipliers, etc.)
                 # units and multiplier modifiers
-
                 if haskey(schdl, "BasicIntervalSchedule.value1Multiplier")
                     value1_multiplier = _multipliers_map[schdl["BasicIntervalSchedule.value1Multiplier"]]
                 else
@@ -1156,8 +1168,8 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
 
                 # Multipliers instead of actual values - TODO: add support for EnergyConsumerPhase data
                 if !haskey(schdl, "BasicIntervalSchedule.value1Unit")
-                    math_obj["pd"] = fill(get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value1", 0.0) * ravens_obj["EnergyConsumer.p"] / power_scale_factor, nphases)
-                    math_obj["qd"] = fill(get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value1", 0.0) * ravens_obj["EnergyConsumer.q"] / power_scale_factor, nphases)
+                    math_obj["pd"] = get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value1", 1.0) .* active_power ./ power_scale_factor
+                    math_obj["qd"] = get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value1", 1.0) .* reactive_power ./ power_scale_factor
                 end
 
             else
@@ -1228,9 +1240,8 @@ function _map_ravens2math_energy_source!(data_math::Dict{String,<:Any}, data_rav
         nconductors = length(get(ravens_obj, "EnergySource.EnergySourcePhase", bus_conn["terminals"]))
 
         if haskey(ravens_obj, "EnergySource.EnergySourcePhase")
-            phase_map = Dict("SinglePhaseKind.A" => 1, "SinglePhaseKind.B" => 2, "SinglePhaseKind.C" => 3)
             for phase_info in ravens_obj["EnergySource.EnergySourcePhase"]
-                phase = phase_map[phase_info["EnergySourcePhase.phase"]]
+                phase = _phase_map[phase_info["EnergySourcePhase.phase"]]
                 push!(connections, phase)
             end
             math_obj["connections"] = connections
