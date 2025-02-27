@@ -1115,29 +1115,51 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
             math_obj["qd"] = fill(get(ravens_obj, "EnergyConsumer.q", 0.0) / power_scale_factor, nphases)
         else
             # Get timeseries schedule
-            if haskey(ravens_obj, "EnergyConsumer.LoadForecast")
-                schdl_name = _extract_name(ravens_obj["EnergyConsumer.LoadForecast"])
+            if haskey(ravens_obj, "EnergyConsumer.LoadProfile")
+                schdl_name = _extract_name(ravens_obj["EnergyConsumer.LoadProfile"])
                 schdl = data_ravens["BasicIntervalSchedule"][schdl_name]
 
                 # TODO: Define other types of timeseries (e.g., multipliers, etc.)
                 # units and multiplier modifiers
-                value1_multiplier = _multipliers_map[schdl["BasicIntervalSchedule.value1Multiplier"]]
-                value2_multiplier = _multipliers_map[schdl["BasicIntervalSchedule.value2Multiplier"]]
-                value1_unit = schdl["BasicIntervalSchedule.value1Unit"]
-                value2_unit = schdl["BasicIntervalSchedule.value2Unit"]
 
-                if value1_unit == "W"
-                    math_obj["pd"] = fill(get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value1", 0.0) * value1_multiplier / power_scale_factor, nphases)
+                if haskey(schdl, "BasicIntervalSchedule.value1Multiplier")
+                    value1_multiplier = _multipliers_map[schdl["BasicIntervalSchedule.value1Multiplier"]]
+                else
+                    value1_multiplier = 1.0
                 end
-                if value1_unit == "VAr"
-                    math_obj["qd"] = fill(get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value1", 0.0) * value1_multiplier / power_scale_factor, nphases)
+
+                if haskey(schdl, "BasicIntervalSchedule.value2Multiplier")
+                    value2_multiplier = _multipliers_map[schdl["BasicIntervalSchedule.value2Multiplier"]]
+                else
+                    value2_multiplier = 1.0
                 end
-                if value2_unit == "W"
-                    math_obj["pd"] = fill(get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value2", 0.0) * value2_multiplier / power_scale_factor, nphases)
+
+                if haskey(schdl, "BasicIntervalSchedule.value1Unit")
+                    value1_unit = lowercase(schdl["BasicIntervalSchedule.value1Unit"])
+                    if value1_unit == "w"
+                        math_obj["pd"] = fill(get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value1", 0.0) * value1_multiplier / power_scale_factor, nphases)
+                    end
+                    if value1_unit == "var"
+                        math_obj["qd"] = fill(get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value1", 0.0) * value1_multiplier / power_scale_factor, nphases)
+                    end
                 end
-                if value2_unit == "VAr"
-                    math_obj["qd"] = fill(get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value2", 0.0) * value2_multiplier / power_scale_factor, nphases)
+
+                if haskey(schdl, "BasicIntervalSchedule.value2Unit")
+                    value2_unit = lowercase(schdl["BasicIntervalSchedule.value2Unit"])
+                    if value2_unit == "w"
+                        math_obj["pd"] = fill(get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value2", 0.0) * value2_multiplier / power_scale_factor, nphases)
+                    end
+                    if value2_unit == "var"
+                        math_obj["qd"] = fill(get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value2", 0.0) * value2_multiplier / power_scale_factor, nphases)
+                    end
                 end
+
+                # Multipliers instead of actual values - TODO: add support for EnergyConsumerPhase data
+                if !haskey(schdl, "BasicIntervalSchedule.value1Unit")
+                    math_obj["pd"] = fill(get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value1", 0.0) * ravens_obj["EnergyConsumer.p"] / power_scale_factor, nphases)
+                    math_obj["qd"] = fill(get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value1", 0.0) * ravens_obj["EnergyConsumer.q"] / power_scale_factor, nphases)
+                end
+
             else
                 @error("No timeseries, load forecast or multinetwork information found!")
             end
