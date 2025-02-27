@@ -131,7 +131,7 @@
                 "RotatingMachine.q": 484.3221048378525,
                 "RotatingMachine.ratedS": 1200.0,
                 "RotatingMachine.ratedU": 461.88021535170066,
-                "Equipment.inService": "true",
+                "Equipment.inService": true,
                 "RotatingMachine.ratedPowerFactor": 0.9,
                 "GeneratingUnit.minOperatingP": 0.0,
                 "GeneratingUnit.maxOperatingP": 1080.0,
@@ -157,7 +157,7 @@
                 "RotatingMachine.q": 968.644209675705,
                 "RotatingMachine.ratedS": 2400.0,
                 "RotatingMachine.ratedU": 461.88021535170066,
-                "Equipment.inService": "true",
+                "Equipment.inService": true,
                 "RotatingMachine.ratedPowerFactor": 0.9,
                 "GeneratingUnit.minOperatingP": 0.0,
                 "GeneratingUnit.maxOperatingP": 2160.0,
@@ -189,7 +189,7 @@
               "EnergySource.x": 1.5522280002325312e-07,
               "EnergySource.r0": 5.069596039676399e-08,
               "EnergySource.x0": 1.5208788119029196e-07,
-              "Equipment.inService": "true",
+              "Equipment.inService": true,
               "ConductingEquipment.BaseVoltage": "BaseVoltage::'BaseV_0.4'",
               "ConductingEquipment.Terminals": [
                 {
@@ -211,11 +211,11 @@
               "EnergyConsumer.p": 6000.0,
               "EnergyConsumer.q": 3000.0,
               "EnergyConsumer.customerCount": 1,
-              "EnergyConsumer.grounded": "true",
-              "Equipment.inService": "true",
+              "EnergyConsumer.grounded": true,
+              "Equipment.inService": true,
               "ConductingEquipment.BaseVoltage": "BaseVoltage::'BaseV_0.4'",
               "EnergyConsumer.phaseConnection": "PhaseShuntConnectionKind.Y",
-              "EnergyConsumer.LoadResponseCharacteristic": "LoadResponseCharacteristic::'Constant kVA'",
+              "EnergyConsumer.LoadResponse": "LoadResponseCharacteristic::'Constant kVA'",
               "EnergyConsumer.LoadForecast": "EnergyConsumerSchedule::'load_shape'",
               "ConductingEquipment.Terminals": [
                 {
@@ -245,11 +245,11 @@
               "EnergyConsumer.p": 6000.0,
               "EnergyConsumer.q": 3000.0,
               "EnergyConsumer.customerCount": 1,
-              "EnergyConsumer.grounded": "true",
-              "Equipment.inService": "true",
+              "EnergyConsumer.grounded": true,
+              "Equipment.inService": true,
               "ConductingEquipment.BaseVoltage": "BaseVoltage::'BaseV_0.4'",
               "EnergyConsumer.phaseConnection": "PhaseShuntConnectionKind.Y",
-              "EnergyConsumer.LoadResponseCharacteristic": "LoadResponseCharacteristic::'Constant kVA'",
+              "EnergyConsumer.LoadResponse": "LoadResponseCharacteristic::'Constant kVA'",
               "EnergyConsumer.LoadForecast": "EnergyConsumerSchedule::'load_shape'",
               "ConductingEquipment.Terminals": [
                 {
@@ -279,11 +279,11 @@
               "EnergyConsumer.p": 6000.0,
               "EnergyConsumer.q": 3000.0,
               "EnergyConsumer.customerCount": 1,
-              "EnergyConsumer.grounded": "true",
-              "Equipment.inService": "true",
+              "EnergyConsumer.grounded": true,
+              "Equipment.inService": true,
               "ConductingEquipment.BaseVoltage": "BaseVoltage::'BaseV_0.4'",
               "EnergyConsumer.phaseConnection": "PhaseShuntConnectionKind.Y",
-              "EnergyConsumer.LoadResponseCharacteristic": "LoadResponseCharacteristic::'Constant kVA'",
+              "EnergyConsumer.LoadResponse": "LoadResponseCharacteristic::'Constant kVA'",
               "EnergyConsumer.LoadForecast": "EnergyConsumerSchedule::'load_shape'",
               "ConductingEquipment.Terminals": [
                 {
@@ -315,7 +315,7 @@
               "IdentifiedObject.mRID": "357e3f68-a996-4ef9-8e29-5a9701da50f5",
               "IdentifiedObject.name": "ohline",
               "Conductor.length": 1.0,
-              "Equipment.inService": "true",
+              "Equipment.inService": true,
               "ConductingEquipment.BaseVoltage": "BaseVoltage::'BaseV_0.4'",
               "ACLineSegment.PerLengthImpedance": "PerLengthPhaseImpedance::'556mcm'",
               "ConductingEquipment.Terminals": [
@@ -365,7 +365,7 @@
               "IdentifiedObject.mRID": "b0c876f2-8724-4b1d-9bb8-16ad6dc08866",
               "IdentifiedObject.name": "quad",
               "Conductor.length": 1.0,
-              "Equipment.inService": "true",
+              "Equipment.inService": true,
               "ConductingEquipment.BaseVoltage": "BaseVoltage::'BaseV_0.4'",
               "ACLineSegment.PerLengthImpedance": "PerLengthPhaseImpedance::'4/0quad'",
               "ConductingEquipment.Terminals": [

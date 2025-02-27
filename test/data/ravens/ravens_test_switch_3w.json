@@ -383,9 +383,9 @@
               "EnergyConsumer.q": 2179.4495,
               "EnergyConsumer.customerCount": 1,
               "EnergyConsumer.phaseConnection": "PhaseShuntConnectionKind.Y",
-              "EnergyConsumer.grounded": "true",
+              "EnergyConsumer.grounded": true,
               "PowerSystemResource.Location": "Location::'load1_Loc'",
-              "EnergyConsumer.LoadResponseCharacteristic": "LoadResponseCharacteristic::'Constant kVA'",
+              "EnergyConsumer.LoadResponse": "LoadResponseCharacteristic::'Constant kVA'",
               "ConductingEquipment.Terminals": [
                 {
                   "Ravens.CimObjectType": "Terminal",

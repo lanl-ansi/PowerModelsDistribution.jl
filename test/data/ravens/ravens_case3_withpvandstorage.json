@@ -80,7 +80,7 @@
               "IdentifiedObject.mRID": "e9c718d0-d75c-41cf-b31e-5d1467780362",
               "IdentifiedObject.name": "ohline",
               "Conductor.length": 1.0,
-              "Equipment.inService": "true",
+              "Equipment.inService": true,
               "ConductingEquipment.BaseVoltage": "BaseVoltage::'BaseV_0.4'",
               "ACLineSegment.PerLengthImpedance": "PerLengthPhaseImpedance::'556mcm'",
               "ACLineSegment.ACLineSegmentPhase": [
@@ -130,7 +130,7 @@
               "IdentifiedObject.mRID": "edba552d-daee-40f3-9488-336f9c9231dc",
               "IdentifiedObject.name": "quad",
               "Conductor.length": 1.0,
-              "Equipment.inService": "true",
+              "Equipment.inService": true,
               "ConductingEquipment.BaseVoltage": "BaseVoltage::'BaseV_0.4'",
               "ACLineSegment.PerLengthImpedance": "PerLengthPhaseImpedance::'4/0quad'",
               "ACLineSegment.ACLineSegmentPhase": [
@@ -186,11 +186,11 @@
               "EnergyConsumer.p": 6000.0,
               "EnergyConsumer.q": 3000.0,
               "EnergyConsumer.customerCount": 1,
-              "EnergyConsumer.grounded": "true",
-              "Equipment.inService": "true",
+              "EnergyConsumer.grounded": true,
+              "Equipment.inService": true,
               "ConductingEquipment.BaseVoltage": "BaseVoltage::'BaseV_0.4'",
               "EnergyConsumer.phaseConnection": "PhaseShuntConnectionKind.Y",
-              "EnergyConsumer.LoadResponseCharacteristic": "LoadResponseCharacteristic::'Constant kVA'",
+              "EnergyConsumer.LoadResponse": "LoadResponseCharacteristic::'Constant kVA'",
               "ConductingEquipment.Terminals": [
                 {
                   "Ravens.CimObjectType": "Terminal",
@@ -219,11 +219,11 @@
               "EnergyConsumer.p": 6000.0,
               "EnergyConsumer.q": 3000.0,
               "EnergyConsumer.customerCount": 1,
-              "EnergyConsumer.grounded": "true",
-              "Equipment.inService": "true",
+              "EnergyConsumer.grounded": true,
+              "Equipment.inService": true,
               "ConductingEquipment.BaseVoltage": "BaseVoltage::'BaseV_0.4'",
               "EnergyConsumer.phaseConnection": "PhaseShuntConnectionKind.Y",
-              "EnergyConsumer.LoadResponseCharacteristic": "LoadResponseCharacteristic::'Constant kVA'",
+              "EnergyConsumer.LoadResponse": "LoadResponseCharacteristic::'Constant kVA'",
               "ConductingEquipment.Terminals": [
                 {
                   "Ravens.CimObjectType": "Terminal",
@@ -252,11 +252,11 @@
               "EnergyConsumer.p": 6000.0,
               "EnergyConsumer.q": 3000.0,
               "EnergyConsumer.customerCount": 1,
-              "EnergyConsumer.grounded": "true",
-              "Equipment.inService": "true",
+              "EnergyConsumer.grounded": true,
+              "Equipment.inService": true,
               "ConductingEquipment.BaseVoltage": "BaseVoltage::'BaseV_0.4'",
               "EnergyConsumer.phaseConnection": "PhaseShuntConnectionKind.Y",
-              "EnergyConsumer.LoadResponseCharacteristic": "LoadResponseCharacteristic::'Constant kVA'",
+              "EnergyConsumer.LoadResponse": "LoadResponseCharacteristic::'Constant kVA'",
               "ConductingEquipment.Terminals": [
                 {
                   "Ravens.CimObjectType": "Terminal",
@@ -291,7 +291,7 @@
               "EnergySource.x": 1.5522280002325312e-07,
               "EnergySource.r0": 5.069596039676399e-08,
               "EnergySource.x0": 1.5208788119029196e-07,
-              "Equipment.inService": "true",
+              "Equipment.inService": true,
               "ConductingEquipment.BaseVoltage": "BaseVoltage::'BaseV_0.4'",
               "ConductingEquipment.Terminals": [
                 {
@@ -318,7 +318,7 @@
                 "PowerElectronicsConnection.ratedU": 400.0,
                 "PowerElectronicsConnection.maxQ": 10000.0,
                 "PowerElectronicsConnection.minQ": -10000.0,
-                "Equipment.inService": "true",
+                "Equipment.inService": true,
                 "ConductingEquipment.BaseVoltage": "BaseVoltage::'BaseV_0.4'",
                 "ConductingEquipment.Terminals": [
                   {
@@ -349,7 +349,7 @@
                 "PowerElectronicsConnection.ratedU": 400.0,
                 "PowerElectronicsConnection.maxQ": 25000.0,
                 "PowerElectronicsConnection.minQ": -25000.0,
-                "Equipment.inService": "true",
+                "Equipment.inService": true,
                 "ConductingEquipment.BaseVoltage": "BaseVoltage::'BaseV_0.4'",
                 "ConductingEquipment.Terminals": [
                   {

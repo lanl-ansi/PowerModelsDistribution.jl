@@ -127,7 +127,7 @@
               "IdentifiedObject.mRID": "f501b03c-aee6-4524-a253-3adc0a016c92",
               "IdentifiedObject.name": "quad",
               "Conductor.length": 1.0,
-              "Equipment.inService": "true",
+              "Equipment.inService": true,
               "ConductingEquipment.BaseVoltage": "BaseVoltage::'BaseV_0.4'",
               "ACLineSegment.PerLengthImpedance": "PerLengthPhaseImpedance::'4/0quad'",
               "ACLineSegment.ACLineSegmentPhase": [
@@ -177,7 +177,7 @@
               "IdentifiedObject.mRID": "ea549d70-b21a-4132-a5d2-ef9996f6c0ea",
               "IdentifiedObject.name": "ohline",
               "Conductor.length": 1.0,
-              "Equipment.inService": "true",
+              "Equipment.inService": true,
               "ConductingEquipment.BaseVoltage": "BaseVoltage::'BaseV_0.4'",
               "ACLineSegment.PerLengthImpedance": "PerLengthPhaseImpedance::'556mcm'",
               "ACLineSegment.ACLineSegmentPhase": [
@@ -233,11 +233,11 @@
               "EnergyConsumer.p": 6000.0,
               "EnergyConsumer.q": 3000.0,
               "EnergyConsumer.customerCount": 1,
-              "EnergyConsumer.grounded": "true",
-              "Equipment.inService": "true",
+              "EnergyConsumer.grounded": true,
+              "Equipment.inService": true,
               "ConductingEquipment.BaseVoltage": "BaseVoltage::'BaseV_0.4'",
               "EnergyConsumer.phaseConnection": "PhaseShuntConnectionKind.Y",
-              "EnergyConsumer.LoadResponseCharacteristic": "LoadResponseCharacteristic::'Constant kVA'",
+              "EnergyConsumer.LoadResponse": "LoadResponseCharacteristic::'Constant kVA'",
               "ConductingEquipment.Terminals": [
                 {
                   "Ravens.CimObjectType": "Terminal",
@@ -266,11 +266,11 @@
               "EnergyConsumer.p": 6000.0,
               "EnergyConsumer.q": 3000.0,
               "EnergyConsumer.customerCount": 1,
-              "EnergyConsumer.grounded": "true",
-              "Equipment.inService": "true",
+              "EnergyConsumer.grounded": true,
+              "Equipment.inService": true,
               "ConductingEquipment.BaseVoltage": "BaseVoltage::'BaseV_0.4'",
               "EnergyConsumer.phaseConnection": "PhaseShuntConnectionKind.Y",
-              "EnergyConsumer.LoadResponseCharacteristic": "LoadResponseCharacteristic::'Constant kVA'",
+              "EnergyConsumer.LoadResponse": "LoadResponseCharacteristic::'Constant kVA'",
               "ConductingEquipment.Terminals": [
                 {
                   "Ravens.CimObjectType": "Terminal",
@@ -299,11 +299,11 @@
               "EnergyConsumer.p": 6000.0,
               "EnergyConsumer.q": 3000.0,
               "EnergyConsumer.customerCount": 1,
-              "EnergyConsumer.grounded": "true",
-              "Equipment.inService": "true",
+              "EnergyConsumer.grounded": true,
+              "Equipment.inService": true,
               "ConductingEquipment.BaseVoltage": "BaseVoltage::'BaseV_0.4'",
               "EnergyConsumer.phaseConnection": "PhaseShuntConnectionKind.Y",
-              "EnergyConsumer.LoadResponseCharacteristic": "LoadResponseCharacteristic::'Constant kVA'",
+              "EnergyConsumer.LoadResponse": "LoadResponseCharacteristic::'Constant kVA'",
               "ConductingEquipment.Terminals": [
                 {
                   "Ravens.CimObjectType": "Terminal",
@@ -338,7 +338,7 @@
               "EnergySource.x": 1.5522280002325312e-07,
               "EnergySource.r0": 5.069596039676399e-08,
               "EnergySource.x0": 1.5208788119029196e-07,
-              "Equipment.inService": "true",
+              "Equipment.inService": true,
               "ConductingEquipment.BaseVoltage": "BaseVoltage::'BaseV_0.4'",
               "ConductingEquipment.Terminals": [
                 {
@@ -366,7 +366,7 @@
                 "LinearShuntCompensator.g0PerSection": 0.0,
                 "LinearShuntCompensator.normalSections": 1,
                 "LinearShuntCompensator.maximumSections": 1,
-                "Equipment.inService": "true",
+                "Equipment.inService": true,
                 "LinearShuntCompensator.aVRDelay": 0.0,
                 "ShuntCompensator.sections": 1,
                 "ConductingEquipment.BaseVoltage": "BaseVoltage::'BaseV_0.4'",

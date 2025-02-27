@@ -338,7 +338,7 @@ function _map_ravens2math_conductor!(data_math::Dict{String,<:Any}, data_ravens:
                 math_obj[t_key] = haskey(oplimitset, f_key) ? fill(oplimitset[f_key], nphases) : fill(Inf, nphases)
             end
 
-            math_obj["br_status"] = get(ravens_obj, "Equipment.inService", "true") == "true" ? 1 : 0
+            math_obj["br_status"] = get(ravens_obj, "Equipment.inService", true) == true ? 1 : 0
             data_math["branch"]["$(math_obj["index"])"] = math_obj
 
             push!(data_math["map"], Dict{String,Any}(
@@ -481,8 +481,8 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
             polarity = fill(1, nrw)
 
             # Status
-            status = haskey(ravens_obj, "Equipment.inService") ? ravens_obj["Equipment.inService"] : "true"
-            status = status == "true" ? 1 : 0
+            status = haskey(ravens_obj, "Equipment.inService") ? ravens_obj["Equipment.inService"] : true
+            status = status == true ? 1 : 0
 
             # Build loss model
             transformer_t_bus_w = _build_loss_model!(data_math, name, to_map, r_s, z_sc, y_sh, connections[1]; nphases=dims, status=status)
@@ -746,8 +746,8 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                 polarity = fill(1, nrw)
 
                 # Status
-                status = haskey(ravens_obj, "Equipment.inService") ? ravens_obj["Equipment.inService"] : "true"
-                status = status == "true" ? 1 : 0
+                status = haskey(ravens_obj, "Equipment.inService") ? ravens_obj["Equipment.inService"] : true
+                status = status == true ? 1 : 0
 
                 # Build loss model
                 transformer_t_bus_w = _build_loss_model!(data_math, name, to_map, r_s, z_sc, y_sh, connections[1]; nphases=nphases, status=status)
@@ -933,8 +933,8 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                     polarity = fill(1, nrw)
 
                     # Status
-                    status = haskey(tanks[tank_id], "Equipment.inService") ? tanks[tank_id]["Equipment.inService"] : "true"
-                    status = status == "true" ? 1 : 0
+                    status = haskey(tanks[tank_id], "Equipment.inService") ? tanks[tank_id]["Equipment.inService"] : true
+                    status = status == true ? 1 : 0
 
                     # Build loss model
                     transformer_t_bus_w = _build_loss_model!(data_math, name, to_map, r_s, z_sc, y_sh, connections[1]; nphases=dims, status=status)
@@ -1052,42 +1052,6 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
             math_obj["model"] = POWER
         end
 
-        # Set p and q (w/ multinetwork support)
-
-        if nw==0
-            math_obj["pd"] = [ravens_obj["EnergyConsumer.p"] / power_scale_factor]
-            math_obj["qd"] = [ravens_obj["EnergyConsumer.q"] / power_scale_factor]
-        else
-
-            # Get timeseries schedule
-            if haskey(ravens_obj, "EnergyConsumer.LoadForecast")
-                schdl_name = _extract_name(ravens_obj["EnergyConsumer.LoadForecast"])
-                schdl = data_ravens["BasicIntervalSchedule"][schdl_name]
-
-                # TODO: Define other types of timeseries (e.g., multipliers, etc.)
-                # units and multiplier modifiers
-                value1_multiplier = _multipliers_map[schdl["BasicIntervalSchedule.value1Multiplier"]]
-                value2_multiplier = _multipliers_map[schdl["BasicIntervalSchedule.value2Multiplier"]]
-                value1_unit = schdl["BasicIntervalSchedule.value1Unit"]
-                value2_unit = schdl["BasicIntervalSchedule.value2Unit"]
-
-                if value1_unit == "W"
-                    math_obj["pd"] = [schdl["EnergyConsumerSchedule.RegularTimePoints"][nw]["RegularTimePoint.value1"] * value1_multiplier / power_scale_factor]
-                end
-                if value1_unit == "VAr"
-                    math_obj["qd"] = [schdl["EnergyConsumerSchedule.RegularTimePoints"][nw]["RegularTimePoint.value1"] * value1_multiplier / power_scale_factor]
-                end
-                if value2_unit == "W"
-                    math_obj["pd"] = [schdl["EnergyConsumerSchedule.RegularTimePoints"][nw]["RegularTimePoint.value2"] * value2_multiplier / power_scale_factor]
-                end
-                if value2_unit == "VAr"
-                    math_obj["qd"] = [schdl["EnergyConsumerSchedule.RegularTimePoints"][nw]["RegularTimePoint.value2"] * value2_multiplier / power_scale_factor]
-                end
-            else
-                @error("No timeseries, load forecast or multinetwork information found!")
-            end
-        end
-
         # Set the nominal voltage
         base_voltage_ref = _extract_name(ravens_obj["ConductingEquipment.BaseVoltage"])
         base_voltage = data_ravens["BaseVoltage"][base_voltage_ref]["BaseVoltage.nominalVoltage"]
@@ -1125,6 +1089,7 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
         end
 
         # Handle phase-specific or three-phase connection
+        nphases = 0
         phase_map = Dict("SinglePhaseKind.A" => 1, "SinglePhaseKind.B" => 2, "SinglePhaseKind.C" => 3)
         if haskey(ravens_obj, "EnergyConsumer.EnergyConsumerPhase")
             connections = Vector{Int64}()
@@ -1136,12 +1101,48 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
                 push!(connections, phase)
             end
             math_obj["connections"] = connections
+            nphases = length(bus_conn["terminals"])
         else
-            N = length(bus_conn["terminals"])
-            bus_conn["vmax"] = fill(op_limit_max, N)
-            bus_conn["vmin"] = fill(op_limit_min, N)
+            nphases = length(bus_conn["terminals"])
+            bus_conn["vmax"] = fill(op_limit_max, nphases)
+            bus_conn["vmin"] = fill(op_limit_min, nphases)
             math_obj["connections"] = bus_conn["terminals"]
         end
+
+        # Set p and q (w/ multinetwork support)
+        if nw==0
+            math_obj["pd"] = fill(get(ravens_obj, "EnergyConsumer.p", 0.0) / power_scale_factor, nphases)
+            math_obj["qd"] = fill(get(ravens_obj, "EnergyConsumer.q", 0.0) / power_scale_factor, nphases)
+        else
+            # Get timeseries schedule
+            if haskey(ravens_obj, "EnergyConsumer.LoadForecast")
+                schdl_name = _extract_name(ravens_obj["EnergyConsumer.LoadForecast"])
+                schdl = data_ravens["BasicIntervalSchedule"][schdl_name]
+
+                # TODO: Define other types of timeseries (e.g., multipliers, etc.)
+                # units and multiplier modifiers
+                value1_multiplier = _multipliers_map[schdl["BasicIntervalSchedule.value1Multiplier"]]
+                value2_multiplier = _multipliers_map[schdl["BasicIntervalSchedule.value2Multiplier"]]
+                value1_unit = schdl["BasicIntervalSchedule.value1Unit"]
+                value2_unit = schdl["BasicIntervalSchedule.value2Unit"]
+
+                if value1_unit == "W"
+                    math_obj["pd"] = fill(get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value1", 0.0) * value1_multiplier / power_scale_factor, nphases)
+                end
+                if value1_unit == "VAr"
+                    math_obj["qd"] = fill(get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value1", 0.0) * value1_multiplier / power_scale_factor, nphases)
+                end
+                if value2_unit == "W"
+                    math_obj["pd"] = fill(get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value2", 0.0) * value2_multiplier / power_scale_factor, nphases)
+                end
+                if value2_unit == "VAr"
+                    math_obj["qd"] = fill(get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value2", 0.0) * value2_multiplier / power_scale_factor, nphases)
+                end
+            else
+                @error("No timeseries, load forecast or multinetwork information found!")
+            end
+        end
+
 
         # Set the configuration
         # TODO: ADD: "PhaseShuntConnectionKind.Yn", "PhaseShuntConnectionKind.I", "PhaseShuntConnectionKind.G"
@@ -1154,14 +1155,14 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
         end
 
         # Set status, dispatchable flag, and index
-        math_obj["status"] = haskey(ravens_obj, "Equipment.inService") ? ravens_obj["Equipment.inService"] : "true"
-        math_obj["status"] = math_obj["status"] == "true" ? 1 : 0
+        math_obj["status"] = haskey(ravens_obj, "Equipment.inService") ? ravens_obj["Equipment.inService"] : true
+        math_obj["status"] = math_obj["status"] == true ? 1 : 0
         math_obj["dispatchable"] = 0
         data_math["load"]["$(math_obj["index"])"] = math_obj
 
         # Handle grounding
         if !(haskey(bus_conn, "grounded"))
-            if ravens_obj["EnergyConsumer.grounded"] == "true"
+            if ravens_obj["EnergyConsumer.grounded"] == true
                 bus_conn["grounded"] = ones(Bool, length(math_obj["connections"]))
             else
                 bus_conn["grounded"] = zeros(Bool, length(math_obj["connections"]))
@@ -1222,8 +1223,8 @@ function _map_ravens2math_energy_source!(data_math::Dict{String,<:Any}, data_rav
         end
 
         # Generator status and configuration
-        math_obj["gen_status"] = haskey(ravens_obj, "Equipment.inService") ? ravens_obj["Equipment.inService"] : "true"
-        math_obj["gen_status"] = math_obj["gen_status"] == "true" ? 1 : 0
+        math_obj["gen_status"] = haskey(ravens_obj, "Equipment.inService") ? ravens_obj["Equipment.inService"] : true
+        math_obj["gen_status"] = math_obj["gen_status"] == true ? 1 : 0
 
         math_obj["configuration"] = get(ravens_obj, "EnergySource.connectionKind", WYE)
 
@@ -1350,8 +1351,8 @@ function _map_ravens2math_rotating_machine!(data_math::Dict{String,<:Any}, data_
 
             connectivity_node = _extract_name(ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.ConnectivityNode"])
             math_obj["gen_bus"] = data_math["bus_lookup"][connectivity_node]
-            math_obj["gen_status"] = get(ravens_obj, "Equipment.inService", "true")
-            math_obj["gen_status"] = status = math_obj["gen_status"] == "true" ? 1 : 0
+            math_obj["gen_status"] = get(ravens_obj, "Equipment.inService", true)
+            math_obj["gen_status"] = status = math_obj["gen_status"] == true ? 1 : 0
 
             # TODO: control mode do not exist in the RAVENS-CIM (Need to be added)
             math_obj["control_mode"] = control_mode = Int(get(ravens_obj, "control_mode", FREQUENCYDROOP))
@@ -1438,8 +1439,8 @@ function _map_ravens2math_power_electronics!(data_math::Dict{String,<:Any}, data
 
                 connectivity_node = _extract_name(ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.ConnectivityNode"])
                 math_obj["gen_bus"] = data_math["bus_lookup"][connectivity_node]
-                math_obj["gen_status"] = get(ravens_obj, "Equipment.inService", "true")
-                math_obj["gen_status"] = status = math_obj["gen_status"] == "true" ? 1 : 0
+                math_obj["gen_status"] = get(ravens_obj, "Equipment.inService", true)
+                math_obj["gen_status"] = status = math_obj["gen_status"] == true ? 1 : 0
 
                 # TODO: control mode do not exist in the RAVENS-CIM (Need to be added)
                 math_obj["control_mode"] = control_mode = Int(get(ravens_obj, "control_mode", FREQUENCYDROOP))
@@ -1518,8 +1519,8 @@ function _map_ravens2math_power_electronics!(data_math::Dict{String,<:Any}, data
                 # Set the bus
                 connectivity_node = _extract_name(ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.ConnectivityNode"])
                 math_obj["storage_bus"] = data_math["bus_lookup"][connectivity_node]
-                math_obj["status"] = get(ravens_obj, "Equipment.inService", "true")
-                math_obj["status"] = status = math_obj["status"] == "true" ? 1 : 0
+                math_obj["status"] = get(ravens_obj, "Equipment.inService", true)
+                math_obj["status"] = status = math_obj["status"] == true ? 1 : 0
 
                 # TODO: configuration for generators is not available on CIM (yet)
                 math_obj["configuration"] = get(ravens_obj, "configuration", WYE)
@@ -1643,8 +1644,8 @@ function _map_ravens2math_switch!(data_math::Dict{String,<:Any}, data_ravens::Di
         end
 
         # TODO: Status
-        math_obj["status"] = get(ravens_obj, "Equipment.inService", "true")
-        math_obj["status"] = status = math_obj["status"] == "true" ? 1 : 0
+        math_obj["status"] = get(ravens_obj, "Equipment.inService", true)
+        math_obj["status"] = status = math_obj["status"] == true ? 1 : 0
 
         # State
         sw_state = get(ravens_obj, "Switch.open", "false")
@@ -1694,8 +1695,8 @@ function _map_ravens2math_shunt_compensator!(data_math::Dict{String,<:Any}, data
             math_obj["shunt_bus"] = data_math["bus_lookup"][connectivity_node]
 
             # Status
-            status = haskey(ravens_obj, "Equipment.inService") ? ravens_obj["Equipment.inService"] : "true"
-            math_obj["status"] = status == "true" ? 1 : 0
+            status = haskey(ravens_obj, "Equipment.inService") ? ravens_obj["Equipment.inService"] : true
+            math_obj["status"] = status == true ? 1 : 0
 
             # Connections/phases obtained from Terminals
             if haskey(ravens_obj["ConductingEquipment.Terminals"][1], "Terminal.phases")
