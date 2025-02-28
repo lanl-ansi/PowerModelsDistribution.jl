@@ -1109,8 +1109,8 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
 
         # Set p and q (w/ multinetwork support)
         if nw==0
-            math_obj["pd"] = fill(get(ravens_obj, "EnergyConsumer.p", 0.0) / power_scale_factor, nphases)
-            math_obj["qd"] = fill(get(ravens_obj, "EnergyConsumer.q", 0.0) / power_scale_factor, nphases)
+            math_obj["pd"] = fill(get(ravens_obj, "EnergyConsumer.p", 0.0) / (power_scale_factor*nphases), nphases)
+            math_obj["qd"] = fill(get(ravens_obj, "EnergyConsumer.q", 0.0) / (power_scale_factor*nphases), nphases)
         else
             # Get timeseries schedule
             if haskey(ravens_obj, "EnergyConsumer.LoadProfile")
@@ -1126,8 +1126,8 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
                         reactive_power[id] = phase_info["EnergyConsumerPhase.q"]
                     end
                 else
-                    active_power = fill(get(ravens_obj, "EnergyConsumer.p", 0.0) / power_scale_factor, nphases)
-                    reactive_power = fill(get(ravens_obj, "EnergyConsumer.p", 0.0) / power_scale_factor, nphases)
+                    active_power = fill(get(ravens_obj, "EnergyConsumer.p", 0.0) / (power_scale_factor*nphases), nphases)
+                    reactive_power = fill(get(ravens_obj, "EnergyConsumer.p", 0.0) / (power_scale_factor*nphases), nphases)
                 end
 
                 schdl_name = _extract_name(ravens_obj["EnergyConsumer.LoadProfile"])
@@ -1416,10 +1416,23 @@ function _map_ravens2math_rotating_machine!(data_math::Dict{String,<:Any}, data_
 
             # Set pmin
             math_obj["pmin"] = ((get(ravens_obj, "GeneratingUnit.minOperatingP", 0) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
-            # Set qmin
-            math_obj["qmin"] = ((get(ravens_obj, "RotatingMachine.minQ", -Inf) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
-            # Set qmax
-            math_obj["qmax"] = ((get(ravens_obj, "RotatingMachine.maxQ", Inf) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
+
+            # Set min and max Q
+            if haskey(ravens_obj, "RotatingMachine.minQ")
+                math_obj["qmin"] = ((ravens_obj["RotatingMachine.minQ"] * ones(nconductors)) ./ nconductors)./(power_scale_factor)
+            elseif haskey(ravens_obj, "SynchronousMachine.minQ")
+                math_obj["qmin"] = ((ravens_obj["SynchronousMachine.minQ"] * ones(nconductors)) ./ nconductors)./(power_scale_factor)
+            else
+                math_obj["qmin"] = fill(-Inf, nconductors)
+            end
+
+            if haskey(ravens_obj, "RotatingMachine.maxQ")
+                math_obj["qmax"] = ((ravens_obj["RotatingMachine.maxQ"] * ones(nconductors)) ./ nconductors)./(power_scale_factor)
+            elseif haskey(ravens_obj, "SynchronousMachine.maxQ")
+                math_obj["qmax"] = ((ravens_obj["SynchronousMachine.maxQ"] * ones(nconductors)) ./ nconductors)./(power_scale_factor)
+            else
+                math_obj["qmax"] = fill(-Inf, nconductors)
+            end
 
             # Set pg and qg
             math_obj["pg"] = (get(ravens_obj, "RotatingMachine.p", 0.0) * ones(nconductors) ./ nconductors)./(power_scale_factor)
