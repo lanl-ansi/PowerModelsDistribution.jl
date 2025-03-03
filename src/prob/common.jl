@@ -118,9 +118,14 @@ function instantiate_mc_model(
 
     # @info "$(data["bus"])"
 
-    # for i in data["bus"]
-    #     @info "+++++++++++++++++++++++++++++++++++++++++++++++++++++"
-    #     @info "$(i)"
+    # for i in data["branch"]
+    #     # @info "+++++++++++++++++++++++++++++++++++++++++++++++++++++"
+    #     # @info "$(i)"
+    #     for (j,k) in enumerate(i)
+    #         for l in k
+    #             @info "$(l)"
+    #         end
+    #     end
     # end
 
     # DEFINIDOEN_instantiate_mc_model
@@ -165,9 +170,14 @@ function instantiate_mc_model_ravens(
 
     # @info "$(data["bus"])"
 
-    # for i in data["bus"]
-    #     @info "+++++++++++++++++++++++++++++++++++++++++++++++++++++"
-    #     @info "$(i)"
+    # for i in data["branch"]
+    #     # @info "+++++++++++++++++++++++++++++++++++++++++++++++++++++"
+    #     # @info "$(i)"
+    #     for (j,k) in enumerate(i)
+    #         for l in k
+    #             @info "$(l)"
+    #         end
+    #     end
     # end
 
     # DEFINIDOEN_instantiate_mc_model_ravens

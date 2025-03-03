@@ -86,7 +86,7 @@ end
 
 
 "converts admittance by multiplying by 2πωl"
-function _admittance_conversion_ravens(data_eng::Dict{String,<:Any}, eng_obj::Dict{String,<:Any}, key::String; freq::Float64=60.0)
+function _admittance_conversion_ravens(data_eng::Dict{String,<:Any}, eng_obj::Dict{String,<:Any}, key::String)
 
     _conductor_count =  data_eng["PerLengthPhaseImpedance.conductorCount"]
     _admittance_matrix = zeros(Float64, _conductor_count, _conductor_count)
@@ -99,7 +99,7 @@ function _admittance_conversion_ravens(data_eng::Dict{String,<:Any}, eng_obj::Di
         _admittance_matrix[col, row] = value
     end
 
-    return _admittance_matrix .* get(eng_obj, "Conductor.length", 1.0) .* freq ./ 1e2 # divide by 2 to get both sides _to and _fr
+    return _admittance_matrix .* get(eng_obj, "Conductor.length", 1.0) ./ 2 # divide by 2 to get both sides _to and _fr
 end
 
 "extracts the name from a ravens reference string"

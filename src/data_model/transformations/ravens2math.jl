@@ -317,7 +317,7 @@ function _map_ravens2math_conductor!(data_math::Dict{String,<:Any}, data_ravens:
 
             base_freq = data_math["settings"]["base_frequency"]
             for (key, param) in [("b_fr", "PhaseImpedanceData.b"), ("b_to", "PhaseImpedanceData.b"), ("g_fr", "PhaseImpedanceData.g"), ("g_to", "PhaseImpedanceData.g")]
-                math_obj[key] = _admittance_conversion_ravens(impedance_data, ravens_obj, param; freq=base_freq)
+                math_obj[key] = _admittance_conversion_ravens(impedance_data, ravens_obj, param)
             end
 
             math_obj["angmin"] = get(ravens_obj, "vad_lb", fill(-60.0, nphases))
