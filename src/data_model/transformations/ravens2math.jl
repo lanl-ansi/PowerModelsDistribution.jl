@@ -325,7 +325,7 @@ function _map_ravens2math_conductor!(data_math::Dict{String,<:Any}, data_ravens:
 
             if (haskey(terminals[1], "ACDCTerminal.OperationalLimitSet"))
                 oplimitset_id = _extract_name(terminals[1]["ACDCTerminal.OperationalLimitSet"])
-                oplimitset = data_ravens["OperationalLimitSet"][oplimitset_id]["OperationalLimitSet.OperationalLimitValue"][2]
+                oplimitset = data_ravens["OperationalLimitSet"][oplimitset_id]["OperationalLimitSet.OperationalLimitValue"][1]  # [1] emerg, [2] normal
             else
                 oplimitset = Dict()
             end
