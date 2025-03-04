@@ -1147,7 +1147,8 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
                 end
 
                 if haskey(schdl, "BasicIntervalSchedule.value1Unit")
-                    value1_unit = lowercase(schdl["BasicIntervalSchedule.value1Unit"])
+                    unit_symbol = schdl["BasicIntervalSchedule.value1Unit"]
+                    value1_unit = lowercase(unit_symbol[findfirst(isequal('.'), unit_symbol) + 1:end])
                     if value1_unit == "w"
                         math_obj["pd"] = fill(get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value1", 0.0) * value1_multiplier / power_scale_factor, nphases)
                     end
@@ -1157,7 +1158,8 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
                 end
 
                 if haskey(schdl, "BasicIntervalSchedule.value2Unit")
-                    value2_unit = lowercase(schdl["BasicIntervalSchedule.value2Unit"])
+                    unit_symbol = schdl["BasicIntervalSchedule.value2Unit"]
+                    value2_unit = lowercase(unit_symbol[findfirst(isequal('.'), unit_symbol) + 1:end])
                     if value2_unit == "w"
                         math_obj["pd"] = fill(get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value2", 0.0) * value2_multiplier / power_scale_factor, nphases)
                     end
