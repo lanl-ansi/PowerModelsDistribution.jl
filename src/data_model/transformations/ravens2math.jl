@@ -1390,11 +1390,13 @@ function _map_ravens2math_rotating_machine!(data_math::Dict{String,<:Any}, data_
             # TODO: control mode do not exist in the RAVENS-CIM (Need to be added)
             math_obj["control_mode"] = control_mode = Int(get(ravens_obj, "control_mode", FREQUENCYDROOP))
 
-            # Set Pmax for generator
-            if !haskey(ravens_obj, "GeneratingUnit.maxOperatingP")
-                math_obj["pmax"] = ((get(ravens_obj, "RotatingMachine.ratedS", Inf) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
+            # Set Pmax and Pmin for generator
+            if haskey(ravens_obj, "RotatingMachine.GeneratingUnit")
+                math_obj["pmin"] = ((get(ravens_obj["RotatingMachine.GeneratingUnit"], "GeneratingUnit.minOperatingP", 0) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
+                math_obj["pmax"] = ((get(ravens_obj["RotatingMachine.GeneratingUnit"], "GeneratingUnit.maxOperatingP", Inf) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
             else
-                math_obj["pmax"] = ((get(ravens_obj, "GeneratingUnit.maxOperatingP", Inf) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
+                math_obj["pmin"] = (zeros(nconductors) ./ nconductors)./(power_scale_factor)
+                math_obj["pmax"] = ((get(ravens_obj, "RotatingMachine.ratedS", Inf) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
             end
 
             # Set bus type
@@ -1414,9 +1416,6 @@ function _map_ravens2math_rotating_machine!(data_math::Dict{String,<:Any}, data_
                 data_math["bus"]["$(math_obj["gen_bus"])"]["va"] = [0.0, -120, 120, zeros(length(data_math["bus"]["$(math_obj["gen_bus"])"]) - 3)...][data_math["bus"]["$(math_obj["gen_bus"])"]["terminals"]]
             end
 
-            # Set pmin
-            math_obj["pmin"] = ((get(ravens_obj, "GeneratingUnit.minOperatingP", 0) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
-
             # Set min and max Q
             if haskey(ravens_obj, "RotatingMachine.minQ")
                 math_obj["qmin"] = ((ravens_obj["RotatingMachine.minQ"] * ones(nconductors)) ./ nconductors)./(power_scale_factor)
@@ -1431,7 +1430,7 @@ function _map_ravens2math_rotating_machine!(data_math::Dict{String,<:Any}, data_
             elseif haskey(ravens_obj, "SynchronousMachine.maxQ")
                 math_obj["qmax"] = ((ravens_obj["SynchronousMachine.maxQ"] * ones(nconductors)) ./ nconductors)./(power_scale_factor)
             else
-                math_obj["qmax"] = fill(-Inf, nconductors)
+                math_obj["qmax"] = fill(Inf, nconductors)
             end
 
             # Set pg and qg
