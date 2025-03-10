@@ -11,7 +11,8 @@ const _phasecode_map = Dict(
 _phase_map = Dict(
     "SinglePhaseKind.A" => 1,
     "SinglePhaseKind.B" => 2,
-    "SinglePhaseKind.C" => 3
+    "SinglePhaseKind.C" => 3,
+    "SinglePhaseKind.N" => 4
 )
 
 const _multipliers_map = Dict(
@@ -40,6 +41,18 @@ function _init_math_obj_ravens(obj_type::String, eng_id::Any, eng_obj::Dict{Stri
     math_obj["index"] = index
 
     return math_obj
+end
+
+
+"converts impendance in Ohm/m by multiplying by length"
+function _impedance_conversion_ravens(eng_obj::Dict{String,<:Any}, vals::Matrix{Float64})
+    return vals .* get(eng_obj, "Conductor.length", 1.0)
+end
+
+
+"converts admittance by multiplying by 2πωl"
+function _admittance_conversion_ravens(eng_obj::Dict{String,<:Any}, vals::Matrix{Float64})
+    2.0 .* pi .* vals .* get(eng_obj, "Conductor.length", 1.0) ./ 1e9
 end
 
 
