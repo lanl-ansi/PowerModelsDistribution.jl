@@ -1701,7 +1701,7 @@ function _map_ravens2math_power_electronics!(data_math::Dict{String,<:Any}, data
         for (name, ravens_obj) in get(regulating_cond_eq, "PowerElectronicsConnection", Dict{Any,Dict{String,Any}}())
 
             # Get type of PowerElectronicsUnit
-            pec_type = get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "Ravens.CimObjectType", "")
+            pec_type = get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "Ravens.cimObjectType", "")
 
             if (pec_type == "PhotoVoltaicUnit")
 
@@ -1803,10 +1803,19 @@ function _map_ravens2math_power_electronics!(data_math::Dict{String,<:Any}, data
                 # Set battery parameters
                 math_obj["energy"] = ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"]["BatteryUnit.storedE"]/power_scale_factor
 
-                if !haskey(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "InefficientBatteryUnit.limitEnergy")
+                if !haskey(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "BatteryUnit.BatteryUnitEfficiency")
                     math_obj["energy_rating"] = ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"]["BatteryUnit.ratedE"]/power_scale_factor
+                    math_obj["charge_efficiency"] = 100.0
+                    math_obj["discharge_efficiency"] = 100.0
+                    math_obj["p_loss"] = 0
+                    math_obj["q_loss"] = 0
                 else
-                    math_obj["energy_rating"] = ((ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"]["InefficientBatteryUnit.limitEnergy"]/100)*ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"]["BatteryUnit.ratedE"])/power_scale_factor
+                    math_obj["energy_rating"] = ((get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"]["BatteryUnit.BatteryUnitEfficiency"], "BatteryUnitEfficiency.limitEnergy", 100.0)/100.0)*ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"]["BatteryUnit.ratedE"])/power_scale_factor
+                    math_obj["charge_efficiency"] = get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "BatteryUnitEfficiency.efficiencyCharge", 100.0) / 100.0
+                    math_obj["discharge_efficiency"] = get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "BatteryUnitEfficiency.efficiencyDischarge", 100.0) / 100.0
+                    # TODO: These are still missing from the RAVENS Schema
+                    math_obj["p_loss"] = get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "BatteryUnitEfficiency.idlingActivePower", 0)./(power_scale_factor)
+                    math_obj["q_loss"] = get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "BatteryUnitEfficiency.idlingReactivePower", 0)./(power_scale_factor)
                 end
 
                 if !haskey(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "PowerElectronicsUnit.maxP")
@@ -1817,8 +1826,6 @@ function _map_ravens2math_power_electronics!(data_math::Dict{String,<:Any}, data
                     math_obj["discharge_rating"] = (get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "PowerElectronicsUnit.maxP", Inf))./(power_scale_factor)
                 end
 
-                math_obj["charge_efficiency"] = get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "InefficientBatteryUnit.efficiencyCharge", 100.0) / 100.0
-                math_obj["discharge_efficiency"] = get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "InefficientBatteryUnit.efficiencyDischarge", 100.0) / 100.0
                 math_obj["thermal_rating"] = get(ravens_obj, "PowerElectronicsConnection.ratedS", Inf)/power_scale_factor
 
                 math_obj["qmin"] = (get(ravens_obj, "PowerElectronicsConnection.minQ", -math_obj["discharge_rating"]*power_scale_factor))./(power_scale_factor)
@@ -1827,10 +1834,6 @@ function _map_ravens2math_power_electronics!(data_math::Dict{String,<:Any}, data
                 # TODO: verify that these CIM terms are equivalent to the needed values.
                 math_obj["r"] = get(ravens_obj, "PowerElectronicsConnection.r", 0)
                 math_obj["x"] = get(ravens_obj, "PowerElectronicsConnection.x", 0)
-
-                # TODO: These are still missing from the RAVENS Schema
-                math_obj["p_loss"] = get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "InefficientBatteryUnit.idlingActivePower", 0)./(power_scale_factor)
-                math_obj["q_loss"] = get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "InefficientBatteryUnit.idlingReactivePower", 0)./(power_scale_factor)
 
                 # TODO: control mode do not exist in the RAVENS-CIM (Need to be added)
                 math_obj["control_mode"] = control_mode = Int(get(ravens_obj, "control_mode", FREQUENCYDROOP))
