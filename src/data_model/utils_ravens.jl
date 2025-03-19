@@ -1,11 +1,15 @@
 const _phasecode_map = Dict(
+    "PhaseCode.ABCN" => [1, 2, 3],
     "PhaseCode.ABC" => [1, 2, 3],
     "PhaseCode.AB" => [1, 2],
     "PhaseCode.AC" => [1, 3],
     "PhaseCode.BC" => [2, 3],
     "PhaseCode.A" => [1],
     "PhaseCode.B" => [2],
-    "PhaseCode.C" => [3]
+    "PhaseCode.C" => [3],
+    "PhaseCode.AN" => [1],
+    "PhaseCode.BN" => [2],
+    "PhaseCode.CN" => [3]
 )
 
 _phase_map = Dict(
