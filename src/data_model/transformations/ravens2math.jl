@@ -611,7 +611,7 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
             g_sh = zeros(Float64, nrw)
             b_sh = zeros(Float64, nrw)
 
-            # Regulator set init
+            # Init RatioTapChanger data (default)
             tm_set = Vector{Vector{Float64}}(undef, nrw)
             tm_lb = Vector{Vector{Float64}}(undef, nrw)
             tm_ub = Vector{Vector{Float64}}(undef, nrw)
@@ -684,8 +684,40 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                 g_sh[wdg_id] =  get(transf_core_impedance, "TransformerCoreAdmittance.g", 0.0)
                 b_sh[wdg_id] = - get(transf_core_impedance, "TransformerCoreAdmittance.b", 0.0)
 
-                # TODO: RatioTapChanger
-                if haskey(wdgs[wdg_id], "TransformerEnd.RatioTapChanger")
+
+                # Set RatioTapChanger in specific wdg
+                if haskey(wdgs[wdg_endNumber], "TransformerEnd.RatioTapChanger")
+
+                    rtc_name = _extract_name(wdgs[wdg_endNumber]["TransformerEnd.RatioTapChanger"])
+                    rtc_data = data_ravens["PowerSystemResource"]["TapChanger"]["RatioTapChanger"][rtc_name]
+
+                    # tm_step
+                    hstep = get(rtc_data, "TapChanger.highStep", 16)
+                    lstep = get(rtc_data, "TapChanger.lowStep", -16)
+                    step_dist = abs(hstep) + abs(lstep)
+                    step_tap = 1/step_dist
+                    tm_step[wdg_endNumber] = fill(step_tap, nphases)
+
+                    # tm_set
+                    step = get(rtc_data, "TapChanger.step", 1.0)    # Starting Tap changer position/step
+                    tm_set[wdg_endNumber] = fill(step, nphases)
+
+                    # tm_fix
+                    ltcFlag = get(rtc_data, "TapChanger.ltcFlag", false)
+                    if (ltcFlag == true)
+                        tm_fix[wdg_endNumber] = zeros(Bool, nphases)
+                    else
+                        tm_fix[wdg_endNumber] = ones(Bool, nphases)
+                    end
+
+                    # tm_ub/tm_lb
+                    neutralVoltPu = get(rtc_data, "TapChanger.neutralU", vnom[wdg_endNumber])/vnom[wdg_endNumber]
+                    step_volt_increment = get(rtc_data, "RatioTapChanger.stepVoltageIncrement", 100.0)
+                    volt_lb = neutralVoltPu + step_tap * (step_volt_increment/100.0) * lstep
+                    volt_ub = neutralVoltPu + step_tap * (step_volt_increment/100.0) * hstep
+                    tm_lb[wdg_endNumber] = fill(volt_lb, nphases)
+                    tm_ub[wdg_endNumber] = fill(volt_ub, nphases)
+
                 else # default
                     tm_set[wdg_id] = fill(1.0, nphases)
                     tm_lb[wdg_id] = fill(0.9, nphases)
@@ -828,6 +860,13 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                 configuration_prev = []
                 vnom_prev = []
 
+                # Init RatioTapChanger data (default)
+                tm_set = Vector{Vector{Float64}}(fill(fill(1.0, nphases), nrw))
+                tm_lb = Vector{Vector{Float64}}(fill(fill(0.9, nphases), nrw))
+                tm_ub = Vector{Vector{Float64}}(fill(fill(1.1, nphases), nrw))
+                tm_fix = Vector{Vector{Bool}}(fill(ones(Bool, nphases), nrw))
+                tm_step = Vector{Vector{Float64}}(fill(fill(1/32, nphases), nrw))
+
                 for tank_id in 1:ntanks
 
                     # Get wdg data
@@ -921,6 +960,40 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                             cm_ub[wdg_endNumber] = cm_wdg
                         end
 
+                        # Set RatioTapChanger in specific wdg
+                        if haskey(wdgs[wdg_endNumber], "TransformerEnd.RatioTapChanger")
+
+                            rtc_name = _extract_name(wdgs[wdg_endNumber]["TransformerEnd.RatioTapChanger"])
+                            rtc_data = data_ravens["PowerSystemResource"]["TapChanger"]["RatioTapChanger"][rtc_name]
+
+                            # tm_step
+                            hstep = get(rtc_data, "TapChanger.highStep", 16)
+                            lstep = get(rtc_data, "TapChanger.lowStep", -16)
+                            step_dist = abs(hstep) + abs(lstep)
+                            step_tap = 1/step_dist
+                            tm_step[wdg_endNumber] = fill(step_tap, nphases)
+
+                            # tm_set
+                            step = get(rtc_data, "TapChanger.step", 1.0)    # Starting Tap changer position/step
+                            tm_set[wdg_endNumber] = fill(step, nphases)
+
+                            # tm_fix
+                            ltcFlag = get(rtc_data, "TapChanger.ltcFlag", false)
+                            if (ltcFlag == true)
+                                tm_fix[wdg_endNumber] = zeros(Bool, nphases)
+                            else
+                                tm_fix[wdg_endNumber] = ones(Bool, nphases)
+                            end
+
+                            # tm_ub/tm_lb
+                            neutralVoltPu = get(rtc_data, "TapChanger.neutralU", vnom[wdg_endNumber])/vnom[wdg_endNumber]
+                            step_volt_increment = get(rtc_data, "RatioTapChanger.stepVoltageIncrement", 100.0)
+                            volt_lb = neutralVoltPu + step_tap * (step_volt_increment/100.0) * lstep
+                            volt_ub = neutralVoltPu + step_tap * (step_volt_increment/100.0) * hstep
+                            tm_lb[wdg_endNumber] = fill(volt_lb, nphases)
+                            tm_ub[wdg_endNumber] = fill(volt_ub, nphases)
+                        end
+
                     end
 
                     ### --- Consistency checks across tanks ---
@@ -977,13 +1050,6 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                 # convert x_sc from list of upper triangle elements to an explicit dict
                 y_sh = g_sh + im*b_sh
                 z_sc = Dict([(key, im*x_sc[i]) for (i,key) in enumerate([(i,j) for i in 1:nrw for j in i+1:nrw])])
-
-                # TODO: RatioTapChanger - How to get wdg_Data correctly?
-                tm_set = Vector{Vector{Float64}}(fill(fill(1.0, nphases), nrw))
-                tm_lb = Vector{Vector{Float64}}(fill(fill(0.9, nphases), nrw))
-                tm_ub = Vector{Vector{Float64}}(fill(fill(1.1, nphases), nrw))
-                tm_fix = Vector{Vector{Bool}}(fill(ones(Bool, nphases), nrw))
-                tm_step = Vector{Vector{Float64}}(fill(fill(1/32, nphases), nrw))
 
                 # TODO: Polarity
                 polarity = fill(1, nrw)
@@ -1076,7 +1142,7 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                     # configurations
                     wdgs_confs = Vector{ConnConfig}(undef, nrw)
 
-                    # Regulator set init
+                    # Init RatioTapChanger data (default)
                     tm_set = Vector{Vector{Float64}}(undef, nrw)
                     tm_lb = Vector{Vector{Float64}}(undef, nrw)
                     tm_ub = Vector{Vector{Float64}}(undef, nrw)
@@ -1167,14 +1233,39 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                             @error("PowerTransformer ConnectionKind not supported yet!")
                         end
 
-                        # TODO: RatioTapChanger
+                        # Set RatioTapChanger in specific wdg
                         if haskey(wdgs_data[wdg_endNumber], "TransformerEnd.RatioTapChanger")
-                            # TODO: default for now, but needs to be corrected!
-                            tm_set[wdg_endNumber] = fill(1.0, nphases)
-                            tm_lb[wdg_endNumber] = fill(0.9, nphases)
-                            tm_ub[wdg_endNumber] = fill(1.1, nphases)
-                            tm_fix[wdg_endNumber] = ones(Bool, nphases)
-                            tm_step[wdg_endNumber] = fill(1/32, nphases)
+
+                            rtc_name = _extract_name(wdgs_data[wdg_endNumber]["TransformerEnd.RatioTapChanger"])
+                            rtc_data = data_ravens["PowerSystemResource"]["TapChanger"]["RatioTapChanger"][rtc_name]
+
+                            # tm_step
+                            hstep = get(rtc_data, "TapChanger.highStep", 16)
+                            lstep = get(rtc_data, "TapChanger.lowStep", -16)
+                            step_dist = abs(hstep) + abs(lstep)
+                            step_tap = 1/step_dist
+                            tm_step[wdg_endNumber] = fill(step_tap, nphases)
+
+                            # tm_set
+                            step = get(rtc_data, "TapChanger.step", 1.0)    # Starting Tap changer position/step
+                            tm_set[wdg_endNumber] = fill(step, nphases)
+
+                            # tm_fix
+                            ltcFlag = get(rtc_data, "TapChanger.ltcFlag", false)
+                            if (ltcFlag == true)
+                                tm_fix[wdg_endNumber] = zeros(Bool, nphases)
+                            else
+                                tm_fix[wdg_endNumber] = ones(Bool, nphases)
+                            end
+
+                            # tm_ub/tm_lb
+                            neutralVoltPu = get(rtc_data, "TapChanger.neutralU", vnom[wdg_endNumber])/vnom[wdg_endNumber]
+                            step_volt_increment = get(rtc_data, "RatioTapChanger.stepVoltageIncrement", 100.0)
+                            volt_lb = neutralVoltPu + step_tap * (step_volt_increment/100.0) * lstep
+                            volt_ub = neutralVoltPu + step_tap * (step_volt_increment/100.0) * hstep
+                            tm_lb[wdg_endNumber] = fill(volt_lb, nphases)
+                            tm_ub[wdg_endNumber] = fill(volt_ub, nphases)
+
                         else # default
                             tm_set[wdg_endNumber] = fill(1.0, nphases)
                             tm_lb[wdg_endNumber] = fill(0.9, nphases)
