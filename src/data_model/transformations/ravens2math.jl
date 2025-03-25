@@ -602,6 +602,10 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
             # configurations
             wdgs_confs = Vector{ConnConfig}(undef, nrw)
 
+            # RegulatorControls flag
+            reg_controls = [false for _ in 1:nrw]
+            reg_obj = [Dict() for _ in 1:nrw]
+
             # Transformer data for each winding
             vnom = Vector{Float64}(undef, nrw)
             snom = Vector{Float64}(undef, nrw)
@@ -718,6 +722,19 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                     tm_lb[wdg_endNumber] = fill(volt_lb, nphases)
                     tm_ub[wdg_endNumber] = fill(volt_ub, nphases)
 
+                    # Regulator Control
+                    if haskey(rtc_data, "TapChanger.TapChangerControl") && !all(tm_fix[wdg_endNumber])
+                        reg_controls[wdg_endNumber] = true
+                        reg_obj[wdg_endNumber] = Dict{String,Any}(
+                                "vreg" => fill(rtc_data["TapChanger.TapChangerControl"]["RegulatingControl.targetValue"], nphases),
+                                "band" =>  fill(rtc_data["TapChanger.TapChangerControl"]["RegulatingControl.targetDeadband"], nphases),
+                                "ptratio" => fill(rtc_data["TapChanger.ptRatio"], nphases),
+                                "ctprim" => fill(rtc_data["TapChanger.ctRating"], nphases),
+                                "r" => fill(rtc_data["TapChanger.TapChangerControl"]["TapChangerControl.lineDropR"], nphases),
+                                "x" => fill(rtc_data["TapChanger.TapChangerControl"]["TapChangerControl.lineDropX"], nphases)
+                            )
+                    end
+
                 else # default
                     tm_set[wdg_id] = fill(1.0, nphases)
                     tm_lb[wdg_id] = fill(0.9, nphases)
@@ -801,9 +818,10 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
 
                 data_math["transformer"]["$(transformer_2wa_obj["index"])"] = transformer_2wa_obj
 
-                ## TODO: Regulator Control
-                # if haskey(eng_obj,"controls") && !all(data_math["transformer"]["$(transformer_2wa_obj["index"])"]["tm_fix"])
-                # end
+                # Add Regulator Controls (only if flag is true)
+                if (reg_controls[wdg_id] == true)
+                    data_math["transformer"]["$(transformer_2wa_obj["index"])"]["controls"] = reg_obj[wdg_id]
+                end
 
                 # TODO: Center-Tapped Transformers (3 Windings)
                 # if w==3 && eng_obj["polarity"][w]==-1 # identify center-tapped transformer and mark all secondary-side nodes as triplex by adding va_start
@@ -851,6 +869,10 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
 
                 # init configuration - default WYE-WYE
                 configuration = [WYE for _ in 1:nrw]
+
+                # RegulatorControls flag
+                reg_controls = [false for _ in 1:nrw]
+                reg_obj = [Dict() for _ in 1:nrw]
 
                 # init vnom for all windings
                 vnom = zeros(Float64, nrw)
@@ -992,6 +1014,20 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                             volt_ub = neutralVoltPu + step_tap * (step_volt_increment/100.0) * hstep
                             tm_lb[wdg_endNumber] = fill(volt_lb, nphases)
                             tm_ub[wdg_endNumber] = fill(volt_ub, nphases)
+
+                            # Regulator Control
+                            if haskey(rtc_data, "TapChanger.TapChangerControl") && !all(tm_fix[wdg_endNumber])
+                                reg_controls[wdg_endNumber] = true
+                                reg_obj[wdg_endNumber] = Dict{String,Any}(
+                                        "vreg" => fill(rtc_data["TapChanger.TapChangerControl"]["RegulatingControl.targetValue"], nphases),
+                                        "band" =>  fill(rtc_data["TapChanger.TapChangerControl"]["RegulatingControl.targetDeadband"], nphases),
+                                        "ptratio" => fill(rtc_data["TapChanger.ptRatio"], nphases),
+                                        "ctprim" => fill(rtc_data["TapChanger.ctRating"], nphases),
+                                        "r" => fill(rtc_data["TapChanger.TapChangerControl"]["TapChangerControl.lineDropR"], nphases),
+                                        "x" => fill(rtc_data["TapChanger.TapChangerControl"]["TapChangerControl.lineDropX"], nphases)
+                                    )
+                            end
+
                         end
 
                     end
@@ -1099,16 +1135,17 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                         "index"         => length(data_math["transformer"])+1
                     )
 
-                    # TODO: RatioTapChanger
+                    # RatioTapChanger
                     transformer_2wa_obj["tm_lb"] = tm_lb[wdg_id]
                     transformer_2wa_obj["tm_ub"] = tm_ub[wdg_id]
                     transformer_2wa_obj["tm_step"] = tm_step[wdg_id]
 
                     data_math["transformer"]["$(transformer_2wa_obj["index"])"] = transformer_2wa_obj
 
-                    ## TODO: Regulator Control
-                    # if haskey(eng_obj,"controls") && !all(data_math["transformer"]["$(transformer_2wa_obj["index"])"]["tm_fix"])
-                    # end
+                    # Add Regulator Controls (only if flag is true)
+                    if (reg_controls[wdg_id] == true)
+                        data_math["transformer"]["$(transformer_2wa_obj["index"])"]["controls"] = reg_obj[wdg_id]
+                    end
 
                     # TODO: Center-Tapped Transformers (3 Windings)
                     # if w==3 && eng_obj["polarity"][w]==-1 # identify center-tapped transformer and mark all secondary-side nodes as triplex by adding va_start
@@ -1141,6 +1178,10 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
 
                     # configurations
                     wdgs_confs = Vector{ConnConfig}(undef, nrw)
+
+                    # RegulatorControls flag
+                    reg_controls = [false for _ in 1:nrw]
+                    reg_obj = [Dict() for _ in 1:nrw] # init
 
                     # Init RatioTapChanger data (default)
                     tm_set = Vector{Vector{Float64}}(undef, nrw)
@@ -1266,6 +1307,19 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                             tm_lb[wdg_endNumber] = fill(volt_lb, nphases)
                             tm_ub[wdg_endNumber] = fill(volt_ub, nphases)
 
+                            # Regulator Control
+                            if haskey(rtc_data, "TapChanger.TapChangerControl") && !all(tm_fix[wdg_endNumber])
+                                reg_controls[wdg_endNumber] = true
+                                reg_obj[wdg_endNumber] = Dict{String,Any}(
+                                        "vreg" => fill(rtc_data["TapChanger.TapChangerControl"]["RegulatingControl.targetValue"], nphases),
+                                        "band" =>  fill(rtc_data["TapChanger.TapChangerControl"]["RegulatingControl.targetDeadband"], nphases),
+                                        "ptratio" => fill(rtc_data["TapChanger.ptRatio"], nphases),
+                                        "ctprim" => fill(rtc_data["TapChanger.ctRating"], nphases),
+                                        "r" => fill(rtc_data["TapChanger.TapChangerControl"]["TapChangerControl.lineDropR"], nphases),
+                                        "x" => fill(rtc_data["TapChanger.TapChangerControl"]["TapChangerControl.lineDropX"], nphases)
+                                    )
+                            end
+
                         else # default
                             tm_set[wdg_endNumber] = fill(1.0, nphases)
                             tm_lb[wdg_endNumber] = fill(0.9, nphases)
@@ -1338,21 +1392,17 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                             "index"         => length(data_math["transformer"])+1
                         )
 
-                        # TODO: RatioTapChanger
-                        for prop in [pass_props]
-                            if haskey(wdg_info[wdg_id], prop)
-                                transformer_2wa_obj[prop] = wdg_info[wdg_id][prop]
-                            end
-                        end
+                        # RatioTapChanger
                         transformer_2wa_obj["tm_lb"] = tm_lb[wdg_id]
                         transformer_2wa_obj["tm_ub"] = tm_ub[wdg_id]
                         transformer_2wa_obj["tm_step"] = tm_step[wdg_id]
 
                         data_math["transformer"]["$(transformer_2wa_obj["index"])"] = transformer_2wa_obj
 
-                        ## TODO: Regulator Control
-                        # if haskey(eng_obj,"controls") && !all(data_math["transformer"]["$(transformer_2wa_obj["index"])"]["tm_fix"])
-                        # end
+                        # Add Regulator Controls (only if flag is true)
+                        if (reg_controls[wdg_id] == true)
+                            data_math["transformer"]["$(transformer_2wa_obj["index"])"]["controls"] = reg_obj[wdg_id]
+                        end
 
                         # TODO: Center-Tapped Transformers (3 Windings)
                         # if w==3 && eng_obj["polarity"][w]==-1 # identify center-tapped transformer and mark all secondary-side nodes as triplex by adding va_start
