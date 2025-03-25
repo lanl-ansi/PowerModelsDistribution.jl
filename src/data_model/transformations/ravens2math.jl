@@ -1606,7 +1606,7 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
         # Correct (if needed) single-phase DELTA connections
         if (math_obj["configuration"] == DELTA) && (nphases == 1)
             math_obj["configuration"] = WYE
-            @warn "EnergyConsumer (load): $name has DELTA configuration but only 1 connection (phase). DELTA configurations must have at least 2 or 3 connections!"
+            @warn "EnergyConsumer (load): $name has DELTA configuration but only 1 connection (phase). DELTA configurations must have at least 2 or 3 connections!. EnergyConsumer converted to WYE connection."
         end
 
         # Set status, dispatchable flag, and index
@@ -2146,9 +2146,19 @@ function _map_ravens2math_switch!(data_math::Dict{String,<:Any}, data_ravens::Di
         # TODO: Dispatchable
         math_obj["dispatchable"] = Int(get(ravens_obj, "dispatchable", YES))
 
-        # TODO: OPF bounds - Do we really need all of these values?
-        for (f_key, t_key) in [("Switch.ratedCurrent", "current_rating"), ("cm_ub_b", "c_rating_b"), ("cm_ub_c", "c_rating_c"),
-            ("sm_ub", "thermal_rating"), ("sm_ub_b", "rate_b"), ("sm_ub_c", "rate_c")]
+        # Current and Power Limits
+        if haskey(ravens_obj, "PowerSystemResource.AssetDatasheet")
+            swinfo_name = _extract_name(ravens_obj["PowerSystemResource.AssetDatasheet"])
+            swinfo_data = data_ravens["AssetInfo"]["SwitchInfo"][swinfo_name]
+            math_obj["current_rating"] = fill(get(swinfo_data, "SwitchInfo.ratedCurrent", Inf), nphases)
+            math_obj["sm_ub"] = math_obj["current_rating"] .* get(swinfo_data, "SwitchInfo.ratedVoltage", Inf)
+        else
+            math_obj["current_rating"] = fill(get(ravens_obj, "Switch.ratedCurrent", Inf), nphases)
+            math_obj["sm_ub"] = math_obj["current_rating"] .* get(ravens_obj, "Switch.ratedVoltage", Inf)
+        end
+
+        # TODO: not found on CIM - kron reductions
+        for (f_key, t_key) in [("cm_ub_b", "c_rating_b"), ("cm_ub_c", "c_rating_c"), ("sm_ub_b", "rate_b"), ("sm_ub_c", "rate_c")]
             math_obj[t_key] = haskey(ravens_obj, f_key) ? fill(ravens_obj[f_key], nphases) : fill(Inf, nphases)
         end
 
@@ -2165,6 +2175,7 @@ function _map_ravens2math_switch!(data_math::Dict{String,<:Any}, data_ravens::Di
         ))
 
     end
+
 end
 
 
