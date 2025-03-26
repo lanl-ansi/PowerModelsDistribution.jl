@@ -312,7 +312,7 @@ function _map_ravens2math_conductor!(data_math::Dict{String,<:Any}, data_ravens:
                 nphases = nconds
             end
 
-            # TODO: Revise if the elseif is needed!
+            # Assign terminals and vmin/vmax
             for bus in [math_obj["f_bus"], math_obj["t_bus"]]
                 if !(haskey(data_math["bus"][string(bus)], "terminals"))
                     data_math["bus"][string(bus)]["terminals"] = bus_terminals
@@ -641,8 +641,7 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                 # nphases
                 nphases = length(connections[wdg_endNumber])
 
-                # add terminals and voltage limits info. if missing
-                # TODO: Revise if the elseif is needed!
+                # Add terminals and voltage limits info. if missing
                 node = _extract_name(wdg_terminals["Terminal.ConnectivityNode"])
                 bus = data_math["bus_lookup"][node]
                 if !(haskey(data_math["bus"][string(bus)], "terminals"))
@@ -1061,7 +1060,6 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                 for i in 1:length(nodes)
                     n = nodes[i]
                     bus = data_math["bus_lookup"][n]
-                    # TODO: Revise if the elseif is needed!
                     if !(haskey(data_math["bus"][string(bus)], "terminals"))
                         data_math["bus"][string(bus)]["terminals"] = connections[i]
                         data_math["bus"][string(bus)]["vmin"] = fill(0.0, nphases)
@@ -1208,7 +1206,7 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                             @error("PhaseCode not supported yet!")
                         end
 
-                        # TODO: Revise if the elseif is needed!
+                        # Add vmin/vmax/terminals info. if missing
                         nphases = length(wdg_connections)
                         if !(haskey(data_math["bus"][string(bus)], "terminals"))
                             data_math["bus"][string(bus)]["terminals"] = wdg_connections
@@ -2107,34 +2105,22 @@ function _map_ravens2math_switch!(data_math::Dict{String,<:Any}, data_ravens::Di
         math_obj["f_bus"] = data_math["bus_lookup"][f_node]
         math_obj["t_bus"] = data_math["bus_lookup"][t_node]
 
-        # Add vmin/vmax/terminals infor to fbus and tbus if missing
-        # TODO: Revise if the elseif is needed!
-        if !(haskey(data_math["bus"][string(math_obj["f_bus"])], "terminals"))
-            data_math["bus"][string(math_obj["f_bus"])]["terminals"] = f_conns
-            data_math["bus"][string(math_obj["f_bus"])]["vmin"] = fill(0.0, nphases)
-            data_math["bus"][string(math_obj["f_bus"])]["vmax"] = fill(Inf, nphases)
-            data_math["bus"][string(math_obj["f_bus"])]["grounded"] = zeros(Bool, nphases)
-        elseif (length(data_math["bus"][string(math_obj["f_bus"])]["terminals"]) < length(f_conns))
-            data_math["bus"][string(math_obj["f_bus"])]["terminals"] = f_conns
-            data_math["bus"][string(math_obj["f_bus"])]["vmin"] = fill(0.0, nphases)
-            data_math["bus"][string(math_obj["f_bus"])]["vmax"] = fill(Inf, nphases)
-            data_math["bus"][string(math_obj["f_bus"])]["grounded"] = zeros(Bool, nphases)
+        # Add vmin/vmax/terminals info to fbus and tbus if missing
+        for bus in [math_obj["f_bus"], math_obj["t_bus"]]
+            if !(haskey(data_math["bus"][string(bus)], "terminals"))
+                data_math["bus"][string(bus)]["terminals"] = f_conns
+                data_math["bus"][string(bus)]["vmin"] = fill(0.0, nphases)
+                data_math["bus"][string(bus)]["vmax"] = fill(Inf, nphases)
+                data_math["bus"][string(bus)]["grounded"] = zeros(Bool, nphases)
+            elseif (length(data_math["bus"][string(bus)]["terminals"]) < length(f_conns))
+                data_math["bus"][string(bus)]["terminals"] = f_conns
+                data_math["bus"][string(bus)]["vmin"] = fill(0.0, nphases)
+                data_math["bus"][string(bus)]["vmax"] = fill(Inf, nphases)
+                data_math["bus"][string(bus)]["grounded"] = zeros(Bool, nphases)
+            end
         end
 
-        # TODO: Revise if the elseif is needed!
-        if !(haskey(data_math["bus"][string(math_obj["t_bus"])], "terminals"))
-            data_math["bus"][string(math_obj["t_bus"])]["terminals"] = t_conns
-            data_math["bus"][string(math_obj["t_bus"])]["vmin"] = fill(0.0, nphases)
-            data_math["bus"][string(math_obj["t_bus"])]["vmax"] = fill(Inf, nphases)
-            data_math["bus"][string(math_obj["t_bus"])]["grounded"] = zeros(Bool, nphases)
-        elseif (length(data_math["bus"][string(math_obj["t_bus"])]["terminals"]) < length(t_conns))
-            data_math["bus"][string(math_obj["t_bus"])]["terminals"] = t_conns
-            data_math["bus"][string(math_obj["t_bus"])]["vmin"] = fill(0.0, nphases)
-            data_math["bus"][string(math_obj["t_bus"])]["vmax"] = fill(Inf, nphases)
-            data_math["bus"][string(math_obj["t_bus"])]["grounded"] = zeros(Bool, nphases)
-        end
-
-        # TODO: Status
+        # Status
         math_obj["status"] = get(ravens_obj, "Equipment.inService", true)
         math_obj["status"] = status = math_obj["status"] == true ? 1 : 0
 
