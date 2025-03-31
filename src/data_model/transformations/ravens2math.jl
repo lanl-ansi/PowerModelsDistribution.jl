@@ -1803,8 +1803,8 @@ function _map_ravens2math_rotating_machine!(data_math::Dict{String,<:Any}, data_
             end
 
             # Set pg and qg
-            math_obj["pg"] = (get(ravens_obj, "RotatingMachine.p", 0.0) * ones(nconductors) ./ nconductors)./(power_scale_factor)
-            math_obj["qg"] = (get(ravens_obj, "RotatingMachine.q", 0.0) * ones(nconductors) ./ nconductors)./(power_scale_factor)
+            math_obj["pg"] = (get(ravens_obj, "RotatingMachine.p", 0.0) * -ones(nconductors) ./ nconductors)./(power_scale_factor)
+            math_obj["qg"] = (get(ravens_obj, "RotatingMachine.q", 0.0) * -ones(nconductors) ./ nconductors)./(power_scale_factor)
 
             # TODO: add a polynomial parameters to be added to gen cost
             _add_gen_cost_model!(math_obj, ravens_obj)
