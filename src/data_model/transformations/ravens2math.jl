@@ -1760,7 +1760,7 @@ function _map_ravens2math_rotating_machine!(data_math::Dict{String,<:Any}, data_
                 math_obj["pmax"] = ((get(ravens_obj["RotatingMachine.GeneratingUnit"], "GeneratingUnit.maxOperatingP", Inf) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
             else
                 math_obj["pmin"] = (zeros(nconductors) ./ nconductors)./(power_scale_factor)
-                math_obj["pmax"] = ((get(ravens_obj, "RotatingMachine.ratedS", Inf) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
+                math_obj["pmax"] = ((get(ravens_obj, "RotatingMachine.ratedS", Inf) * get(ravens_obj, "RotatingMachine.ratedPowerFactor", 1.0) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
             end
 
             # Set bus type
@@ -1790,6 +1790,11 @@ function _map_ravens2math_rotating_machine!(data_math::Dict{String,<:Any}, data_
                 math_obj["qmin"] = ((ravens_obj["RotatingMachine.minQ"] * ones(nconductors)) ./ nconductors)./(power_scale_factor)
             elseif haskey(ravens_obj, "SynchronousMachine.minQ")
                 math_obj["qmin"] = ((ravens_obj["SynchronousMachine.minQ"] * ones(nconductors)) ./ nconductors)./(power_scale_factor)
+            elseif haskey(ravens_obj, "RotatingMachine.ratedPowerFactor")
+                Srated = get(ravens_obj, "RotatingMachine.ratedS", Inf)
+                PFrated = get(ravens_obj, "RotatingMachine.ratedPowerFactor", 1.0)
+                Prated = Srated*PFrated
+                math_obj["qmax"] = -((sqrt(Srated^2 - Prated^2) * ones(nconductors)) ./ nconductors) ./ (power_scale_factor)
             else
                 math_obj["qmin"] = fill(-Inf, nconductors)
             end
@@ -1798,6 +1803,11 @@ function _map_ravens2math_rotating_machine!(data_math::Dict{String,<:Any}, data_
                 math_obj["qmax"] = ((ravens_obj["RotatingMachine.maxQ"] * ones(nconductors)) ./ nconductors)./(power_scale_factor)
             elseif haskey(ravens_obj, "SynchronousMachine.maxQ")
                 math_obj["qmax"] = ((ravens_obj["SynchronousMachine.maxQ"] * ones(nconductors)) ./ nconductors)./(power_scale_factor)
+            elseif haskey(ravens_obj, "RotatingMachine.ratedPowerFactor")
+                Srated = get(ravens_obj, "RotatingMachine.ratedS", Inf)
+                PFrated = get(ravens_obj, "RotatingMachine.ratedPowerFactor", 1.0)
+                Prated = Srated*PFrated
+                math_obj["qmax"] = ((sqrt(Srated^2 - Prated^2) * ones(nconductors)) ./ nconductors) ./ (power_scale_factor)
             else
                 math_obj["qmax"] = fill(Inf, nconductors)
             end
