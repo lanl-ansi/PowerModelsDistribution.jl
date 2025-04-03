@@ -1794,7 +1794,7 @@ function _map_ravens2math_rotating_machine!(data_math::Dict{String,<:Any}, data_
                 Srated = get(ravens_obj, "RotatingMachine.ratedS", Inf)
                 PFrated = get(ravens_obj, "RotatingMachine.ratedPowerFactor", 1.0)
                 Prated = Srated*PFrated
-                math_obj["qmax"] = -((sqrt(Srated^2 - Prated^2) * ones(nconductors)) ./ nconductors) ./ (power_scale_factor)
+                math_obj["qmin"] = -((sqrt(Srated^2 - Prated^2) * ones(nconductors)) ./ nconductors) ./ (power_scale_factor)
             else
                 math_obj["qmin"] = fill(-Inf, nconductors)
             end
