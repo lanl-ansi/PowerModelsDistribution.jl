@@ -393,7 +393,7 @@ function _map_ravens2math_conductor!(data_math::Dict{String,<:Any}, data_ravens:
                     @assert  radius[i] != NaN "WireInfo radius not found! using NaN. Revise data."
 
                     # Note: gets rewritten as missing if not needed
-                    dcable[i] = radius[i] * 2.0
+                    dcable[i] = get(wireinfo_data, "ConcentricNeutralCableInfo.diameterOverNeutral", radius[i] * 2.0)
 
                     gmr[i] = get(wireinfo_data, "WireInfo.gmr", radius[i] * 0.778)
 
@@ -402,6 +402,10 @@ function _map_ravens2math_conductor!(data_math::Dict{String,<:Any}, data_ravens:
                         @assert rac[i] != NaN "WireInfo AC25 resistance is not found! using NaN. Revise input data."
                         rdc[i] = rac[i] / 1.02
                     elseif wireinfo_data["Ravens.cimObjectType"] == "ConcentricNeutralCableInfo"
+                        rdc[i] = get(wireinfo_data, "WireInfo.rDC20", NaN)
+                        @assert rdc[i] != NaN "WireInfo rDC20 resistance is not found! using NaN. Revise input data."
+                        rac[i] = rdc[i] * 1.02
+                    elseif wireinfo_data["Ravens.cimObjectType"] == "TapeShieldCableInfo"
                         rdc[i] = get(wireinfo_data, "WireInfo.rDC20", NaN)
                         @assert rdc[i] != NaN "WireInfo rDC20 resistance is not found! using NaN. Revise input data."
                         rac[i] = rdc[i] * 1.02
@@ -419,10 +423,10 @@ function _map_ravens2math_conductor!(data_math::Dict{String,<:Any}, data_ravens:
                     dins[i] = get(wireinfo_data, "CableInfo.diameterOverJacket", NaN)
                     tins[i] = get(wireinfo_data, "WireInfo.insulationThickness", NaN)
 
-                    # TODO: tape shielded cables information
-                    diashield[i] = NaN
-                    tapelayer[i] = NaN
-                    tapelap[i] = NaN
+                    # Tape shielded cables information
+                    diashield[i] = get(wireinfo_data, "CableInfo.diameterOverJacket", NaN) # diameter over tape shield
+                    tapelayer[i] = get(wireinfo_data, "TapeShieldCableInfo.tapeThickness", NaN)  # tape shield thickness
+                    tapelap[i] = get(wireinfo_data, "TapeShieldCableInfo.tapeLap", NaN)   #tape lap (default 20.0)
 
                 end
 
@@ -435,8 +439,8 @@ function _map_ravens2math_conductor!(data_math::Dict{String,<:Any}, data_ravens:
                 epsr = findfirst(isnan, dins) !== nothing ? missing : ones(nconds).*2.3 # use dins as signal for epsr to be missing
                 dins = findfirst(isnan, dins) !== nothing ? missing : dins
                 tins = findfirst(isnan, tins) !== nothing ? missing : tins
-                diashield = findfirst(isnan, diashield) !== nothing ? missing : diashield
-                tapelayer = findfirst(isnan, tapelayer) !== nothing ? missing : tapelayer
+                diashield = findfirst(isnan, tapelayer) !== nothing ? missing : diashield
+                tapelayer = findfirst(isnan, tapelayer) !== nothing ? missing : tapelayer # use tapelayer as signal for diashield to be missing
                 tapelap = findfirst(isnan, tapelap) !== nothing ? missing : tapelap
 
                 # TODO: earth model (using default)
@@ -800,8 +804,12 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
 
                 # TODO: IMPORTANT ASSUMPTIONS
                 # 1) assume there is at least 1 tank and that all tanks have the same number of windings (i.e., TransformerTankEnds)
-                # 2) assume the number of phases is equal to the number of tanks
-                nphases = length(tanks) # assume nphases == ntanks
+                # 2) assume the number of phases is equal to the number of tanks - DEPRECATED
+                # 3) assumes number of phases are indicated correctly in terminal # 1
+                phasecode = ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.phases"] # terminal 1 phasecode
+                nphases = length(_phasecode_map[phasecode])
+                # nphases = length(tanks) # assume nphases == ntanks
+
                 nrw = length(tanks[1]["TransformerTank.TransformerTankEnd"])
 
                 # init connections vector for combined transformer windings
