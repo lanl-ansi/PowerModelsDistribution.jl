@@ -579,57 +579,57 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{Str
             _apply_linecode!(eng_obj, data_eng)
         end
 
-        if !(all(isapprox.(get(eng_obj, "rs", zeros(1, 1)), 0)) && all(isapprox.(get(eng_obj, "xs", zeros(1, 1)), 0)))
-            # build virtual bus
+        # if !(all(isapprox.(get(eng_obj, "rs", zeros(1, 1)), 0)) && all(isapprox.(get(eng_obj, "xs", zeros(1, 1)), 0)))
+        #     # build virtual bus
 
-            f_bus = deepcopy(data_math["bus"]["$(math_obj["f_bus"])"])
-            t_bus = deepcopy(data_math["bus"]["$(math_obj["t_bus"])"])
+        #     f_bus = deepcopy(data_math["bus"]["$(math_obj["f_bus"])"])
+        #     t_bus = deepcopy(data_math["bus"]["$(math_obj["t_bus"])"])
 
-            N = length(eng_obj["t_connections"])
-            bus_obj = Dict{String,Any}(
-                "name" => "_virtual_bus.switch.$name",
-                "bus_i" => length(data_math["bus"])+1,
-                "bus_type" => eng_obj["status"] == DISABLED ? 4 : 1,
-                "terminals" => eng_obj["t_connections"],  # connected to the switch on the to-side
-                "grounded" => fill(false, N),  # connected to the switch on the to-side
-                "vmin" => fill(0.0, N),
-                "vmax" => fill(Inf, N),
-                "vm_pair_lb" => Tuple{Any,Any,Real}[],
-                "vm_pair_ub" => Tuple{Any,Any,Real}[],
-                "source_id" => "switch.$name",
-                "index" => length(data_math["bus"])+1,
-            )
+        #     N = length(eng_obj["t_connections"])
+        #     bus_obj = Dict{String,Any}(
+        #         "name" => "_virtual_bus.switch.$name",
+        #         "bus_i" => length(data_math["bus"])+1,
+        #         "bus_type" => eng_obj["status"] == DISABLED ? 4 : 1,
+        #         "terminals" => eng_obj["t_connections"],  # connected to the switch on the to-side
+        #         "grounded" => fill(false, N),  # connected to the switch on the to-side
+        #         "vmin" => fill(0.0, N),
+        #         "vmax" => fill(Inf, N),
+        #         "vm_pair_lb" => Tuple{Any,Any,Real}[],
+        #         "vm_pair_ub" => Tuple{Any,Any,Real}[],
+        #         "source_id" => "switch.$name",
+        #         "index" => length(data_math["bus"])+1,
+        #     )
 
-            math_obj["t_bus"] = bus_obj["bus_i"]
-            data_math["bus"]["$(bus_obj["index"])"] = bus_obj
+        #     math_obj["t_bus"] = bus_obj["bus_i"]
+        #     data_math["bus"]["$(bus_obj["index"])"] = bus_obj
 
-            branch_obj = _init_math_obj("line", name, eng_obj, length(data_math["branch"])+1)
+        #     branch_obj = _init_math_obj("line", name, eng_obj, length(data_math["branch"])+1)
 
-            _branch_obj = Dict{String,Any}(
-                "name" => "_virtual_branch.switch.$name",
-                "source_id" => "switch.$name",
-                "f_bus" => bus_obj["bus_i"],
-                "t_bus" => data_math["bus_lookup"][eng_obj["t_bus"]],
-                "f_connections" => eng_obj["t_connections"],  # the virtual branch connects to the switch on the to-side
-                "t_connections" => eng_obj["t_connections"],  # should be identical to the switch's to-side connections
-                "br_r" => _impedance_conversion(data_eng, eng_obj, "rs"),
-                "br_x" => _impedance_conversion(data_eng, eng_obj, "xs"),
-                "g_fr" => _admittance_conversion(data_eng, eng_obj, "g_fr"),
-                "g_to" => _admittance_conversion(data_eng, eng_obj, "g_to"),
-                "b_fr" => _admittance_conversion(data_eng, eng_obj, "b_fr"),
-                "b_to" => _admittance_conversion(data_eng, eng_obj, "b_to"),
-                "angmin" => fill(-10.0, nphases),
-                "angmax" => fill( 10.0, nphases),
-                "c_rating_a" => fill(Inf, nphases),
-                "br_status" => eng_obj["status"] == DISABLED ? 0 : 1,
-            )
+        #     _branch_obj = Dict{String,Any}(
+        #         "name" => "_virtual_branch.switch.$name",
+        #         "source_id" => "switch.$name",
+        #         "f_bus" => bus_obj["bus_i"],
+        #         "t_bus" => data_math["bus_lookup"][eng_obj["t_bus"]],
+        #         "f_connections" => eng_obj["t_connections"],  # the virtual branch connects to the switch on the to-side
+        #         "t_connections" => eng_obj["t_connections"],  # should be identical to the switch's to-side connections
+        #         "br_r" => _impedance_conversion(data_eng, eng_obj, "rs"),
+        #         "br_x" => _impedance_conversion(data_eng, eng_obj, "xs"),
+        #         "g_fr" => _admittance_conversion(data_eng, eng_obj, "g_fr"),
+        #         "g_to" => _admittance_conversion(data_eng, eng_obj, "g_to"),
+        #         "b_fr" => _admittance_conversion(data_eng, eng_obj, "b_fr"),
+        #         "b_to" => _admittance_conversion(data_eng, eng_obj, "b_to"),
+        #         "angmin" => fill(-10.0, nphases),
+        #         "angmax" => fill( 10.0, nphases),
+        #         "c_rating_a" => fill(Inf, nphases),
+        #         "br_status" => eng_obj["status"] == DISABLED ? 0 : 1,
+        #     )
 
-            merge!(branch_obj, _branch_obj)
+        #     merge!(branch_obj, _branch_obj)
 
-            data_math["branch"]["$(branch_obj["index"])"] = branch_obj
+        #     data_math["branch"]["$(branch_obj["index"])"] = branch_obj
 
-            map_to = [map_to, "bus.$(bus_obj["index"])", "branch.$(branch_obj["index"])"]
-        end
+        #     map_to = [map_to, "bus.$(bus_obj["index"])", "branch.$(branch_obj["index"])"]
+        # end
 
         data_math["switch"]["$(math_obj["index"])"] = math_obj
 
