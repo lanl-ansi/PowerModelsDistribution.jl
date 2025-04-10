@@ -511,16 +511,24 @@ function _map_ravens2math_conductor!(data_math::Dict{String,<:Any}, data_ravens:
 
             if (haskey(terminals[1], "ACDCTerminal.OperationalLimitSet"))
                 oplimitset_id = _extract_name(terminals[1]["ACDCTerminal.OperationalLimitSet"])
-                oplimitset = data_ravens["OperationalLimitSet"][oplimitset_id]["OperationalLimitSet.OperationalLimitValue"][1]  # [1] emerg, [2] normal
+                oplimitset_valslist = data_ravens["OperationalLimitSet"][oplimitset_id]["OperationalLimitSet.OperationalLimitValue"]
+                oplimitset = Vector{Dict}(undef, length(oplimitset_valslist))
+                for i in 1:length(oplimitset_valslist)
+                    oplimitset[i] = data_ravens["OperationalLimitSet"][oplimitset_id]["OperationalLimitSet.OperationalLimitValue"][i]
+                end
             else
-                oplimitset = Dict()
+                oplimitset =[Dict()]
             end
 
             limit_keys = [("CurrentLimit.value", "c_rating_a"), ("CurrentLimit.value", "c_rating_b"), ("CurrentLimit.value", "c_rating_c"),
                         ("ApparentPowerLimit.value", "rate_a"), ("ApparentPowerLimit.value", "rate_b"), ("ApparentPowerLimit.value", "rate_c")]
 
-            for (f_key, t_key) in limit_keys
-                math_obj[t_key] = haskey(oplimitset, f_key) ? fill(oplimitset[f_key], nphases) : fill(Inf, nphases)
+            for i in 1:length(oplimitset)
+                val = fill(0.0, nphases)
+                for (f_key, t_key) in limit_keys
+                    val = haskey(oplimitset[i], f_key) && val[1] <= oplimitset[i][f_key] ? fill(oplimitset[i][f_key], nphases) : fill(Inf, nphases)
+                    math_obj[t_key] = val
+                end
             end
 
             math_obj["br_status"] = get(ravens_obj, "Equipment.inService", true) == true ? 1 : 0
