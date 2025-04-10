@@ -346,7 +346,7 @@ function _map_ravens2math_conductor!(data_math::Dict{String,<:Any}, data_ravens:
                 wire_positions = spacinginfo_data["WireSpacingInfo.WirePositions"]
                 num_of_wires = length(wire_positions)
 
-                # Kron reduce bus terminals by removing conn 4 based on number of wires
+                # TODO: Kron reduce bus terminals by removing conn 4 based on number of wires
                 if num_of_wires > nconds
                     reduce = true
                 end
@@ -356,7 +356,7 @@ function _map_ravens2math_conductor!(data_math::Dict{String,<:Any}, data_ravens:
                 y_coords = Vector{Float64}(undef, num_of_wires)
 
                 for i in 1:1:num_of_wires
-                    seq_num = wire_positions[i]["WirePosition.sequenceNumber"]
+                    seq_num = get(wire_positions[i], "WirePosition.sequenceNumber", i)
                     x_coords[seq_num] = get(wire_positions[i], "WirePosition.xCoord", 0.0)
                     y_coords[seq_num] = get(wire_positions[i], "WirePosition.yCoord", 0.0)
                 end
@@ -923,8 +923,9 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                             transf_end_noloadtest = get(transf_end_info[wdg_endNumber], "TransformerEndInfo.EnergisedEndNoLoadTests", [Dict()])
                             loss = get(transf_end_noloadtest[1], "NoLoadTest.loss", 0.0)
                             g_sh_tank =  (loss/(0.01*(snom_wdg/1000.0)))/zbase
-                            exct_current = get(transf_end_noloadtest[1], "NoLoadTest.excitingCurrent", 0.0)
-                            cmag = sqrt(exct_current^2 - (loss*100.0/(0.01*(snom_wdg/1000.0)))^2)/100
+                            pctNoLoadLoss = loss*100.0/(0.01*(snom_wdg/1000.0))
+                            exct_current = get(transf_end_noloadtest[1], "NoLoadTest.excitingCurrent", pctNoLoadLoss)
+                            cmag = sqrt(exct_current^2 - pctNoLoadLoss^2)/100
                             b_sh_tank = -(cmag*snom_wdg)/(vnom_wdg^2)
                             # data is measured externally, but we now refer it to the internal side
                             g_sh[tank_id] = g_sh_tank*ratios^2
