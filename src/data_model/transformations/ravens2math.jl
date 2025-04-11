@@ -1948,8 +1948,8 @@ function _map_ravens2math_power_electronics!(data_math::Dict{String,<:Any}, data
 
 
                 # Set pg and qg
-                math_obj["pg"] = (get(ravens_obj, "PowerElectronicsConnection.p", 0.0) * ones(nconductors) ./ nconductors)./(power_scale_factor)
-                math_obj["qg"] = (get(ravens_obj, "PowerElectronicsConnection.q", 0.0) * ones(nconductors) ./ nconductors)./(power_scale_factor)
+                math_obj["pg"] = (get(ravens_obj, "PowerElectronicsConnection.p", 0.0) * -ones(nconductors) ./ nconductors)./(power_scale_factor)
+                math_obj["qg"] = (get(ravens_obj, "PowerElectronicsConnection.q", 0.0) * -ones(nconductors) ./ nconductors)./(power_scale_factor)
 
                 # TODO: add a polynomial parameters to be added to gen cost
                 _add_gen_cost_model!(math_obj, ravens_obj)
@@ -2020,8 +2020,8 @@ function _map_ravens2math_power_electronics!(data_math::Dict{String,<:Any}, data
                 math_obj["control_mode"] = control_mode = Int(get(ravens_obj, "control_mode", FREQUENCYDROOP))
 
                 # Set the ps and qs
-                math_obj["ps"] = (get(ravens_obj, "PowerElectronicsConnection.p", 0.0))./(power_scale_factor)
-                math_obj["qs"] = (get(ravens_obj, "PowerElectronicsConnection.q", 0.0))./(power_scale_factor)
+                math_obj["ps"] = (-get(ravens_obj, "PowerElectronicsConnection.p", 0.0))./(power_scale_factor)
+                math_obj["qs"] = (-get(ravens_obj, "PowerElectronicsConnection.q", 0.0))./(power_scale_factor)
 
                 # Set bus type
                 bus_type = data_math["bus"]["$(math_obj["storage_bus"])"]["bus_type"]
@@ -2114,10 +2114,10 @@ function _map_ravens2math_switch!(data_math::Dict{String,<:Any}, data_ravens::Di
         if haskey(ravens_obj, "PowerSystemResource.AssetDatasheet")
             swinfo_name = _extract_name(ravens_obj["PowerSystemResource.AssetDatasheet"])
             swinfo_data = data_ravens["AssetInfo"]["SwitchInfo"][swinfo_name]
-            math_obj["current_rating"] = fill(get(swinfo_data, "SwitchInfo.ratedCurrent", Inf), nphases)
+            math_obj["current_rating"] = fill(get(swinfo_data, "SwitchInfo.breakingCapacity", get(swinfo_data, "SwitchInfo.ratedCurrent", Inf)), nphases)
             math_obj["sm_ub"] = math_obj["current_rating"] .* get(swinfo_data, "SwitchInfo.ratedVoltage", Inf)
         else
-            math_obj["current_rating"] = fill(get(ravens_obj, "Switch.ratedCurrent", Inf), nphases)
+            math_obj["current_rating"] = fill(get(swinfo_data, "SwitchInfo.breakingCapacity", get(swinfo_data, "SwitchInfo.ratedCurrent", Inf)), nphases)
             math_obj["sm_ub"] = math_obj["current_rating"] .* get(ravens_obj, "Switch.ratedVoltage", Inf)
         end
 
