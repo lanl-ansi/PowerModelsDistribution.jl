@@ -177,7 +177,7 @@ function _map_ravens2math_nw!(data_math::Dict{String,<:Any}, data_ravens::Dict{S
     if nw==0
 
         data_math["map"] = Vector{Dict{String,Any}}([
-            Dict{String,Any}("unmap_function" => "_map_math2ravens_root!")
+            Dict{String,Any}("unmap_function" => "_map_math2eng_root!")
         ])
 
         _init_base_components!(data_math)
@@ -204,7 +204,7 @@ function _map_ravens2math_nw!(data_math::Dict{String,<:Any}, data_ravens::Dict{S
     else
 
         data_math[string(nw)]["map"] = Vector{Dict{String,Any}}([
-            Dict{String,Any}("unmap_function" => "_map_math2ravens_root!")
+            Dict{String,Any}("unmap_function" => "_map_math2eng_root!")
         ])
 
         _init_base_components!(data_math[string(nw)])
@@ -271,7 +271,7 @@ function _map_ravens2math_connectivity_node!(data_math::Dict{String,<:Any}, data
         push!(data_math["map"], Dict(
             "from" => name,
             "to" => "bus.$index",
-            "unmap_function" => "_map_math2ravens_bus!"
+            "unmap_function" => "_map_math2eng_bus!"
         ))
     end
 end
@@ -537,7 +537,7 @@ function _map_ravens2math_conductor!(data_math::Dict{String,<:Any}, data_ravens:
             push!(data_math["map"], Dict{String,Any}(
                 "from" => name,
                 "to" => "branch.$(math_obj["index"])",
-                "unmap_function" => "_map_math2ravens_line!",
+                "unmap_function" => "_map_math2eng_line!",
             ))
 
         end
@@ -561,7 +561,7 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
         push!(data_math["map"], Dict{String,Any}(
             "from" => name,
             "to" => String[],
-            "unmap_function" => "_map_math2ravens_transformer!",
+            "unmap_function" => "_map_math2eng_transformer!",
         ))
 
         to_map = data_math["map"][end]["to"]
@@ -1605,7 +1605,7 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
         push!(data_math["map"], Dict{String,Any}(
             "from" => name,
             "to" => "load.$(math_obj["index"])",
-            "unmap_function" => "_map_math2ravens_load!",
+            "unmap_function" => "_map_math2eng_load!",
         ))
     end
 end
@@ -1750,7 +1750,7 @@ function _map_ravens2math_energy_source!(data_math::Dict{String,<:Any}, data_rav
         push!(data_math["map"], Dict{String,Any}(
             "from" => name,
             "to" => map_to,
-            "unmap_function" => "_map_math2ravens_energy_source!",
+            "unmap_function" => "_map_math2eng_voltage_source!",
         ))
     end
 end
@@ -1859,7 +1859,7 @@ function _map_ravens2math_rotating_machine!(data_math::Dict{String,<:Any}, data_
             push!(data_math["map"], Dict{String,Any}(
                 "from" => name,
                 "to" => "gen.$(math_obj["index"])",
-                "unmap_function" => "_map_math2ravens_rotating_machine!",
+                "unmap_function" => "_map_math2eng_generator!",
             ))
         end
 
@@ -1960,7 +1960,7 @@ function _map_ravens2math_power_electronics!(data_math::Dict{String,<:Any}, data
                 push!(data_math["map"], Dict{String,Any}(
                     "from" => name,
                     "to" => "gen.$(math_obj["index"])",
-                    "unmap_function" => "_map_math2ravens_photovoltaic_unit!",
+                    "unmap_function" => "_map_math2eng_solar!",
                 ))
 
             elseif (pec_type == "BatteryUnit")
@@ -2036,7 +2036,7 @@ function _map_ravens2math_power_electronics!(data_math::Dict{String,<:Any}, data
                 push!(data_math["map"], Dict{String,Any}(
                     "from" => name,
                     "to" => "storage.$(math_obj["index"])",
-                    "unmap_function" => "_map_math2ravens_battery_unit!",
+                    "unmap_function" => "_map_math2eng_solar!",
                 ))
             end
         end
@@ -2135,7 +2135,7 @@ function _map_ravens2math_switch!(data_math::Dict{String,<:Any}, data_ravens::Di
         push!(data_math["map"], Dict{String,Any}(
             "from" => name,
             "to" => map_to,
-            "unmap_function" => "_map_math2ravens_switch!",
+            "unmap_function" => "_map_math2eng_switch!",
         ))
 
     end
@@ -2196,7 +2196,7 @@ function _map_ravens2math_shunt_compensator!(data_math::Dict{String,<:Any}, data
             push!(data_math["map"], Dict{String,Any}(
                 "from" => name,
                 "to" => "shunt.$(math_obj["index"])",
-                "unmap_function" => "_map_math2ravens_shunt!",
+                "unmap_function" => "_map_math2eng_shunt!",
             ))
         end
     end
