@@ -858,6 +858,9 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
             tm_fix = Vector{Vector{Bool}}(fill(ones(Bool, nphases), nrw))
             tm_step = Vector{Vector{Float64}}(fill(fill(1/32, nphases), nrw))
 
+            # Init transf_star_impedance
+            transf_star_impedance = Dict()
+
             for tank_id in 1:ntanks
 
                 # Get wdg data
@@ -901,14 +904,22 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                     # assign vnom_wdg to vnom for transformer
                     vnom[wdg_endNumber] = vnom_wdg
 
+                    # Transformer star impedance when values are missing for other windings.
+                    if (wdg_endNumber != 1 && transf_star_impedance != Dict())
+                        transf_star_impedance = get(transf_end_info[wdg_endNumber], "TransformerEndInfo.TransformerStarImpedance", transf_end_info[wdg_endNumber-1]["TransformerEndInfo.TransformerStarImpedance"])
+                        ratios = vnom[wdg_endNumber-1]/voltage_scale_factor
+                    else
+                        transf_star_impedance = get(transf_end_info[wdg_endNumber], "TransformerEndInfo.TransformerStarImpedance", Dict())
+                    end
+
                     # resistance computation
-                    transf_star_impedance = get(transf_end_info[wdg_endNumber], "TransformerEndInfo.TransformerStarImpedance", Dict())
                     r_s[wdg_endNumber][tank_id] = get(transf_end_info[wdg_endNumber], "TransformerEndInfo.r",
                                         get(transf_star_impedance, "TransformerStarImpedance.r", 0.0))
 
                     # reactance computation
                     x_sc[wdg_endNumber][tank_id] = get(transf_end_info[wdg_endNumber], "TransformerEndInfo.x",
                                         get(transf_star_impedance, "TransformerStarImpedance.x", 0.0))
+
                     # -- alternative computation of xsc using sc tests
                     if haskey(transf_end_info[wdg_endNumber], "TransformerEndInfo.EnergisedEndShortCircuitTests")
                         leak_impedance_wdg = transf_end_info[wdg_endNumber]["TransformerEndInfo.EnergisedEndShortCircuitTests"][1]["ShortCircuitTest.leakageImpedance"]
