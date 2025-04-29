@@ -646,11 +646,13 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
 
                 # resistance
                 transf_star_impedance = get(wdgs[wdg_endNumber], "TransformerEnd.StarImpedance", Dict())
+                transf_mesh_impedance = get(wdgs[wdg_endNumber], "TransformerEnd.MeshImpedance", Dict())
+
                 r_s[wdg_endNumber] = get(wdgs[wdg_endNumber], "PowerTransformerEnd.r",
-                                        get(transf_star_impedance, "TransformerStarImpedance.r", 0.0))
+                                        get(transf_star_impedance, "TransformerStarImpedance.r",
+                                            get(transf_mesh_impedance, "TransformerMeshImpedance.r", 0.0))./2) # divide by 2 because XFRMR Star Resistance includes both windings.
 
                 # reactance
-                transf_mesh_impedance = get(wdgs[wdg_endNumber], "TransformerEnd.MeshImpedance", Dict())
                 x_sc[wdg_endNumber] = get(transf_mesh_impedance, "TransformerMeshImpedance.x",
                                         get(transf_star_impedance, "TransformerStarImpedance.x", 0.0))
 
@@ -914,7 +916,7 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
 
                     # resistance computation
                     r_s[wdg_endNumber][tank_id] = get(transf_end_info[wdg_endNumber], "TransformerEndInfo.r",
-                                        get(transf_star_impedance, "TransformerStarImpedance.r", 0.0))
+                                        get(transf_star_impedance, "TransformerStarImpedance.r", 0.0)./2) # divide by 2 because XFRMR Star Resistance includes both windings.
 
                     # reactance computation
                     x_sc[wdg_endNumber][tank_id] = get(transf_end_info[wdg_endNumber], "TransformerEndInfo.x",
