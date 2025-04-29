@@ -297,7 +297,7 @@ function _map_ravens2math_conductor!(data_math::Dict{String,<:Any}, data_ravens:
             math_obj["f_bus"] = data_math["bus_lookup"][f_node]
             math_obj["t_bus"] = data_math["bus_lookup"][t_node]
 
-            bus_terminals = nconds >= 3 ? collect(1:nconds) : [_phase_map[phase["ACLineSegmentPhase.phase"]] for phase in ravens_obj["ACLineSegment.ACLineSegmentPhase"]]
+            bus_terminals = nconds >= 4 ? collect(1:nconds) : [_phase_map[phase["ACLineSegmentPhase.phase"]] for phase in ravens_obj["ACLineSegment.ACLineSegmentPhase"]]
 
             # TODO: Kron reduce bus terminals by removing conn 4
             reduce = false # flag for Kron reduction
