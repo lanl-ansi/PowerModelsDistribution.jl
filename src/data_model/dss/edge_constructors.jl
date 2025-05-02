@@ -305,7 +305,7 @@ function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}
             r2 = real(puz2) * Zbase
             x2 = imag(puz2) * Zbase
             vsource.r0 = real(puz0) * Zbase
-            vsource.x1 = imag(puz0) * Zbase
+            vsource.x0 = imag(puz0) * Zbase
         elseif (:r1 ∈ raw_fields && :x1 ∈ raw_fields)
             r2 = vsource.r1
             x2 = vsource.x1
