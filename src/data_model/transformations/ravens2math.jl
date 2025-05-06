@@ -1659,10 +1659,16 @@ function _map_ravens2math_power_electronics!(data_math::Dict{String,<:Any}, data
                 data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"] = _compute_bus_type(bus_type, status, control_mode)
 
                 # Set the nominal voltage
-                base_voltage_ref = _extract_name(ravens_obj["ConductingEquipment.BaseVoltage"])
-                nominal_voltage = data_ravens["BaseVoltage"][base_voltage_ref]["BaseVoltage.nominalVoltage"]
-                base_voltage =  nominal_voltage / sqrt(nconductors)
-                math_obj["vbase"] =  base_voltage / voltage_scale_factor
+                bus_conn =  data_math["bus"]["$(math_obj["gen_bus"])"]
+                if haskey(ravens_obj, "ConductingEquipment.BaseVoltage")
+                    base_voltage_ref = _extract_name(ravens_obj["ConductingEquipment.BaseVoltage"])
+                    nominal_voltage = data_ravens["BaseVoltage"][base_voltage_ref]["BaseVoltage.nominalVoltage"]
+                    base_voltage =  nominal_voltage / sqrt(nconductors)
+                    math_obj["vbase"] =  base_voltage / voltage_scale_factor
+                else
+                    math_obj["vbase"] = data_math["settings"]["vbases_buses"][string(math_obj["gen_bus"])]
+                    nominal_voltage = math_obj["vbase"] * voltage_scale_factor * sqrt(nconductors)
+                end
 
                 if control_mode == Int(ISOCHRONOUS) && status == 1
                     data_math["bus"]["$(math_obj["gen_bus"])"]["vm"] = ((get(ravens_obj, "PowerElectronicsConnection.ratedU", nominal_voltage))/nominal_voltage)* ones(nconductors)
@@ -1720,8 +1726,8 @@ function _map_ravens2math_power_electronics!(data_math::Dict{String,<:Any}, data
 
                 math_obj = _init_math_obj_ravens("storage", name, ravens_obj, length(data_math["storage"])+1; pass_props=pass_props)
 
-                # TODO: connections/phases do not exist in the RAVENS-CIM (Need to be added) - should come from terminals
-                connections = [1, 2, 3] # TODO
+                # Connections/phases
+                connections = _phasecode_map[get(ravens_obj["ConductingEquipment.Terminals"][1], "Terminal.phases", "PhaseCode.ABC")]
                 nconductors = length(connections)
                 math_obj["connections"] = connections
 
@@ -1789,7 +1795,7 @@ function _map_ravens2math_power_electronics!(data_math::Dict{String,<:Any}, data
                 push!(data_math["map"], Dict{String,Any}(
                     "from" => name,
                     "to" => "storage.$(math_obj["index"])",
-                    "unmap_function" => "_map_math2eng_solar!",
+                    "unmap_function" => "_map_math2eng_storage!",
                 ))
             end
         end
