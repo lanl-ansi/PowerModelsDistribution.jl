@@ -168,7 +168,7 @@ function build_mn_mc_opf_oltc(pm::AbstractUnbalancedPowerModel)
         variable_mc_branch_power(pm; nw=n)
         variable_mc_switch_power(pm; nw=n)
         variable_mc_transformer_power(pm; nw=n)
-        variable_mc_oltc_transformer_tap(pm; nw=n)  
+        variable_mc_oltc_transformer_tap(pm; nw=n)
         variable_mc_generator_power(pm; nw=n)
         variable_mc_load_power(pm; nw=n)
         variable_mc_storage_power(pm; nw=n)
@@ -219,7 +219,7 @@ function build_mn_mc_opf_oltc(pm::AbstractUnbalancedPowerModel)
             constraint_mc_transformer_power(pm, i, fix_taps=false; nw=n)
         end
     end
-    
+
     network_ids = sort(collect(nw_ids(pm)))
 
     n_1 = network_ids[1]
@@ -235,6 +235,6 @@ function build_mn_mc_opf_oltc(pm::AbstractUnbalancedPowerModel)
 
         n_1 = n_2
     end
-    
+
     objective_mc_min_fuel_cost(pm)
 end
