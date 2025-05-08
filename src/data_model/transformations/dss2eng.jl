@@ -410,6 +410,24 @@ function _dss2eng_linecode!(data_eng::Dict{String,<:Any}, data_dss::OpenDssDataM
             _import_all!(eng_obj, dss_obj)
         end
 
+        # kron reduction on linecode only if kron key is found
+        reduce = get(dss_obj, "kron", false)
+        if reduce == true
+            nphases = nphases - 1
+            Z = eng_obj["rs"] + im*eng_obj["xs"]
+            Y = (eng_obj["g_fr"].* 2.0) + (im*eng_obj["b_fr"] .* 2.0)
+            z, y = _kron(Z, Y, nphases)
+            rs, xs = real(z), imag(z)
+            g, b = real(y), imag(y)
+            eng_obj["rs"] = rs
+            eng_obj["xs"] = xs
+            eng_obj["b_fr"] = b ./ 2.0
+            eng_obj["b_to"] = b ./ 2.0
+            eng_obj["g_fr"] = g ./ 2.0
+            eng_obj["g_to"] = g ./ 2.0
+            eng_obj["cm_ub"] = fill(dss_obj["emergamps"], nphases)
+        end
+
         _add_eng_obj!(data_eng, "linecode", id, eng_obj)
     end
 end

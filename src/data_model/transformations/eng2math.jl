@@ -487,6 +487,7 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
                 # 2-WINDING TRANSFORMER
                 # make virtual bus and mark it for reduction
                 tm_nom = eng_obj["configuration"][w]==DELTA ? eng_obj["vm_nom"][w]*sqrt(3) : eng_obj["vm_nom"][w]
+
                 transformer_2wa_obj = Dict{String,Any}(
                     "name"          => "_virtual_transformer.$name.$w",
                     "source_id"     => "_virtual_transformer.$(eng_obj["source_id"]).$w",

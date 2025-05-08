@@ -68,3 +68,12 @@ dist_transformer = parse_file("../test/data/opendss/dist_transformer.dss")
 # IEEE13 Feeder
 IEEE13_Feeder_engr = parse_file("../test/data/opendss/ieee13_feeder.dss", multinetwork=true,
     time_series="daily", transformations=[remove_line_limits!, remove_transformer_limits!])
+
+# RAVENS
+ravens_case3_withgens = parse_file("../test/data/ravens/ravens_case3_withgens.json")
+ravens_case3_withpvandstorage = parse_file("../test/data/ravens/ravens_case3_withpvandstorage.json")
+ravens_case3_withsubxf = parse_file("../test/data/ravens/ravens_case3_withsubxf.json")
+ravens_case3_withcap = parse_file("../test/data/ravens/ravens_case3_withcap.json")
+ravens_test_switch_3w = parse_file("../test/data/ravens/ravens_test_switch_3w.json")
+# ravens_test_switch_1w = parse_file("../test/data/ravens/ravens_test_switch_1w.json")
+ravens_case3_withgens_mn = parse_file("../test/data/ravens/ravens_case3_withgens_mn.json")

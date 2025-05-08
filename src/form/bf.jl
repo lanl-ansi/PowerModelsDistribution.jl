@@ -109,10 +109,10 @@ function constraint_mc_transformer_power_dy(pm::LPUBFDiagModel, nw::Int, trans_i
     tm = [tm_fixed[idx] ? tm_set[idx] : var(pm, nw, :tap, trans_id)[fc] for (idx,(fc,tc)) in enumerate(zip(f_connections,t_connections))]
     nph = length(tm_set)
 
-    p_fr = [var(pm, nw, :pt, f_idx)[c] for c in f_connections]
-    p_to = [var(pm, nw, :pt, t_idx)[c] for c in t_connections]
-    q_fr = [var(pm, nw, :qt, f_idx)[c] for c in f_connections]
-    q_to = [var(pm, nw, :qt, t_idx)[c] for c in t_connections]
+    p_fr = var(pm, nw, :pt, f_idx)
+    p_to = var(pm, nw, :pt, t_idx)
+    q_fr = var(pm, nw, :qt, f_idx)
+    q_to = var(pm, nw, :qt, t_idx)
 
     w_fr = var(pm, nw, :w)[f_bus]
     w_to = var(pm, nw, :w)[t_bus]
