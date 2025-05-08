@@ -698,14 +698,23 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                     # Regulator Control
                     if haskey(rtc_data, "TapChanger.TapChangerControl") && !all(tm_fix[wdg_endNumber])
                         reg_controls[wdg_endNumber] = true
+
+                        if haskey(rtc_data, "TapChanger.TapChangerRatio")
+                            ptRatio = get(rtc_data["TapChanger.TapChangerRatio"], "TapChanger.ptRatio", 60.0)
+                            ctRating = get(rtc_data["TapChanger.TapChangerRatio"], "TapChanger.ctRating", 0.2)
+                        else
+                            ptRatio = 60.0
+                            ctRating = 0.2
+                        end
+
                         reg_obj[wdg_endNumber] = Dict{String,Any}(
                                 "vreg" => fill(rtc_data["TapChanger.TapChangerControl"]["RegulatingControl.targetValue"], nphases),
                                 "band" =>  fill(rtc_data["TapChanger.TapChangerControl"]["RegulatingControl.targetDeadband"], nphases),
-                                "ptratio" => fill(rtc_data["TapChanger.ptRatio"], nphases),
-                                "ctprim" => fill(rtc_data["TapChanger.ctRating"], nphases),
+                                "ptratio" => fill(ptRatio, nphases),
+                                "ctprim" => fill(ctRating, nphases),
                                 "r" => fill(rtc_data["TapChanger.TapChangerControl"]["TapChangerControl.lineDropR"], nphases),
                                 "x" => fill(rtc_data["TapChanger.TapChangerControl"]["TapChangerControl.lineDropX"], nphases)
-                            )
+                        )
                     end
 
                 else # default
@@ -1005,14 +1014,23 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                         # Regulator Control
                         if haskey(rtc_data, "TapChanger.TapChangerControl") && !all(tm_fix[wdg_endNumber])
                             reg_controls[wdg_endNumber] = true
+
+                            if haskey(rtc_data, "TapChanger.TapChangerRatio")
+                                ptRatio = get(rtc_data["TapChanger.TapChangerRatio"], "TapChanger.ptRatio", 60.0)
+                                ctRating = get(rtc_data["TapChanger.TapChangerRatio"], "TapChanger.ctRating", 0.2)
+                            else
+                                ptRatio = 60.0
+                                ctRating = 0.2
+                            end
+
                             reg_obj[wdg_endNumber] = Dict{String,Any}(
                                     "vreg" => fill(rtc_data["TapChanger.TapChangerControl"]["RegulatingControl.targetValue"], nphases),
                                     "band" =>  fill(rtc_data["TapChanger.TapChangerControl"]["RegulatingControl.targetDeadband"], nphases),
-                                    "ptratio" => fill(rtc_data["TapChanger.ptRatio"], nphases),
-                                    "ctprim" => fill(rtc_data["TapChanger.ctRating"], nphases),
+                                    "ptratio" => fill(ptRatio, nphases),
+                                    "ctprim" => fill(ctRating, nphases),
                                     "r" => fill(rtc_data["TapChanger.TapChangerControl"]["TapChangerControl.lineDropR"], nphases),
                                     "x" => fill(rtc_data["TapChanger.TapChangerControl"]["TapChangerControl.lineDropX"], nphases)
-                                )
+                            )
                         end
 
                     end
