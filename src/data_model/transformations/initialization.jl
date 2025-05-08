@@ -260,7 +260,7 @@ add_start_vrvi!(data_math::Dict{String,Any}; kwargs...)
 
 Short-hand for [`add_start_voltage`](@ref add_start_voltage) with rectangular coordinates (coordinates=:rectangular).
 """
-add_start_vrvi!(data_math::Dict{String,Any}; kwargs...) = add_start_voltage!(data_math, coordinates=:rectangular, kwargs...)
+add_start_vrvi!(data_math::Dict{String,Any}; kwargs...) = add_start_voltage!(data_math; coordinates=:rectangular, kwargs...)
 
 
 """
@@ -268,4 +268,4 @@ add_start_vmva!(data_math::Dict{String,Any}; kwargs...)
 
 Short-hand for [`add_start_voltage`](@ref add_start_voltage) with polar coordinates (coordinates=:polar).
 """
-add_start_vmva!(data_math::Dict{String,Any}; kwargs...) = add_start_voltage!(data_math, coordinates=:polar, kwargs...)
+add_start_vmva!(data_math::Dict{String,Any}; kwargs...) = add_start_voltage!(data_math; coordinates=:polar, kwargs...)
