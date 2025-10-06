@@ -529,6 +529,11 @@ function _map_ravens2math_conductor!(data_math::Dict{String,<:Any}, data_ravens:
             end
 
             math_obj["br_status"] = get(ravens_obj, "Equipment.inService", true) == true ? 1 : 0
+            bus_data = data_math["bus"][string(math_obj["t_bus"])]
+            if(math_obj["br_status"] == 0)
+                bus_data["bus_type"] = 4
+            end
+
             data_math["branch"]["$(math_obj["index"])"] = math_obj
 
             push!(data_math["map"], Dict{String,Any}(
@@ -1386,7 +1391,11 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
         end
 
         # Set bus type to PQ bus
-        bus_conn["bus_type"] = 1
+        if(math_obj["status"] == 0)
+            bus_conn["bus_type"] = 4
+        else
+            bus_conn["bus_type"] = 1
+        end
 
         # Map the object
         push!(data_math["map"], Dict{String,Any}(
@@ -1415,7 +1424,6 @@ function _map_ravens2math_energy_source!(data_math::Dict{String,<:Any}, data_rav
         gen_bus = data_math["bus_lookup"][connectivity_node]
         math_obj["gen_bus"] = gen_bus
         bus_conn = data_math["bus"][string(gen_bus)]
-        bus_conn["bus_type"] = 3  # Set bus type to PV bus
 
         # Handle phase-specific or three-phase connection
         connections = Vector{Int64}()
@@ -1451,6 +1459,12 @@ function _map_ravens2math_energy_source!(data_math::Dict{String,<:Any}, data_rav
         # Generator status and configuration
         math_obj["gen_status"] = haskey(ravens_obj, "Equipment.inService") ? ravens_obj["Equipment.inService"] : true
         math_obj["gen_status"] = math_obj["gen_status"] == true ? 1 : 0
+
+        if(math_obj["gen_status"] == 0)
+            bus_conn["bus_type"] = 4
+        else
+            bus_conn["bus_type"] = 3
+        end
 
         math_obj["configuration"] = get(ravens_obj, "EnergySource.connectionKind", WYE)
 
@@ -1489,7 +1503,12 @@ function _map_ravens2math_energy_source!(data_math::Dict{String,<:Any}, data_rav
         # Check for impedance and adjust bus type if necessary
         map_to = "gen.$(math_obj["index"])"
         if !all(isapprox.(rs, 0)) && !all(isapprox.(xs, 0))
-            bus_conn["bus_type"] = 1  # Virtual bus becomes the new slack bus
+
+            if(math_obj["gen_status"] == 0)
+                bus_conn["bus_type"] = 4
+            else
+                bus_conn["bus_type"] = 1    # Virtual bus becomes the new slack bus
+            end
 
             bus_obj = Dict(
                 "bus_i" => length(data_math["bus"]) + 1,
@@ -1600,7 +1619,12 @@ function _map_ravens2math_rotating_machine!(data_math::Dict{String,<:Any}, data_
             end
 
             # Set bus type
-            bus_type = data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"]
+            if(status == 0)
+                bus_type = 4
+            else
+                bus_type = data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"]
+            end
+
             data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"] = _compute_bus_type(bus_type, status, control_mode)
 
             # Set the nominal voltage
@@ -1704,7 +1728,12 @@ function _map_ravens2math_power_electronics!(data_math::Dict{String,<:Any}, data
                 math_obj["control_mode"] = control_mode = Int(get(ravens_obj, "control_mode", FREQUENCYDROOP))
 
                 # Set bus type
-                bus_type = data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"]
+                if(status == 0)
+                    bus_type = 4
+                else
+                    bus_type = data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"]
+                end
+
                 data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"] = _compute_bus_type(bus_type, status, control_mode)
 
                 # Set the nominal voltage
@@ -1870,7 +1899,12 @@ function _map_ravens2math_power_electronics!(data_math::Dict{String,<:Any}, data
                 math_obj["qs"] = (-get(ravens_obj, "PowerElectronicsConnection.q", 0.0))./(power_scale_factor)
 
                 # Set bus type
-                bus_type = data_math["bus"]["$(math_obj["storage_bus"])"]["bus_type"]
+                if(status == 0)
+                    bus_type = 4
+                else
+                    bus_type = data_math["bus"]["$(math_obj["storage_bus"])"]["bus_type"]
+                end
+
                 data_math["bus"]["$(math_obj["storage_bus"])"]["bus_type"] = _compute_bus_type(bus_type, status, control_mode)
 
                 if control_mode == Int(ISOCHRONOUS) && math_obj["status"] == 1
@@ -1947,6 +1981,10 @@ function _map_ravens2math_switch!(data_math::Dict{String,<:Any}, data_ravens::Di
         # Status
         status = get(ravens_obj, "Equipment.inService", true)
         math_obj["status"] = status == true ? 1 : 0
+        bus_data = data_math["bus"][string(math_obj["t_bus"])]
+        if(status == 0)
+            bus_data["bus_type"] = 4
+        end
 
         # State
         sw_state = CLOSED
@@ -2021,6 +2059,14 @@ function _map_ravens2math_shunt_compensator!(data_math::Dict{String,<:Any}, data
             # Status
             status = haskey(ravens_obj, "Equipment.inService") ? ravens_obj["Equipment.inService"] : true
             math_obj["status"] = status == true ? 1 : 0
+
+            bus_info = string(math_obj["shunt_bus"])
+            bus_conn = data_math["bus"][bus_info]
+            if(math_obj["status"] == 0)
+                bus_conn["bus_type"] = 4
+            else
+                bus_conn["bus_type"] = 1
+            end
 
             # Connections/phases obtained from Terminals
             connections = _phasecode_map[get(ravens_obj["ConductingEquipment.Terminals"][1], "Terminal.phases", "PhaseCode.ABC")]

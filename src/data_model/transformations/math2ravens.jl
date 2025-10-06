@@ -222,6 +222,15 @@ function transform_solution_ravens(
                         begin
                             if haskey(solution_math["nw"][nw]["transformer"][tr_id], "status")
                                 tr_status = Int(solution_math["nw"][nw]["transformer"][tr_id]["status"]) == 1 ? true : false
+                            else
+                                # deduce the element status based on status of t_bus
+                                t_bus_id = nw_data["transformer"][tr_id]["t_bus"] # index for t_bus of edge element
+                                t_bus_status = Int(solution_math["nw"][nw]["bus"]["$(t_bus_id)"]["status"])
+                                if (t_bus_status == 0)
+                                    tr_status = false
+                                else
+                                    tr_status = true
+                                end
                             end
                             Dict("AvStatus.inService" => tr_status)
                         end
@@ -307,16 +316,27 @@ function transform_solution_ravens(
                 end
 
                 ed_status = nw_data[ed][ed_id]["$(obj_prfx)status"] == 1 ? true : false
+
                 if mn_flag
                     data = Dict("AnalysisResultData.Curve" => _make_curve_data(nws, data_math, nw ->
                             begin
                                 if haskey(solution_math["nw"][nw][ed][ed_id], "status")
                                     ed_status = Int(solution_math["nw"][nw][ed][ed_id]["status"]) == 1 ? true : false
+                                else
+                                    # deduce the element status based on status of t_bus
+                                    t_bus_id = nw_data[ed][ed_id]["t_bus"] # index for t_bus of edge element
+                                    t_bus_status = Int(solution_math["nw"][nw]["bus"]["$(t_bus_id)"]["status"])
+                                    if (t_bus_status == 0)
+                                        ed_status = false
+                                    else
+                                        ed_status = true
+                                    end
                                 end
                                 Dict("AvStatus.inService" => ed_status)
                             end
                         )
                     )
+
                 else
                     data = Dict("AnalysisResultData.DataValues" => Dict("AvStatus.inService" => ed_status))
                 end
