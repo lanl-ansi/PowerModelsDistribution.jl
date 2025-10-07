@@ -223,10 +223,12 @@ function transform_solution_ravens(
                             if haskey(solution_math["nw"][nw]["transformer"][tr_id], "status")
                                 tr_status = Int(solution_math["nw"][nw]["transformer"][tr_id]["status"]) == 1 ? true : false
                             else
-                                # deduce the element status based on status of t_bus
+                                # deduce the element status based on status of f_bus - t_bus
+                                f_bus_id = nw_data["transformer"][tr_id]["f_bus"] # index for f_bus of edge element
                                 t_bus_id = nw_data["transformer"][tr_id]["t_bus"] # index for t_bus of edge element
+                                f_bus_status = Int(solution_math["nw"][nw]["bus"]["$(f_bus_id)"]["status"])
                                 t_bus_status = Int(solution_math["nw"][nw]["bus"]["$(t_bus_id)"]["status"])
-                                if (t_bus_status == 0)
+                                if (f_bus_status == 0 || t_bus_status == 0)
                                     tr_status = false
                                 else
                                     tr_status = true
@@ -324,9 +326,11 @@ function transform_solution_ravens(
                                     ed_status = Int(solution_math["nw"][nw][ed][ed_id]["status"]) == 1 ? true : false
                                 else
                                     # deduce the element status based on status of t_bus
+                                    f_bus_id = nw_data[ed][ed_id]["f_bus"] # index for f_bus of edge element
                                     t_bus_id = nw_data[ed][ed_id]["t_bus"] # index for t_bus of edge element
+                                    f_bus_status = Int(solution_math["nw"][nw]["bus"]["$(f_bus_id)"]["status"])
                                     t_bus_status = Int(solution_math["nw"][nw]["bus"]["$(t_bus_id)"]["status"])
-                                    if (t_bus_status == 0)
+                                    if (f_bus_status == 0 || t_bus_status == 0)
                                         ed_status = false
                                     else
                                         ed_status = true
