@@ -1898,6 +1898,12 @@ function _map_ravens2math_power_electronics!(data_math::Dict{String,<:Any}, data
                 bus_type = 4
                 if(status == 1)
                     bus_type = 1
+                    if haskey(ravens_obj, "PowerElectronicsConnection.PowerElectronicsOperatingMode")
+                        mode = ravens_obj["PowerElectronicsConnection.PowerElectronicsOperatingMode"]["PowerElectronicsOperatingMode.mode"]
+                        if mode == "OperatingModeKind.gridForming"
+                            bus_type = 2
+                        end
+                    end
                 end
 
                 data_math["bus"]["$(math_obj["storage_bus"])"]["bus_type"] = _compute_bus_type(bus_type, status, control_mode)
