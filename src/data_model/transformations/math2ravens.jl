@@ -146,32 +146,35 @@ function transform_solution_ravens(
         phases = _get_phases(terminals, phase_mapping)
         conn_node = split(nw_data["bus"][bus_id]["source_id"], '.')[2]
 
-        for (i, phase) in enumerate(phases)
-            if mn_flag
-                data = Dict("AnalysisResultData.Curve" => _make_curve_data(nws, data_math, nw ->
-                        begin
-                            nw_bus = solution_math["nw"][nw]["bus"][bus_id]
-                            v_info = Dict(
-                                "AvVoltage.v" => nw_bus["vm"][i] * solution_math["nw"][nw]["settings"]["voltage_scale_factor"],
-                                "Ravens.cimObjectType" => "AvVoltage"
-                            )
-                            # Conditionally add the angle (some do not have it)
-                            if haskey(nw_bus, "va")
-                                v_info["AvVoltage.angle"] = nw_bus["va"][i]
+        # Filter virtual buses that exist in the MATH model
+        if !occursin("virtual", nw_data["bus"][bus_id]["name"])
+            for (i, phase) in enumerate(phases)
+                if mn_flag
+                    data = Dict("AnalysisResultData.Curve" => _make_curve_data(nws, data_math, nw ->
+                            begin
+                                nw_bus = solution_math["nw"][nw]["bus"][bus_id]
+                                v_info = Dict(
+                                    "AvVoltage.v" => nw_bus["vm"][i] * solution_math["nw"][nw]["settings"]["voltage_scale_factor"],
+                                    "Ravens.cimObjectType" => "AvVoltage"
+                                )
+                                # Conditionally add the angle (some do not have it)
+                                if haskey(nw_bus, "va")
+                                    v_info["AvVoltage.angle"] = nw_bus["va"][i]
+                                end
+                                return v_info
                             end
-                            return v_info
-                        end
+                        )
                     )
-                )
-            else
-                data = Dict("AnalysisResultData.DataValues" => Dict(
-                    "AvVoltage.v" => bus_data["vm"][i] * solution_math["settings"]["voltage_scale_factor"],
-                    "AvVoltage.angle" => bus_data["va"][i],
-                    "Ravens.cimObjectType" => "AvVoltage"
+                else
+                    data = Dict("AnalysisResultData.DataValues" => Dict(
+                        "AvVoltage.v" => bus_data["vm"][i] * solution_math["settings"]["voltage_scale_factor"],
+                        "AvVoltage.angle" => bus_data["va"][i],
+                        "Ravens.cimObjectType" => "AvVoltage"
+                        )
                     )
-                )
+                end
+                _push_result!(solution_ravens, "OperationsResult.Voltages", _build_voltage_entry(phase, conn_node, data))
             end
-            _push_result!(solution_ravens, "OperationsResult.Voltages", _build_voltage_entry(phase, conn_node, data))
         end
     end
 
