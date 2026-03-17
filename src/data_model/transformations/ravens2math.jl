@@ -1500,7 +1500,8 @@ function _map_ravens2math_energy_source!(data_math::Dict{String,<:Any}, data_rav
 
         # Check for impedance and adjust bus type if necessary
         map_to = "gen.$(math_obj["index"])"
-        if !all(isapprox.(rs, 0)) && !all(isapprox.(xs, 0))
+        #if !all(isapprox.(rs, 0)) && !all(isapprox.(xs, 0))
+        if 2>1
             bus_conn["bus_type"] = 1  # Virtual bus becomes the new slack bus
 
             bus_obj = Dict(
