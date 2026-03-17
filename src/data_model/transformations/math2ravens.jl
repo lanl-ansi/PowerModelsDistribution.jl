@@ -253,7 +253,7 @@ function transform_solution_ravens(
                                 begin
                                     nw_ed = solution_math["nw"][nw][ed][ed_id]
                                     if haskey(nw_ed, "state")
-                                        sw_state = Int(nw_ed["state"]) == 0 ? true : false
+                                        sw_state = round(nw_ed["state"]) == 0 ? true : false
                                     end
                                     Dict("AvSwitch.open" => sw_state)
                                 end
