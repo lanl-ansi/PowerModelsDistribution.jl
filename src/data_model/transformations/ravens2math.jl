@@ -28,6 +28,8 @@ const pmd_ravens_asset_types = String[
 ]
 
 
+
+
 function transform_data_model_ravens(
     data::Dict{String,<:Any};
     kron_reduce::Bool=true,
@@ -53,6 +55,8 @@ function transform_data_model_ravens(
 
     correct_network_data && correct_network_data!(data_math; make_pu=make_pu, make_pu_extensions=make_pu_extensions)
 
+    data_math["switch_close_actions_ub"] = Inf
+
     return data_math
 
 end
@@ -74,10 +78,10 @@ function _map_ravens2math(
     add_base_voltages!(_data_ravens; overwrite=false)
 
     # TODO: Add settings (defaults)
-    basemva = 1
+    basemva = 100
     _settings = Dict("sbase_default" => basemva * 1e3,
                     "voltage_scale_factor" => 1e3,
-                    "power_scale_factor" => 1e3,
+                    "power_scale_factor" => 1000,
                     "base_frequency" => get(_data_ravens, "BaseFrequency", 60.0),
                     "vbases_default" => Dict{String,Real}(),
     )
@@ -92,6 +96,7 @@ function _map_ravens2math(
         )
 
         if haskey(data_ravens, "BasicIntervalSchedule")
+            #("yes it has BasicIntervalSchedule")
             schdls = get(data_ravens, "BasicIntervalSchedule", Dict{String,Any}()) # Get schedules/timeseries
 
             # Check for shortest timeseries. Use that length for mn
@@ -284,7 +289,12 @@ function _map_ravens2math_conductor!(data_math::Dict{String,<:Any}, data_ravens:
 
         for (name, ravens_obj) in get(conductors, "ACLineSegment", Dict{Any,Dict{String,Any}}())
             math_obj = _init_math_obj_ravens("ACLineSegment", name, ravens_obj, length(data_math["branch"]) + 1; pass_props=pass_props)
-            nconds = length(ravens_obj["ACLineSegment.ACLineSegmentPhase"]) # number of conductors/wires
+            nconds = 0
+            try
+                nconds = length(ravens_obj["ACLineSegment.ACLineSegmentPhase"]) # number of conductors/wires
+            catch
+                nconds = 1
+            end
             nphases = 0 # init number of phases
             terminals = ravens_obj["ConductingEquipment.Terminals"]
 
@@ -330,6 +340,7 @@ function _map_ravens2math_conductor!(data_math::Dict{String,<:Any}, data_ravens:
 
                 math_obj["br_r"] = _impedance_conversion_ravens(impedance_data, ravens_obj, "PhaseImpedanceData.r")
                 math_obj["br_x"] = _impedance_conversion_ravens(impedance_data, ravens_obj, "PhaseImpedanceData.x")
+                #println("br_r = ", math_obj["br_r"])
 
                 for (key, param) in [("b_fr", "PhaseImpedanceData.b"), ("b_to", "PhaseImpedanceData.b"), ("g_fr", "PhaseImpedanceData.g"), ("g_to", "PhaseImpedanceData.g")]
                     math_obj[key] = _admittance_conversion_ravens(impedance_data, ravens_obj, param)
@@ -360,7 +371,7 @@ function _map_ravens2math_conductor!(data_math::Dict{String,<:Any}, data_ravens:
 
                 # angular frequency
                 ω = 2π * base_freq
-                ω₀ = 2π * base_freq
+                ω_θ = 2π * base_freq
 
                 # Get data for each specific ACLineSegmentPhase
                 segmentphase_data = ravens_obj["ACLineSegment.ACLineSegmentPhase"]
@@ -462,7 +473,7 @@ function _map_ravens2math_conductor!(data_math::Dict{String,<:Any}, data_ravens:
                     nconds,
                     earth_model,
                     rac,
-                    ω₀,
+                    ω_θ,
                     rdc,
                     rho,
                     nphases,
@@ -1339,10 +1350,11 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
                 end
 
                 # Multipliers instead of actual values
-                if !haskey(schdl, "BasicIntervalSchedule.value1Unit")
-                    math_obj["pd"] = get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value1", 1.0) .* active_power ./ power_scale_factor
-                    math_obj["qd"] = get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value1", 1.0) .* reactive_power ./ power_scale_factor
+                if haskey(schdl, "BasicIntervalSchedule.value1Unit")
+                    math_obj["pd"] = Float64.(get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value1", 1.0) .* active_power ./ power_scale_factor)
+                    math_obj["qd"] = Float64.(get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value1", 1.0) .* reactive_power ./ power_scale_factor)
                 end
+                 #println(math_obj["pd"], "... ...", math_obj["qd"])
 
             else
                 @error("No timeseries, load forecast or multinetwork information found!")
