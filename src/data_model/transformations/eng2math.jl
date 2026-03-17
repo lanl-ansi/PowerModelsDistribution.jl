@@ -928,7 +928,8 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
 
         map_to = "gen.$(math_obj["index"])"
 
-        if !all(isapprox.(get(eng_obj, "rs", zeros(1, 1)), 0)) && !all(isapprox.(get(eng_obj, "xs", zeros(1, 1)), 0))
+        #if !all(isapprox.(get(eng_obj, "rs", zeros(1, 1)), 0)) && !all(isapprox.(get(eng_obj, "xs", zeros(1, 1)), 0))
+        if 2>1
             f_bus = deepcopy(data_math["bus"]["$(math_obj["gen_bus"])"])
 
             bus_obj = Dict{String,Any}(
