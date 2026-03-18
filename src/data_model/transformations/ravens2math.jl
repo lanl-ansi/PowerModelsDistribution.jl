@@ -1307,8 +1307,8 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
                         reactive_power[id] = get(phase_info, "EnergyConsumerPhase.q", 0.0)
                     end
                 else
-                    active_power = fill(get(ravens_obj, "EnergyConsumer.p", 0.0) / (power_scale_factor*nphases), nphases)
-                    reactive_power = fill(get(ravens_obj, "EnergyConsumer.q", 0.0) / (power_scale_factor*nphases), nphases)
+                    active_power = fill(get(ravens_obj, "EnergyConsumer.p", 0.0) / (nphases), nphases)
+                    reactive_power = fill(get(ravens_obj, "EnergyConsumer.q", 0.0) / (nphases), nphases)
                 end
 
                 schdl_name = _extract_name(ravens_obj["EnergyConsumer.LoadProfile"])
