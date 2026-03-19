@@ -820,8 +820,8 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
 
                 #transformer_2wa_obj["tm_lb"] = tm_lb[wdg_id]
                 #transformer_2wa_obj["tm_ub"] = tm_ub[wdg_id]
-                transformer_2wa_obj["tm_lb"] = 0.9
-                transformer_2wa_obj["tm_ub"] = 1.1
+                transformer_2wa_obj["tm_lb"] = 0.9 * ones(length(f_connections))
+                transformer_2wa_obj["tm_ub"] = 1.1 * ones(length(f_connections))
                 transformer_2wa_obj["tm_step"] = tm_step[wdg_id]
 
                 data_math["transformer"]["$(transformer_2wa_obj["index"])"] = transformer_2wa_obj
@@ -1172,8 +1172,8 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                 # RatioTapChanger
                 #transformer_2wa_obj["tm_lb"] = tm_lb[wdg_id]
                 #transformer_2wa_obj["tm_ub"] = tm_ub[wdg_id]
-                transformer_2wa_obj["tm_lb"] = 0.9
-                transformer_2wa_obj["tm_ub"] = 1.1
+                transformer_2wa_obj["tm_lb"] = 0.9 * ones(size(f_connections))
+                transformer_2wa_obj["tm_ub"] = 1.1 * ones(size(f_connections))
                 transformer_2wa_obj["tm_step"] = tm_step[wdg_id]
 
                 data_math["transformer"]["$(transformer_2wa_obj["index"])"] = transformer_2wa_obj
