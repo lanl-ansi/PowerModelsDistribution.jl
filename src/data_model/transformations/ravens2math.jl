@@ -818,8 +818,10 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                 )
 
 
-                transformer_2wa_obj["tm_lb"] = tm_lb[wdg_id]
-                transformer_2wa_obj["tm_ub"] = tm_ub[wdg_id]
+                #transformer_2wa_obj["tm_lb"] = tm_lb[wdg_id]
+                #transformer_2wa_obj["tm_ub"] = tm_ub[wdg_id]
+                transformer_2wa_obj["tm_lb"] = 0.9
+                transformer_2wa_obj["tm_ub"] = 1.1
                 transformer_2wa_obj["tm_step"] = tm_step[wdg_id]
 
                 data_math["transformer"]["$(transformer_2wa_obj["index"])"] = transformer_2wa_obj
@@ -1032,8 +1034,10 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                         step_volt_increment = get(rtc_data, "RatioTapChanger.stepVoltageIncrement", 100.0)
                         volt_lb = neutralVoltPu + step_tap * (step_volt_increment/100.0) * lstep
                         volt_ub = neutralVoltPu + step_tap * (step_volt_increment/100.0) * hstep
-                        tm_lb[wdg_endNumber] = fill(volt_lb, nphases)
-                        tm_ub[wdg_endNumber] = fill(volt_ub, nphases)
+                        #tm_lb[wdg_endNumber] = fill(volt_lb, nphases)
+                        #tm_ub[wdg_endNumber] = fill(volt_ub, nphases)
+                        tm_lb[wdg_endNumber] = fill(0.9, nphases)
+                        tm_ub[wdg_endNumber] = fill(1.1, nphases)
 
                         # Regulator Control
                         if haskey(rtc_data, "TapChanger.TapChangerControl") && !all(tm_fix[wdg_endNumber])
@@ -1166,8 +1170,10 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                 )
 
                 # RatioTapChanger
-                transformer_2wa_obj["tm_lb"] = tm_lb[wdg_id]
-                transformer_2wa_obj["tm_ub"] = tm_ub[wdg_id]
+                #transformer_2wa_obj["tm_lb"] = tm_lb[wdg_id]
+                #transformer_2wa_obj["tm_ub"] = tm_ub[wdg_id]
+                transformer_2wa_obj["tm_lb"] = 0.9
+                transformer_2wa_obj["tm_ub"] = 1.1
                 transformer_2wa_obj["tm_step"] = tm_step[wdg_id]
 
                 data_math["transformer"]["$(transformer_2wa_obj["index"])"] = transformer_2wa_obj
