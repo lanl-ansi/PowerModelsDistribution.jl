@@ -1407,7 +1407,7 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
             "to" => "load.$(math_obj["index"])",
             "unmap_function" => "_map_math2eng_load!",
         ))
-        push!(data_math["settings"]["vnom_kv"], math_obj["load_bus"] => math_obj["vnom_kv"])
+        push!(data_math["settings"]["vnom_kv"], string(math_obj["load_bus"]) => math_obj["vnom_kv"])
 
     end
 end
@@ -1574,7 +1574,7 @@ function _map_ravens2math_energy_source!(data_math::Dict{String,<:Any}, data_rav
             "unmap_function" => "_map_math2eng_voltage_source!",
         ))
     end
-    push!(data_math["settings"]["vnom_kv"], math_obj["gen_bus"] => math_obj["vnom"])
+    push!(data_math["settings"]["vnom_kv"], string(math_obj["gen_bus"]) => math_obj["vnom"])
 
 end
 
@@ -1681,7 +1681,7 @@ function _map_ravens2math_rotating_machine!(data_math::Dict{String,<:Any}, data_
                 "to" => "gen.$(math_obj["index"])",
                 "unmap_function" => "_map_math2eng_generator!",
             ))
-            push!(data_math["settings"]["vnom_kv"], math_obj["gen_bus"] => math_obj["vbase"])
+            push!(data_math["settings"]["vnom_kv"], string(math_obj["gen_bus"]) => math_obj["vbase"])
         end
 
     end
