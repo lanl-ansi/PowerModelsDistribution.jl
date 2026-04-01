@@ -707,6 +707,7 @@ function solution_make_si(
                             if haskey(nw_data[n]["settings"]["vnom_kv"], id) && comp_type == "bus"
                                 vnom_kv = nw_data[n]["settings"]["vnom_kv"][id]
                                 comp[prop] = _apply_func_vals(comp[prop], x->x*vnom_kv)
+                                println("corrected, voltage is ", comp[prop])
                             end
                         elseif prop in sbase_props
                             comp[prop] = _apply_func_vals(comp[prop], x->x*sbase)
