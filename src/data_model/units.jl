@@ -689,7 +689,7 @@ function solution_make_si(
                 dimensionalize_math_comp = get(dimensionalize_math, comp_type, Dict())
                 ext_comp = get(dimensionalize_math_extensions, comp_type, Dict())
 
-                vbase_props   = mult_vbase      ? [get(dimensionalize_math_comp, "vbase", []); get(ext_comp, "vbase", [])]   : []
+                vbase_props   = mult_vbase      ? [get(dimensionalize_math_comp, "vbase", []); get(ext_comp, "vbase", [])]   : ["vm"]
                 sbase_props   = mult_sbase      ? [get(dimensionalize_math_comp, "sbase", []); get(ext_comp, "sbase", [])]   : []
                 ibase_props   = mult_ibase      ? [get(dimensionalize_math_comp, "ibase", []); get(ext_comp, "ibase", [])]   : []
                 rad2deg_props = convert_rad2deg ? [get(dimensionalize_math_comp, "rad2deg", []); get(ext_comp, "rad2deg", [])] : []
@@ -700,8 +700,6 @@ function solution_make_si(
                         #vnom_kv = nw_data[n][comp_type][id]["vnom_kv"]
                         ibase = sbase/vbase
                     end
-
-                    println("vbase_props = ", vbase_props)
                     for (prop, val) in comp
                         if prop in vbase_props
                             comp[prop] = _apply_func_vals(comp[prop], x->x*vbase)
