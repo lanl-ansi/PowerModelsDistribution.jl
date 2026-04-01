@@ -701,6 +701,7 @@ function solution_make_si(
                         ibase = sbase/vbase
                     end
 
+                    println("vbase_props = ", vbase_props)
                     for (prop, val) in comp
                         if prop in vbase_props
                             comp[prop] = _apply_func_vals(comp[prop], x->x*vbase)
