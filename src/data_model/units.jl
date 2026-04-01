@@ -689,7 +689,7 @@ function solution_make_si(
                 dimensionalize_math_comp = get(dimensionalize_math, comp_type, Dict())
                 ext_comp = get(dimensionalize_math_extensions, comp_type, Dict())
 
-                vbase_props   = mult_vbase      ? [get(dimensionalize_math_comp, "vbase", []); get(ext_comp, "vbase", [])]   : ["vm"]
+                vbase_props   = mult_vbase      ? [get(dimensionalize_math_comp, "vbase", ["vm"]); get(ext_comp, "vbase", [])]   : []
                 sbase_props   = mult_sbase      ? [get(dimensionalize_math_comp, "sbase", []); get(ext_comp, "sbase", [])]   : []
                 ibase_props   = mult_ibase      ? [get(dimensionalize_math_comp, "ibase", []); get(ext_comp, "ibase", [])]   : []
                 rad2deg_props = convert_rad2deg ? [get(dimensionalize_math_comp, "rad2deg", []); get(ext_comp, "rad2deg", [])] : []
