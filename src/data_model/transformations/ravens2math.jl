@@ -256,6 +256,7 @@ function _map_ravens2math_connectivity_node!(data_math::Dict{String,<:Any}, data
         # Set voltage magnitude and angle
         if haskey(ravens_obj, "SvVoltage.v")
             math_obj["vm"] = (ravens_obj["SvVoltage.v"] / voltage_scale_factor_sqrt3)
+            math_obj["vbase"] = (ravens_obj["SvVoltage.v"] / voltage_scale_factor_sqrt3)
         end
 
         if haskey(ravens_obj, "SvVoltage.angle")
