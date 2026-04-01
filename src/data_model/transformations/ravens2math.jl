@@ -84,6 +84,7 @@ function _map_ravens2math(
                     "power_scale_factor" => 1000,
                     "base_frequency" => get(_data_ravens, "BaseFrequency", 60.0),
                     "vbases_default" => Dict{String,Real}(),
+                    "vnom_kv" => Dict{String,Real}()
     )
 
     # Multinetwork
@@ -1406,6 +1407,8 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
             "to" => "load.$(math_obj["index"])",
             "unmap_function" => "_map_math2eng_load!",
         ))
+        push!(data_math["settings"]["vnom_kv"], math_obj["load_bus"] => math_obj["vnom_kv"])
+
     end
 end
 
@@ -1571,6 +1574,8 @@ function _map_ravens2math_energy_source!(data_math::Dict{String,<:Any}, data_rav
             "unmap_function" => "_map_math2eng_voltage_source!",
         ))
     end
+    push!(data_math["settings"]["vnom_kv"], math_obj["gen_bus"] => math_obj["vnom"])
+
 end
 
 
@@ -1620,7 +1625,6 @@ function _map_ravens2math_rotating_machine!(data_math::Dict{String,<:Any}, data_
             bus_conn =  data_math["bus"]["$(math_obj["gen_bus"])"]
             base_voltage_ref = _extract_name(ravens_obj["ConductingEquipment.BaseVoltage"])
             nominal_voltage = data_ravens["BaseVoltage"][base_voltage_ref]["BaseVoltage.nominalVoltage"]
-            println("nominal voltage = ", nominal_voltage)
             base_voltage =  nominal_voltage / sqrt(nconductors)
             math_obj["vbase"] =  base_voltage / voltage_scale_factor
 
@@ -1677,6 +1681,7 @@ function _map_ravens2math_rotating_machine!(data_math::Dict{String,<:Any}, data_
                 "to" => "gen.$(math_obj["index"])",
                 "unmap_function" => "_map_math2eng_generator!",
             ))
+            push!(data_math["settings"]["vnom_kv"], math_obj["gen_bus"] => math_obj["vbase"])
         end
 
     end
