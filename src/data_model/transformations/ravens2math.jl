@@ -1573,7 +1573,7 @@ function _map_ravens2math_energy_source!(data_math::Dict{String,<:Any}, data_rav
             "to" => map_to,
             "unmap_function" => "_map_math2eng_voltage_source!",
         ))
-        push!(data_math["settings"]["vnom_kv"], string(math_obj["gen_bus"]) => vnom)
+        push!(data_math["settings"]["vnom_kv"], string(math_obj["gen_bus"]) => vnom / voltage_scale_factor_sqrt3)
     end
 
 end
