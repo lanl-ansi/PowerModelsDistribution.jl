@@ -411,7 +411,7 @@ function _rebase_pu_bus!(bus::Dict{String,<:Any}, vbase::Real, sbase::Real, sbas
     end
 
     # save new vbase
-    bus["vbase"] = vbase
+    bus["vbase"] = vbase_old
 end
 
 
