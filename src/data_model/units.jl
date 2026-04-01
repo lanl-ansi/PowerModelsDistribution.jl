@@ -217,7 +217,6 @@ function _calc_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict
         if !ismissing(zone_vbase[bus_to_zone[bus]])
             @warn "You supplied multiple voltage bases for the same zone; ignoring all but the last one."
         end
-        println("vbase = ", vbase)
         zone_vbase[bus_to_zone[bus]] = vbase
     end
 
@@ -698,12 +697,13 @@ function solution_make_si(
                 for (id, comp) in comp_dict
                     if !isempty(vbase_props) || !isempty(ibase_props)
                         vbase = nw_data[n][comp_type][id]["vbase"]
+                        vnom_kv = nw_data[n][comp_type][id]["vnom_kv"]
                         ibase = sbase/vbase
                     end
 
                     for (prop, val) in comp
                         if prop in vbase_props
-                            comp[prop] = _apply_func_vals(comp[prop], x->x*vbase)
+                            comp[prop] = _apply_func_vals(comp[prop], x->x*vbase*vnom_kv)
                         elseif prop in sbase_props
                             comp[prop] = _apply_func_vals(comp[prop], x->x*sbase)
                         elseif prop in ibase_props
