@@ -317,6 +317,7 @@ function _make_math_per_unit!(
         if ismissing(bus_vbase[id])
             error("calc_voltage_bases was unabled to discover the voltage base for bus $id (source_id: $(get(bus, "source_id", ""))), there may be islands in the network model")
         end
+        println("vbase = ", bus_vbase["id"])
         _rebase_pu_bus!(bus, bus_vbase[id], sbase, sbase_old, voltage_scale_factor)
     end
 
@@ -412,7 +413,6 @@ function _rebase_pu_bus!(bus::Dict{String,<:Any}, vbase::Real, sbase::Real, sbas
 
     # save new vbase
     bus["vbase"] = vbase
-    println("vbase = ", vbase)
 end
 
 
