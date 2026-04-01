@@ -689,7 +689,7 @@ function solution_make_si(
                 dimensionalize_math_comp = get(dimensionalize_math, comp_type, Dict())
                 ext_comp = get(dimensionalize_math_extensions, comp_type, Dict())
 
-                vbase_props   = mult_vbase      ? [get(dimensionalize_math_comp, "vbase", ["vm"]); get(ext_comp, "vbase", [])]   : []
+                vbase_props   = mult_vbase      ? [get(dimensionalize_math_comp, "vbase", []); get(ext_comp, "vbase", [])]   : []
                 sbase_props   = mult_sbase      ? [get(dimensionalize_math_comp, "sbase", []); get(ext_comp, "sbase", [])]   : []
                 ibase_props   = mult_ibase      ? [get(dimensionalize_math_comp, "ibase", []); get(ext_comp, "ibase", [])]   : []
                 rad2deg_props = convert_rad2deg ? [get(dimensionalize_math_comp, "rad2deg", []); get(ext_comp, "rad2deg", [])] : []
@@ -703,11 +703,12 @@ function solution_make_si(
                     for (prop, val) in comp
                         if prop in vbase_props
                             comp[prop] = _apply_func_vals(comp[prop], x->x*vbase)
-                            if haskey(nw_data[n]["settings"]["vnom_kv"], id) && comp_type == "bus"
+                            #=if haskey(nw_data[n]["settings"]["vnom_kv"], id) && comp_type == "bus"
                                 vnom_kv = nw_data[n]["settings"]["vnom_kv"][id]
                                 comp[prop] = _apply_func_vals(comp[prop], x->x*vnom_kv)
                                 println("corrected, voltage is ", comp[prop])
                             end
+                            =#
                         elseif prop in sbase_props
                             comp[prop] = _apply_func_vals(comp[prop], x->x*sbase)
                         elseif prop in ibase_props
