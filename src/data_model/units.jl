@@ -217,6 +217,7 @@ function _calc_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict
         if !ismissing(zone_vbase[bus_to_zone[bus]])
             @warn "You supplied multiple voltage bases for the same zone; ignoring all but the last one."
         end
+        println("vbase = ", vbase)
         zone_vbase[bus_to_zone[bus]] = vbase
     end
 
@@ -317,7 +318,6 @@ function _make_math_per_unit!(
         if ismissing(bus_vbase[id])
             error("calc_voltage_bases was unabled to discover the voltage base for bus $id (source_id: $(get(bus, "source_id", ""))), there may be islands in the network model")
         end
-        println("vbase = ", bus_vbase[id])
         _rebase_pu_bus!(bus, bus_vbase[id], sbase, sbase_old, voltage_scale_factor)
     end
 
