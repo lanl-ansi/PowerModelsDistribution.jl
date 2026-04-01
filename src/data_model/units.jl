@@ -697,13 +697,17 @@ function solution_make_si(
                 for (id, comp) in comp_dict
                     if !isempty(vbase_props) || !isempty(ibase_props)
                         vbase = nw_data[n][comp_type][id]["vbase"]
-                        vnom_kv = nw_data[n][comp_type][id]["vnom_kv"]
+                        #vnom_kv = nw_data[n][comp_type][id]["vnom_kv"]
                         ibase = sbase/vbase
                     end
 
                     for (prop, val) in comp
                         if prop in vbase_props
-                            comp[prop] = _apply_func_vals(comp[prop], x->x*vbase*vnom_kv)
+                            comp[prop] = _apply_func_vals(comp[prop], x->x*vbase)
+                            if haskey(nw_data[n]["settings"]["vnom_kv"], id) && comp_type == "bus"
+                                vnom_kv = nw_data[n]["settings"]["vnom_kv"][id]
+                                comp[prop] = _apply_func_vals(comp[prop], x->x*vnom_kv)
+                            end
                         elseif prop in sbase_props
                             comp[prop] = _apply_func_vals(comp[prop], x->x*sbase)
                         elseif prop in ibase_props
