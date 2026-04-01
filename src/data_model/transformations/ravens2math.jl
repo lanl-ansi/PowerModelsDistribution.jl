@@ -1620,6 +1620,7 @@ function _map_ravens2math_rotating_machine!(data_math::Dict{String,<:Any}, data_
             bus_conn =  data_math["bus"]["$(math_obj["gen_bus"])"]
             base_voltage_ref = _extract_name(ravens_obj["ConductingEquipment.BaseVoltage"])
             nominal_voltage = data_ravens["BaseVoltage"][base_voltage_ref]["BaseVoltage.nominalVoltage"]
+            println("nominal voltage = ", nominal_voltage)
             base_voltage =  nominal_voltage / sqrt(nconductors)
             math_obj["vbase"] =  base_voltage / voltage_scale_factor
 
