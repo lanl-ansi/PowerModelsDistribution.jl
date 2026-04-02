@@ -236,6 +236,12 @@ function transform_solution_ravens(
         push!(seen_xfrmrs, "$(cond_eq_name)")
     end
 
+    function round_switch_state(state)
+        if state < 0.01
+            state = 0
+        end
+    end
+
     # --- Edge elements (branches, switches, etc.) ---
 	edge_elements = ["branch", "switch"]
     for ed in edge_elements
@@ -253,7 +259,7 @@ function transform_solution_ravens(
                                 begin
                                     nw_ed = solution_math["nw"][nw][ed][ed_id]
                                     if haskey(nw_ed, "state")
-                                        sw_state = round(nw_ed["state"]) == 0 ? true : false
+                                        sw_state = round_switch_state(nw_ed["state"]) == 0 ? true : false
                                     end
                                     Dict("AvSwitch.open" => sw_state)
                                 end
