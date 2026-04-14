@@ -346,7 +346,7 @@ function _check_eng_component_dtypes(data_eng::Dict{String,<:Any}, component_typ
             end
         end
     else
-        @warn "$component_type $component_name does not exist"
+        @_warn "$component_type $component_name does not exist"
     end
 end
 

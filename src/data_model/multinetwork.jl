@@ -51,7 +51,7 @@ function make_multinetwork(
     )::Dict{String,Any}
 
     if ismultinetwork(data)
-        @info "data is already multinetwork, returning"
+        @_info "data is already multinetwork, returning"
         return data
     elseif iseng(data)
         return _make_multinetwork_eng(data; sparse=sparse, time_elapsed=time_elapsed, global_keys=global_keys)
@@ -94,17 +94,17 @@ function _make_multinetwork_eng(
     end
 
     if eltype(times) == Any && length(unique([typeof(el) for el in times])) > 1
-        @warn "Time steps in this data model are of mixed type, multinetwork frames may be out of order. You may want to manually correct this with sort_multinetwork!"
+        @_warn "Time steps in this data model are of mixed type, multinetwork frames may be out of order. You may want to manually correct this with sort_multinetwork!"
         times = [t for t in times]
         if ismissing(time_elapsed)
-            @warn "Cannot infer time_elapsed, setting to 1.0. You can manually adjust with set_time_elapsed!"
+            @_warn "Cannot infer time_elapsed, setting to 1.0. You can manually adjust with set_time_elapsed!"
             time_elapsed = 1.0
         end
     else
         times = sort([t for t in times])
         if ismissing(time_elapsed)
             if eltype(times) <: Real
-                @info "assuming time is in hours for time_elapsed inference. if this is incorrect, manually adjust with set_time_elapsed!"
+                @_info "assuming time is in hours for time_elapsed inference. if this is incorrect, manually adjust with set_time_elapsed!"
                 time_elapsed = diff(times)
                 push!(time_elapsed, time_elapsed[end])
             else
@@ -114,7 +114,7 @@ function _make_multinetwork_eng(
                     push!(delta, delta[end])
                     time_elapsed = [Dates.toms(dt) / 3.6e6 for dt in delta]
                 catch err
-                    @warn "Cannot infer time_elapsed, setting to 1.0. You can manually adjust with set_time_elapsed!"
+                    @_warn "Cannot infer time_elapsed, setting to 1.0. You can manually adjust with set_time_elapsed!"
                     time_elapsed = 1.0
                 end
             end
@@ -179,7 +179,7 @@ function _make_multinetwork_math(
     )::Dict{String,Any}
 
     @assert ismath(data_math) "wrong data model for _make_multinetwork_math"
-    @info "Converting a MATHEMATICAL data model into multinetwork assumes the InfrastructureModels data structure ( see https://github.com/lanl-ansi/InfrastructureModels.jl/blob/master/src/core/data.jl#L135 )"
+    @_info "Converting a MATHEMATICAL data model into multinetwork assumes the InfrastructureModels data structure ( see https://github.com/lanl-ansi/InfrastructureModels.jl/blob/master/src/core/data.jl#L135 )"
 
     return _IM.make_multinetwork(data_math, pmd_it_name, union(_pmd_math_global_keys, global_keys))
 end

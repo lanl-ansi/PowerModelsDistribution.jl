@@ -1486,7 +1486,7 @@ without introducing explicit power variables.
 """
 function constraint_mc_thermal_limit_from(pm::AbstractQuadraticExplicitNeutralIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rate_a::Vector{<:Real})
     if any(rate_a.<Inf)
-        @warn("""
+        @_warn("""
             A branch power bound cannot be represented quadratically in the default AbstractQuadraticExplicitNeutralIVRModel.
             Either extend this quadratic formulation by including explicit branch power variables, or use AbstractNLExplicitNeutralIVRModel instead.""")
     end
@@ -1507,7 +1507,7 @@ throw an error because this cannot be represented quadratically
 without introducing explicit power variables.
 """
 function constraint_mc_thermal_limit_to(pm::AbstractQuadraticExplicitNeutralIVRModel, nw::Int, t_idx::Tuple{Int,Int,Int}, t_connections::Vector{Int}, rate_a::Vector{<:Real})
-    @warn("""
+    @_warn("""
         A branch power bound cannot be represented quadratically in the default AbstractQuadraticExplicitNeutralIVRModel.
         Either extend this quadratic formulation by including explicit branch power variables, or use AbstractNLExplicitNeutralIVRModel instead.
         """)
@@ -1747,7 +1747,7 @@ throw an error because this cannot be represented quadratically
 without introducing explicit power variables.
 """
 function constraint_mc_switch_thermal_limit(pm::AbstractQuadraticExplicitNeutralIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{<:Real})
-    @warn("""
+    @_warn("""
         A switch power bound cannot be represented quadratically in the default AbstractQuadraticExplicitNeutralIVRModel.
         Either extend this quadratic formulation by including explicit switch power variables, or use AbstractNLExplicitNeutralIVRModel instead.
         """)

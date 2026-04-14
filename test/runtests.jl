@@ -10,6 +10,7 @@ import Ipopt
 import SCS
 
 import JSON
+import Logging
 
 using Test
 using LinearAlgebra
@@ -22,6 +23,21 @@ scs_solver = optimizer_with_attributes(SCS.Optimizer, "verbose"=>0)
 
 include("common.jl")
 include("test_cases.jl")
+
+function _test_logs(f, args...)
+    log_msg = sprint() do io
+        old_logger = PowerModelsDistribution._LOGGER[]
+        PowerModelsDistribution._LOGGER[] =
+            Logging.ConsoleLogger(io, Logging.Debug)
+        f()
+        PowerModelsDistribution._LOGGER[] = old_logger
+        return
+    end
+    for (type, msg) in args
+        @test occursin(type == :warn ? "Warning: $msg" : "Info: $msg", log_msg)
+    end
+    return
+end
 
 @testset "PowerModelsDistribution" begin
 

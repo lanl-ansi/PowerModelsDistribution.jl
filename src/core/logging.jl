@@ -1,85 +1,68 @@
-"""
-    _pmd_metafmt(level::Logging.LogLevel, _module, group, id, file, line)
-
-MetaFormatter for ConsoleLogger for PMD to adjust log message format
-"""
-function _pmd_metafmt(level::Logging.LogLevel, _module, group, id, file, line)
-    @nospecialize
-    color = Logging.default_logcolor(level)
-    prefix = "$(_module) | " * (level == Logging.Warn ? "Warning" : string(level)) * " ] :"
-    suffix = ""
-    Logging.Info <= level < Logging.Warn && return color, prefix, suffix
-    _module !== nothing && (suffix *= "$(_module)")
-    if file !== nothing
-        _module !== nothing && (suffix *= " ")
-        suffix *= Base.contractuser(file)
-        if line !== nothing
-            suffix *= ":$(isa(line, UnitRange) ? "$(first(line))-$(last(line))" : line)"
-        end
-    end
-    !isempty(suffix) && (suffix = "@ " * suffix)
-
-    return color, prefix, suffix
-end
-
+const _LOGGER = Ref{Logging.ConsoleLogger}()
 
 """
     silence!()
 
-Sets loglevel for PMD to :Error, silencing Info and Warn
-"""
-function silence!()
-    set_logging_level!(:Error)
-end
+Silence logging within PowerModelsDistribution.
 
+This is equivalent to calling `set_logging_level!(:Error)`.
+"""
+silence!() = set_logging_level!(:Error)
 
 """
     reset_logging_level!()
 
-Resets the log level to Info
-"""
-function reset_logging_level!()
-    Logging.global_logger(_LOGGER)
+Resets the log level to `:Info`.
 
-    return
+This is equivalent to calling `set_logging_level!(:Info)`.
+"""
+reset_logging_level!() = set_logging_level!(:Info)
+
+# A no-op. We keep this method for backward compatibility.
+restore_global_logger!() = nothing
+
+function _meta_formatter(level::Logging.LogLevel, _module, args...)
+    return Logging.default_logcolor(level), "$(_module) | $level]:", ""
 end
 
-
-"""
-    restore_global_logger!()
-
-Restores the global logger to its default state (before PMD was loaded)
-"""
-function restore_global_logger!()
-    Logging.global_logger(_DEFAULT_LOGGER)
-
+function set_logging_level!(level::Logging.LogLevel)
+    _LOGGER[] =
+        Logging.ConsoleLogger(stdout, level; meta_formatter = _meta_formatter)
     return
 end
-
 
 """
     set_logging_level!(level::Symbol)
 
-Sets the logging level for PMD: :Info, :Warn, :Error
-"""
-function set_logging_level!(level::Symbol)
-    Logging.global_logger(_make_filtered_logger(getfield(Logging, level)))
+Set the logging level within PowerModelsDistribution.
 
+`level` must be one of `:Error`, `:Warn`, `:Info`, or `:Debug`.
+"""
+set_logging_level!(level::Symbol) = set_logging_level!(getfield(Logging, level))
+
+function _log_if_level(f, level, logger = _LOGGER[])
+    if level >= Logging.min_enabled_level(logger)
+        Logging.with_logger(f, logger)
+    end
     return
 end
 
+# Currently unused.
+# macro _error(msg)
+#     return quote
+#         $_log_if_level(() -> @error($msg), $(Logging.Error))
+#         error($msg)
+#     end |> esc
+# end
 
-"""
-    _make_filtered_logger(level::Logging.LogLevel)
+macro _warn(msg)
+    return :($_log_if_level(() -> @warn($msg), $(Logging.Warn)) )|> esc
+end
 
-Helper function to create the filtered logger for PMD
-"""
-function _make_filtered_logger(level)
-    LoggingExtras.EarlyFilteredLogger(_LOGGER) do log
-        if log._module == PowerModelsDistribution && log.level < level
-            return false
-        else
-            return true
-        end
-    end
+macro _debug(msg)
+    return :($_log_if_level(() -> @debug($msg), $(Logging.Debug))) |> esc
+end
+
+macro _info(msg)
+    return :($_log_if_level(() -> @info($msg), $(Logging.Info)) )|> esc
 end

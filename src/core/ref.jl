@@ -231,7 +231,7 @@ function ref_add_core!(ref::Dict{Symbol,Any})
         nw_ref[:ref_buses] = ref_buses
 
         if length(ref_buses) > 1
-            @debug "multiple reference buses found, $(keys(ref_buses)), this can cause infeasibility if they are in the same connected component"
+            @_debug "multiple reference buses found, $(keys(ref_buses)), this can cause infeasibility if they are in the same connected component"
         end
 
         ### aggregate info for pairs of connected buses ###
