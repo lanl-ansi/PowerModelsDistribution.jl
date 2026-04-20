@@ -764,7 +764,7 @@ function _map_conductor_ids!(data_math::Dict{String,<:Any})
     end
 
     data_math["conductor_ids"] = Vector{Int}([cnd_map[c] for c in data_math["conductor_ids"]])
-
+    println("conductor ids = ", data_math["conductor_ids"])
     for type in ["branch", "switch", "transformer"]
         if haskey(data_math, type)
             for (_,obj) in data_math[type]
