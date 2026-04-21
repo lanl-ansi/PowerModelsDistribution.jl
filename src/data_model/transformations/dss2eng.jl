@@ -340,11 +340,13 @@ end
 "Adds vsources to `data_eng` from `data_dss`"
 function _dss2eng_vsource!(data_eng::Dict{String,<:Any}, data_dss::OpenDssDataModel, import_all::Bool, time_series::String="daily")
     for (id, dss_obj) in get(data_dss, "vsource", Dict{String,Any}())
+        println("dss_obj = ", dss_obj)
         ph1_ang = dss_obj["angle"]
         vm_pu = dss_obj["pu"]
 
         phases = dss_obj["phases"]
         vnom = dss_obj["basekv"] / sqrt(phases)
+        println("vnom = ", vnom)
 
         data_eng["settings"]["vbases_default"][_parse_bus_id(dss_obj["bus1"])[1]] = vnom
 

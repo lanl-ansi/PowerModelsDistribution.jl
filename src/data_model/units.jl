@@ -421,6 +421,7 @@ function _rebase_pu_branch!(branch::Dict{String,<:Any}, vbase::Real, sbase::Real
         z_old = 1
         vbase_old = 1.0
     else
+        #println("1. vbase = ", branch["vbase"])
         vbase_old = branch["vbase"]
         z_old = vbase_old^2/sbase_old*voltage_scale_factor
     end
@@ -441,6 +442,8 @@ function _rebase_pu_branch!(branch::Dict{String,<:Any}, vbase::Real, sbase::Real
 
     # save new vbase
     branch["vbase"] = vbase
+    #println("2. vbase = ",  branch["vbase"])
+
 end
 
 
@@ -519,6 +522,8 @@ function _rebase_pu_load!(load::Dict{String,<:Any}, vbase::Real, sbase::Real, sb
 
     vbase_old = get(load, "vbase", 1.0)
     vbase_scale = vbase_old/vbase
+    println("vnom_kv = ", get(load, "vnom_kv", "missing"))
+    println("vbase = ", vbase)
     _scale(load, "vnom_kv", vbase_scale)
 
     sbase_scale = sbase_old/sbase

@@ -28,6 +28,8 @@ const pmd_ravens_asset_types = String[
 ]
 
 
+
+
 function transform_data_model_ravens(
     data::Dict{String,<:Any};
     kron_reduce::Bool=true,
@@ -53,6 +55,8 @@ function transform_data_model_ravens(
 
     correct_network_data && correct_network_data!(data_math; make_pu=make_pu, make_pu_extensions=make_pu_extensions)
 
+    data_math["switch_close_actions_ub"] = Inf
+
     return data_math
 
 end
@@ -74,12 +78,13 @@ function _map_ravens2math(
     add_base_voltages!(_data_ravens; overwrite=false)
 
     # TODO: Add settings (defaults)
-    basemva = 1
+    basemva = 100
     _settings = Dict("sbase_default" => basemva * 1e3,
                     "voltage_scale_factor" => 1e3,
-                    "power_scale_factor" => 1e3,
+                    "power_scale_factor" => 1000,
                     "base_frequency" => get(_data_ravens, "BaseFrequency", 60.0),
                     "vbases_default" => Dict{String,Real}(),
+                    "vnom_kv" => Dict{String,Real}()
     )
 
     # Multinetwork
@@ -92,6 +97,7 @@ function _map_ravens2math(
         )
 
         if haskey(data_ravens, "BasicIntervalSchedule")
+            #("yes it has BasicIntervalSchedule")
             schdls = get(data_ravens, "BasicIntervalSchedule", Dict{String,Any}()) # Get schedules/timeseries
 
             # Check for shortest timeseries. Use that length for mn
@@ -126,6 +132,7 @@ function _map_ravens2math(
                         "time_elapsed" => get(_data_ravens, "time_elapsed", 1.0),
                     )
                 )
+                
 
                 # Store nw dict in vector
                 nws_vect[n] = nw_dict
@@ -284,7 +291,12 @@ function _map_ravens2math_conductor!(data_math::Dict{String,<:Any}, data_ravens:
 
         for (name, ravens_obj) in get(conductors, "ACLineSegment", Dict{Any,Dict{String,Any}}())
             math_obj = _init_math_obj_ravens("ACLineSegment", name, ravens_obj, length(data_math["branch"]) + 1; pass_props=pass_props)
-            nconds = length(ravens_obj["ACLineSegment.ACLineSegmentPhase"]) # number of conductors/wires
+            nconds = 0
+            try
+                nconds = length(ravens_obj["ACLineSegment.ACLineSegmentPhase"]) # number of conductors/wires
+            catch
+                nconds = 1
+            end
             nphases = 0 # init number of phases
             terminals = ravens_obj["ConductingEquipment.Terminals"]
 
@@ -330,6 +342,7 @@ function _map_ravens2math_conductor!(data_math::Dict{String,<:Any}, data_ravens:
 
                 math_obj["br_r"] = _impedance_conversion_ravens(impedance_data, ravens_obj, "PhaseImpedanceData.r")
                 math_obj["br_x"] = _impedance_conversion_ravens(impedance_data, ravens_obj, "PhaseImpedanceData.x")
+                #println("br_r = ", math_obj["br_r"])
 
                 for (key, param) in [("b_fr", "PhaseImpedanceData.b"), ("b_to", "PhaseImpedanceData.b"), ("g_fr", "PhaseImpedanceData.g"), ("g_to", "PhaseImpedanceData.g")]
                     math_obj[key] = _admittance_conversion_ravens(impedance_data, ravens_obj, param)
@@ -360,7 +373,7 @@ function _map_ravens2math_conductor!(data_math::Dict{String,<:Any}, data_ravens:
 
                 # angular frequency
                 ω = 2π * base_freq
-                ω₀ = 2π * base_freq
+                ω_θ = 2π * base_freq
 
                 # Get data for each specific ACLineSegmentPhase
                 segmentphase_data = ravens_obj["ACLineSegment.ACLineSegmentPhase"]
@@ -462,7 +475,7 @@ function _map_ravens2math_conductor!(data_math::Dict{String,<:Any}, data_ravens:
                     nconds,
                     earth_model,
                     rac,
-                    ω₀,
+                    ω_θ,
                     rdc,
                     rho,
                     nphases,
@@ -1274,8 +1287,10 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
         if nphases >= 3
             math_obj["vnom_kv"] = (base_voltage / voltage_scale_factor_sqrt3)
         else
-            math_obj["vnom_kv"] = (base_voltage / voltage_scale_factor)
+           math_obj["vnom_kv"] = (base_voltage / voltage_scale_factor)
         end
+
+        println("vnom_kv = ", math_obj["vnom_kv"])
 
         # Set p and q (w/ multinetwork support)
         if nw==0
@@ -1296,8 +1311,8 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
                         reactive_power[id] = get(phase_info, "EnergyConsumerPhase.q", 0.0)
                     end
                 else
-                    active_power = fill(get(ravens_obj, "EnergyConsumer.p", 0.0) / (power_scale_factor*nphases), nphases)
-                    reactive_power = fill(get(ravens_obj, "EnergyConsumer.q", 0.0) / (power_scale_factor*nphases), nphases)
+                    active_power = fill(get(ravens_obj, "EnergyConsumer.p", 0.0) / (nphases), nphases)
+                    reactive_power = fill(get(ravens_obj, "EnergyConsumer.q", 0.0) / (nphases), nphases)
                 end
 
                 schdl_name = _extract_name(ravens_obj["EnergyConsumer.LoadProfile"])
@@ -1340,9 +1355,10 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
 
                 # Multipliers instead of actual values
                 if haskey(schdl, "BasicIntervalSchedule.value1Unit")
-                    math_obj["pd"] = get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value1", 1.0) .* active_power ./ power_scale_factor
-                    math_obj["qd"] = get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value1", 1.0) .* reactive_power ./ power_scale_factor
+                    math_obj["pd"] = Float64.(get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value1", 1.0) .* active_power ./ power_scale_factor)
+                    math_obj["qd"] = Float64.(get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value1", 1.0) .* reactive_power ./ power_scale_factor)
                 end
+                 #println(math_obj["pd"], "... ...", math_obj["qd"])
 
             else
                 @error("No timeseries, load forecast or multinetwork information found!")
@@ -1394,6 +1410,8 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
             "to" => "load.$(math_obj["index"])",
             "unmap_function" => "_map_math2eng_load!",
         ))
+        push!(data_math["settings"]["vnom_kv"], string(math_obj["load_bus"]) => math_obj["vnom_kv"])
+
     end
 end
 
@@ -1458,9 +1476,11 @@ function _map_ravens2math_energy_source!(data_math::Dict{String,<:Any}, data_rav
         if haskey(ravens_obj, "ConductingEquipment.BaseVoltage")
             base_voltage_ref = _extract_name(ravens_obj["ConductingEquipment.BaseVoltage"])
             vnom = data_ravens["BaseVoltage"][base_voltage_ref]["BaseVoltage.nominalVoltage"] / sqrt(nconductors)
+            println("vnom = ", vnom)
             data_math["settings"]["vbases_default"][connectivity_node] = vnom / voltage_scale_factor
         else
             vnom = ravens_obj["EnergySource.nominalVoltage"] / sqrt(nconductors)
+            println("vnom = ", vnom)
             data_math["settings"]["vbases_default"][connectivity_node] = vnom / voltage_scale_factor
         end
 
@@ -1489,6 +1509,7 @@ function _map_ravens2math_energy_source!(data_math::Dict{String,<:Any}, data_rav
         # Check for impedance and adjust bus type if necessary
         map_to = "gen.$(math_obj["index"])"
         if !all(isapprox.(rs, 0)) && !all(isapprox.(xs, 0))
+        #if 2>1
             bus_conn["bus_type"] = 1  # Virtual bus becomes the new slack bus
 
             bus_obj = Dict(
@@ -1557,7 +1578,9 @@ function _map_ravens2math_energy_source!(data_math::Dict{String,<:Any}, data_rav
             "to" => map_to,
             "unmap_function" => "_map_math2eng_voltage_source!",
         ))
+        push!(data_math["settings"]["vnom_kv"], string(math_obj["gen_bus"]) => vnom / voltage_scale_factor_sqrt3)
     end
+
 end
 
 
@@ -1663,6 +1686,7 @@ function _map_ravens2math_rotating_machine!(data_math::Dict{String,<:Any}, data_
                 "to" => "gen.$(math_obj["index"])",
                 "unmap_function" => "_map_math2eng_generator!",
             ))
+            push!(data_math["settings"]["vnom_kv"], string(math_obj["gen_bus"]) => math_obj["vbase"])
         end
 
     end
