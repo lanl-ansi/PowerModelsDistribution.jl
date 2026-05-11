@@ -1,7 +1,7 @@
 @info "running explicit neutral power flow tests with native julia power flow solver"
 
 
-function conductor_correction!(data_eng)
+function conductor_correction!(data_eng::EngineeringModel)
     nw = data_eng
     if neutral_idx ∈ nw["conductor_ids"]
         filter!(e -> e ≠ neutral_idx, nw["conductor_ids"])
@@ -45,7 +45,7 @@ end
 
 
 
-function sourcebus_voltage_vector_correction!(data_math::Dict{String,Any}; explicit_neutral=true)
+function sourcebus_voltage_vector_correction!(data_math::MathematicalModel; explicit_neutral=true)
     if haskey(data_math, "multinetwork")
         for (n, nw) in data_math["nw"]
             for (i, bus) in data_math["nw"]["bus"]

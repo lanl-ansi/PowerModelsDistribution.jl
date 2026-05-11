@@ -15,27 +15,25 @@ const _loss_model_objects = Dict{String,Vector{String}}(
 
 
 """
-    make_lossless!(data_eng::Dict{String,<:Any})
+    make_lossless!(data::EngineeringModel)
 
 Remove parameters from objects with loss models to make them lossless. This includes linecodes,
 lines, switches, xfmrcodes, transformers, voltage sources, generators, solar, and storage, which
 all have (or will have in the future), loss model parameters that can be omitted.
 """
-function make_lossless!(data::Dict{String,<:Any}; exclude::Vector{String}=String[])
-    @assert iseng(data) "wrong data model type"
-
+function make_lossless!(data::EngineeringModel; exclude::Vector{String}=String[])
     apply_pmd!(_make_lossless!, data; apply_to_subnetworks=true, exclude=exclude)
 end
 
 
 """
-    _make_lossless!(data_eng::Dict{String,<:Any})
+    _make_lossless!(data_eng::EngineeringModel{NetworkModel})
 
 Remove parameters from objects with loss models to make them lossless. This includes linecodes,
 lines, switches, xfmrcodes, transformers, voltage sources, generators, solar, and storage, which
 all have (or will have in the future), loss model parameters that can be omitted.
 """
-function _make_lossless!(data_eng::Dict{String,<:Any}; exclude::Vector{String}=String[])
+function _make_lossless!(data_eng::EngineeringModel{NetworkModel}; exclude::Vector{String}=String[])
     for (object_type, parameters) in _loss_model_objects
         if haskey(data_eng, object_type) && !(object_type in exclude)
             for (id, eng_obj) in data_eng[object_type]
@@ -54,23 +52,21 @@ end
 
 
 """
-    apply_phase_projection!(data::Dict{String,<:Any})
+    apply_phase_projection!(data::EngineeringModel)
 
 pad matrices and vectors to max number of conductors
 """
-function apply_phase_projection!(data::Dict{String,<:Any})
-    @assert iseng(data) "wrong data model type"
-
+function apply_phase_projection!(data::EngineeringModel)
     apply_pmd!(_apply_phase_projection!, data; apply_to_subnetworks=true)
 end
 
 
 """
-    _apply_phase_projection!(data_eng::Dict{String,<:Any})
+    _apply_phase_projection!(data_eng::EngineeringModel{NetworkModel})
 
 pad matrices and vectors to max number of conductors
 """
-function _apply_phase_projection!(data_eng::Dict{String,<:Any})
+function _apply_phase_projection!(data_eng::EngineeringModel{NetworkModel})
     @assert get(data_eng, "is_kron_reduced", false)
 
     all_conductors = _get_complete_conductor_set(data_eng)
@@ -213,25 +209,25 @@ end
 
 
 """
-    apply_phase_projection_delta!(data::Dict{String,<:Any})
+    apply_phase_projection_delta!(data::EngineeringModel)
 
 phase projection for components where unprojected states are not yet supported (delta configurations).
 
 See [`apply_phase_projection!`](@ref apply_phase_projection!)
 """
-function apply_phase_projection_delta!(data::Dict{String,<:Any})
+function apply_phase_projection_delta!(data::EngineeringModel)
     apply_pmd!(_apply_phase_projection_delta!, data; apply_to_subnetworks=true)
 end
 
 
 """
-    _apply_phase_projection_delta!(data_eng::Dict{String,<:Any})
+    _apply_phase_projection_delta!(data_eng::EngineeringModel{NetworkModel})
 
 phase projection for components where unprojected states are not yet supported (delta configurations).
 
 See [`apply_phase_projection!`](@ref apply_phase_projection!)
 """
-function _apply_phase_projection_delta!(data_eng::Dict{String,<:Any})
+function _apply_phase_projection_delta!(data_eng::EngineeringModel{NetworkModel})
     @assert get(data_eng, "is_kron_reduced", false)
 
     bus_terminals = Dict{String,Vector{Int}}()
@@ -319,7 +315,7 @@ end
 
 
 "helper function to update the terminals on projected buses"
-function _update_bus_terminal_projections!(data_eng::Dict{String,<:Any}, bus_terminals::Dict{String,<:Vector{Int}})
+function _update_bus_terminal_projections!(data_eng::EngineeringModel{NetworkModel}, bus_terminals::Dict{String,<:Vector{Int}})
     for (id, terminals) in bus_terminals
         eng_obj = data_eng["bus"][id]
 
@@ -351,9 +347,7 @@ _is_multiport_component(comp::Dict{String,Any})::Bool = haskey(comp, "bus") && i
 
 
 "Obtain impedance parameters, directly or from linecode."
-function _get_line_impedance_parameters(data_eng::Dict{String,Any}, line::Dict{String,Any})
-    @assert data_eng["data_model"] == ENGINEERING
-
+function _get_line_impedance_parameters(data_eng::EngineeringModel{NetworkModel}, line::Dict{String,Any})
     if haskey(line, "rs")
         z_s = line["rs"] .+ im * line["xs"]
         y_fr = line["g_fr"] .+ im * line["b_fr"]
@@ -370,9 +364,7 @@ end
 
 
 "Create an equivalent shunt for a line which connects to a single bus."
-function _loop_line_to_shunt(data_eng::Dict{String,Any}, line_id::AbstractString)
-    @assert data_eng["data_model"] == ENGINEERING
-
+function _loop_line_to_shunt(data_eng::EngineeringModel{NetworkModel}, line_id::AbstractString)
     # only possible when the line is a 'loop' with respect to its bus
     line = data_eng["line"][line_id]
     @assert line["f_bus"] == line["t_bus"]
@@ -408,9 +400,7 @@ end
 
 
 "Merge a terminal into another for a specified bus, i.e. as if they are short-ciruited."
-function _merge_terminals!(data_eng::Dict{String,Any}, bus_id::String, t_fr, t_to)
-    @assert data_eng["data_model"] == ENGINEERING
-
+function _merge_terminals!(data_eng::EngineeringModel{NetworkModel}, bus_id::String, t_fr, t_to)
     bus = data_eng["bus"][bus_id]
     old_terminals = bus["terminals"]
     # exclude t_fr from the bus terminals
@@ -498,20 +488,16 @@ This is useful because OpenDSS modelers have to insert tiny impedances to repres
 The addmittance to ground should be zero to trigger the short-circuit handling.
 """
 function transform_loops!(
-    data::Dict{String,Any};
+    data::EngineeringModel{T};
     zero_series_impedance_threshold::Real=1E-8,
     shunt_id_prefix::AbstractString="line_loop"
-)::Dict{String,Any}
-
-    @assert iseng(data) "wrong data model type"
-
+)::EngineeringModel{T} where T
     apply_pmd!(_transform_loops!, data; apply_to_subnetworks=true, zero_series_impedance_threshold=zero_series_impedance_threshold, shunt_id_prefix=shunt_id_prefix)
 end
 
-
 """
     _transform_loops!(
-        data_eng::Dict{String,Any};
+        data_eng::EngineeringModel{NetworkModel};
         zero_series_impedance_threshold::Real=1E-8,
         shunt_id_prefix::AbstractString="line_loop"
     )::Dict{String,Any}
@@ -523,10 +509,10 @@ This is useful because OpenDSS modelers have to insert tiny impedances to repres
 The addmittance to ground should be zero to trigger the short-circuit handling.
 """
 function _transform_loops!(
-    data_eng::Dict{String,Any};
+    data_eng::EngineeringModel{NetworkModel};
     zero_series_impedance_threshold::Real=1E-8,
     shunt_id_prefix::AbstractString="line_loop"
-)::Dict{String,Any}
+)::EngineeringModel{NetworkModel}
 
     for (id, line) in get(data_eng, "line", Dict())
         if line["f_bus"] == line["t_bus"]
@@ -571,11 +557,11 @@ end
 
 
 """
-    _remove_unconnected_terminals!(data_eng::Dict{String,Any})::Dict{String,Any}
+    _remove_unconnected_terminals!(data_eng::EngineeringModel{NetworkModel})::Dict{String,Any}
 
 Remove all terminals which are unconnected (not considering a grounding as a connection).
 """
-function _remove_unconnected_terminals!(data_eng::Dict{String,Any})::Dict{String,Any}
+function _remove_unconnected_terminals!(data_eng::EngineeringModel{NetworkModel})::Dict{String,Any}
     # find all connected bts (a 'bt' is a bus-terminal pair)
     connected_bts = []
     for type in setdiff(intersect(pmd_eng_asset_types, keys(data_eng)), ["bus"])
@@ -612,11 +598,11 @@ end
 
 
 """
-    reduce_lines!(data_eng::Dict{String,Any})::Dict{String,Any}
+    reduce_lines!(data_eng::EngineeringModel{NetworkModel})::Dict{String,Any}
 
 Reduces line models, by removing trailing lines and merging lines in series with the same linecode.
 """
-function reduce_lines!(data_eng::Dict{String,Any})::Dict{String,Any}
+function reduce_lines!(data_eng::EngineeringModel{NetworkModel})::Dict{String,Any}
     delete_trailing_lines!(data_eng)
     join_lines!(data_eng)
 
@@ -625,7 +611,7 @@ end
 
 
 "Returns a reduced data model, by removing trailing lines and merging lines in series with the same linecode."
-reduce_lines(data_eng::Dict{String,Any}) = reduce_lines!(deepcopy(data_eng))
+reduce_lines(data_eng::EngineeringModel{NetworkModel}) = reduce_lines!(deepcopy(data_eng))
 
 
 "Reverse the direction of a line."
@@ -643,14 +629,12 @@ end
 
 
 """
-    get_defined_buses(data_eng::Dict{String,Any}; comp_types=pmd_eng_asset_types)::Vector{String}
+    get_defined_buses(data_eng::EngineeringModel{NetworkModel}; comp_types=pmd_eng_asset_types)::Vector{String}
 
 Returns a unique list of all buses specified in the data model.
 The argument 'comp_types' specifies which component types are searched to build the list.
 """
-function get_defined_buses(data_eng::Dict{String,Any}; comp_types=pmd_eng_asset_types)::Vector{String}
-    @assert data_eng["data_model"] == ENGINEERING
-
+function get_defined_buses(data_eng::EngineeringModel{NetworkModel}; comp_types=pmd_eng_asset_types)::Vector{String}
     buses_exclude = Vector{String}()
     for comp_type in intersect(comp_types, keys(data_eng))
         for (id, comp) in data_eng[comp_type]
@@ -671,14 +655,12 @@ end
 
 
 """
-    delete_trailing_lines!(data_eng::Dict{String,Any})::Dict{String,Any}
+    delete_trailing_lines!(data_eng::EngineeringModel{NetworkModel})::Dict{String,Any}
 
 Deletes trailing lines,
 i.e. lines connected to a bus with no other connected components and which is not grounded.
 """
-function delete_trailing_lines!(data_eng::Dict{String,Any})::Dict{String,Any}
-    @assert data_eng["data_model"] == ENGINEERING
-
+function delete_trailing_lines!(data_eng::EngineeringModel{NetworkModel})::Dict{String,Any}
     # exclude buses that appear in components other than lines
     comp_types_exclude = setdiff(pmd_eng_asset_types, ["line"])
     buses_exclude = get_defined_buses(data_eng, comp_types=comp_types_exclude)
@@ -724,9 +706,7 @@ end
 
 
 "Join lines which are connected in series, and of which the intermediate bus is ungrounded and does not connect to any other components."
-function join_lines!(data_eng::Dict{String,Any})
-    @assert data_eng["data_model"] == ENGINEERING
-
+function join_lines!(data_eng::EngineeringModel{NetworkModel})
     # a bus is eligible for reduction if it only appears in exactly two lines
     buses_all = collect(keys(data_eng["bus"]))
 
@@ -787,12 +767,12 @@ end
 
 
 """
-    remove_distribution_transformers!(data_eng::Dict{String,<:Any})
+    remove_distribution_transformers!(data_eng::EngineeringModel{NetworkModel})
 
 Removes distribution transformers and replaces them with lines. The current version only
 supports distribution transformers supplying loads i.e. no lines between transformer and load.
 """
-function remove_distribution_transformers!(data_eng::Dict{String,<:Any})
+function remove_distribution_transformers!(data_eng::EngineeringModel{NetworkModel})
     if haskey(data_eng, "transformer")
         for (_, transformer) in data_eng["transformer"]
             buses = transformer["bus"]
@@ -832,7 +812,7 @@ end
 
 
 """
-    _equivalance_center_tap!(transformer::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
+    _equivalance_center_tap!(transformer::Dict{String,<:Any}, data_eng::EngineeringModel{NetworkModel})
 
 Removes center tap transformers based on Eq. (1) from Kersting's paper
 'Center-Tapped Transformers and 120/240-V Secondary Models'

@@ -67,33 +67,37 @@ end
 
 Instantiates a PowerModelsDistribution data model
 """
-function Model(model_type::DataModel=ENGINEERING; kwargs...)::Dict{String,Any}
+function Model(model_type::DataModel=ENGINEERING; kwargs...)::DistributionModel
     if model_type == ENGINEERING
-        data_model = Dict{String,Any}(
-            "data_model" => model_type,
-            "per_unit" => false,
-            "settings" => Dict{String,Any}(
-                "voltage_scale_factor" => get(kwargs, :voltage_scale_factor, 1e3),
-                "power_scale_factor" => get(kwargs, :power_scale_factor, 1e3),
-                "vbases_default" => get(kwargs, :vbases_default, Dict{Any,Real}()),
-                "sbase_default" => get(kwargs, :sbase_default, 1.0),
-                "base_frequency" => get(kwargs, :basefreq, 60.0),
+        data_model = EngineeringModel{NetworkModel}(
+            Dict{String,Any}(
+                "data_model" => model_type,
+                "per_unit" => false,
+                "settings" => Dict{String,Any}(
+                    "voltage_scale_factor" => get(kwargs, :voltage_scale_factor, 1e3),
+                    "power_scale_factor" => get(kwargs, :power_scale_factor, 1e3),
+                    "vbases_default" => get(kwargs, :vbases_default, Dict{Any,Real}()),
+                    "sbase_default" => get(kwargs, :sbase_default, 1.0),
+                    "base_frequency" => get(kwargs, :basefreq, 60.0),
+                )
             )
         )
 
         _add_unused_kwargs!(data_model["settings"], kwargs)
     elseif model_type == MATHEMATICAL
         @warn "There are not currently any helper functions to help build a mathematical model, this will only instantiate required fields."
-        data_model = Dict{String,Any}(
-            "bus" => Dict{String,Any}(),
-            "load" => Dict{String,Any}(),
-            "shunt" => Dict{String,Any}(),
-            "gen" => Dict{String,Any}(),
-            "storage" => Dict{String,Any}(),
-            "branch" => Dict{String,Any}(),
-            "switch" => Dict{String,Any}(),
-            "per_unit" => false,
-            "data_model" => model_type
+        data_model = MathematicalModel{NetworkModel}(
+            Dict{String,Any}(
+                "bus" => Dict{String,Any}(),
+                "load" => Dict{String,Any}(),
+                "shunt" => Dict{String,Any}(),
+                "gen" => Dict{String,Any}(),
+                "storage" => Dict{String,Any}(),
+                "branch" => Dict{String,Any}(),
+                "switch" => Dict{String,Any}(),
+                "per_unit" => false,
+                "data_model" => model_type
+            )
         )
 
         _add_unused_kwargs!(data_model, kwargs)

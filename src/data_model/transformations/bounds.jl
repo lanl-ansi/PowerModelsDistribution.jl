@@ -1,21 +1,19 @@
 """
-    adjust_small_line_impedances!(data::Dict{String,<:Any}; min_impedance_val::Real=1e-2, replace_impedance_val::Real=0.0)
+    adjust_small_line_impedances!(data::EngineeringModel; min_impedance_val::Real=1e-2, replace_impedance_val::Real=0.0)
 
 Replaces impedances (rs, xs) on lines, linecodes, and switches lower than `min_impedance_val` with `replace_impedance_val`.
 """
-function adjust_small_line_impedances!(data::Dict{String,<:Any}; min_impedance_val::Real=1e-2, replace_impedance_val::Real=0.0)
-    @assert iseng(data) "wrong data model type"
-
+function adjust_small_line_impedances!(data::EngineeringModel; min_impedance_val::Real=1e-2, replace_impedance_val::Real=0.0)
     apply_pmd!(_adjust_small_line_impedances!, data; apply_to_subnetworks=true, min_impedance_val=min_impedance_val, replace_impedance_val=replace_impedance_val)
 end
 
 
 """
-    _adjust_small_line_impedances!(data_eng::Dict{String,<:Any}; min_impedance_val::Real=1e-2, replace_impedance_val::Real=0.0)
+    _adjust_small_line_impedances!(data_eng::EngineeringModel{NetworkModel}; min_impedance_val::Real=1e-2, replace_impedance_val::Real=0.0)
 
 Replaces impedances (rs, xs) on lines, linecodes, and switches lower than `min_impedance_val` with `replace_impedance_val`.
 """
-function _adjust_small_line_impedances!(data_eng::Dict{String,<:Any}; min_impedance_val::Real=1e-2, replace_impedance_val::Real=0.0)
+function _adjust_small_line_impedances!(data_eng::EngineeringModel{NetworkModel}; min_impedance_val::Real=1e-2, replace_impedance_val::Real=0.0)
     for type in ["line", "linecode", "switch"]
         if haskey(data_eng, type)
             for (id,obj) in data_eng[type]
@@ -31,23 +29,21 @@ end
 
 
 """
-    adjust_small_line_admittances!(data::Dict{String,<:Any}; min_admittance_val::Real=1e-2, replace_admittance_val::Real=0.0)
+    adjust_small_line_admittances!(data::EngineeringModel; min_admittance_val::Real=1e-2, replace_admittance_val::Real=0.0)
 
 Replaces admittances (g_fr, g_to, b_fr, b_to) on lines, linecodes, and switches lower than `min_admittance_val` with `replace_admittance_val`.
 """
-function adjust_small_line_admittances!(data::Dict{String,<:Any}; min_admittance_val::Real=1e-2, replace_admittance_val::Real=0.0)
-    @assert iseng(data) "wrong data model type"
-
+function adjust_small_line_admittances!(data::EngineeringModel; min_admittance_val::Real=1e-2, replace_admittance_val::Real=0.0)
     apply_pmd!(_adjust_small_line_admittances!, data; apply_to_subnetworks=true, min_admittance_val=min_admittance_val, replace_admittance_val=replace_admittance_val)
 end
 
 
 """
-    _adjust_small_line_admittances!(data_eng::Dict{String,<:Any}; min_admittance_val::Real=1e-2, replace_admittance_val::Real=0.0)
+    _adjust_small_line_admittances!(data_eng::EngineeringModel{NetworkModel}; min_admittance_val::Real=1e-2, replace_admittance_val::Real=0.0)
 
 Replaces admittances (g_fr, g_to, b_fr, b_to) on lines, linecodes, and switches lower than `min_admittance_val` with `replace_admittance_val`.
 """
-function _adjust_small_line_admittances!(data_eng::Dict{String,<:Any}; min_admittance_val::Real=1e-2, replace_admittance_val::Real=0.0)
+function _adjust_small_line_admittances!(data_eng::EngineeringModel{NetworkModel}; min_admittance_val::Real=1e-2, replace_admittance_val::Real=0.0)
     for type in ["line", "linecode", "switch"]
         if haskey(data_eng, type)
             for (id,obj) in data_eng[type]
@@ -63,23 +59,21 @@ end
 
 
 """
-    adjust_small_line_lengths!(data::Dict{String,<:Any}; min_length_val::Real=25.0, replace_length_val::Real=0.0)
+    adjust_small_line_lengths!(data::EngineeringModel; min_length_val::Real=25.0, replace_length_val::Real=0.0)
 
 Replaces length on lines, switches lower than `min_length_val` with `replace_length_val`.
 """
-function adjust_small_line_lengths!(data::Dict{String,<:Any}; min_length_val::Real=25.0, replace_length_val::Real=0.0)
-    @assert iseng(data) "wrong data model type"
-
+function adjust_small_line_lengths!(data::EngineeringModel; min_length_val::Real=25.0, replace_length_val::Real=0.0)
     apply_pmd!(_adjust_small_line_lengths!, data; apply_to_subnetworks=true, min_length_val=min_length_val, replace_length_val=replace_length_val)
 end
 
 
 """
-    _adjust_small_line_lengths!(data_eng::Dict{String,<:Any}; min_length_val::Real=25.0, replace_length_val::Real=0.0)
+    _adjust_small_line_lengths!(data_eng::EngineeringModel{NetworkModel}; min_length_val::Real=25.0, replace_length_val::Real=0.0)
 
 Replaces length on lines, switches lower than `min_length_val` with `replace_length_val`.
 """
-function _adjust_small_line_lengths!(data_eng::Dict{String,<:Any}; min_length_val::Real=25.0, replace_length_val::Real=0.0)
+function _adjust_small_line_lengths!(data_eng::EngineeringModel{NetworkModel}; min_length_val::Real=25.0, replace_length_val::Real=0.0)
     for type in ["line", "switch"]
         if haskey(data_eng, type)
             for (id,obj) in data_eng[type]
@@ -93,25 +87,23 @@ end
 
 
 """
-    apply_voltage_bounds!(data::Dict{String,<:Any}; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1)
+    apply_voltage_bounds!(data::EngineeringModel; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1)
 
 add voltage bounds to all buses based on per-unit upper (`vm_ub`) and lower (`vm_lb`), scaled by the bus's voltage based
 """
-function apply_voltage_bounds!(data::Dict{String,<:Any}; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1, exclude::Vector{String}=!isempty(get(data, "voltage_source", Dict())) ? String[x.second["bus"] for x in data["voltage_source"]] : String[])
-    @assert iseng(data) "wrong data model type"
-
+function apply_voltage_bounds!(data::EngineeringModel; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1, exclude::Vector{String}=!isempty(get(data, "voltage_source", Dict())) ? String[x.second["bus"] for x in data["voltage_source"]] : String[])
     apply_pmd!(_apply_voltage_bounds!, data; apply_to_subnetworks=true, vm_lb=vm_lb, vm_ub=vm_ub)
 end
 
 
 
 """
-    _apply_voltage_bounds!(data_eng::Dict{String,<:Any}; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1)
+    _apply_voltage_bounds!(data_eng::EngineeringModel{NetworkModel}; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1)
 
 add voltage bounds to all buses based on per-unit upper (`vm_ub`) and lower (`vm_lb`), scaled by the bus's voltage based
 """
-function _apply_voltage_bounds!(data_eng::Dict{String,<:Any}; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1, exclude::Vector{String}=!isempty(get(data_eng, "voltage_source", Dict())) ? String[x.second["bus"] for x in data_eng["voltage_source"]] : String[])
-    (bus_vbases, _) = calc_eng_voltage_bases(data_eng, data_eng["settings"]["vbases_default"])
+function _apply_voltage_bounds!(data_eng::EngineeringModel{NetworkModel}; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1, exclude::Vector{String}=!isempty(get(data_eng, "voltage_source", Dict())) ? String[x.second["bus"] for x in data_eng["voltage_source"]] : String[])
+    (bus_vbases, _) = calc_voltage_bases(data_eng, data_eng["settings"]["vbases_default"])
     for (id, bus) in filter(x->!(x.first in exclude), get(data_eng, "bus", Dict{String,Any}()))
         vbase = bus_vbases[id]
         if !ismissing(vm_lb) && !ismissing(vbase)
@@ -128,7 +120,7 @@ end
 
 
 """
-    remove_all_bounds!(data; exclude::Vector{<:String}=String["energy_ub"], exclude_asset_type::Vector{String}=String[])
+    remove_all_bounds!(data::EngineeringModel; exclude::Vector{<:String}=String["energy_ub"], exclude_asset_type::Vector{String}=String[])
 
 Removes all fields ending in '_ub' or '_lb' that aren't required by the math model. Properties
 can be excluded from this removal with `exclude::Vector{String}`
@@ -137,15 +129,13 @@ Whole asset types (e.g., "line") can be excluded using the keyword argument `exc
 
 By default, `"energy_ub"` is excluded from this removal, since it is a required properly on storage.
 """
-function remove_all_bounds!(data; exclude::Vector{<:String}=String["energy_ub"], exclude_asset_type::Vector{String}=String[])
-    @assert iseng(data) "wrong data model type"
-
+function remove_all_bounds!(data::EngineeringModel; exclude::Vector{<:String}=String["energy_ub"], exclude_asset_type::Vector{String}=String[])
     apply_pmd!(_remove_all_bounds!, data; apply_to_subnetworks=true, exclude=exclude, exclude_asset_type=exclude_asset_type)
 end
 
 
 """
-    _remove_all_bounds!(data_eng; exclude::Vector{<:String}=String["energy_ub"], exclude_asset_type::Vector{String}=String[])
+    _remove_all_bounds!(data_eng::EngineeringModel{NetworkModel}; exclude::Vector{<:String}=String["energy_ub"], exclude_asset_type::Vector{String}=String[])
 
 Removes all fields ending in '_ub' or '_lb' that aren't required by the math model. Properties
 can be excluded from this removal with `exclude::Vector{String}`
@@ -154,7 +144,7 @@ Whole asset types (e.g., "line") can be excluded using the keyword argument `exc
 
 By default, `"energy_ub"` is excluded from this removal, since it is a required properly on storage.
 """
-function _remove_all_bounds!(data_eng; exclude::Vector{<:String}=String["energy_ub"], exclude_asset_type::Vector{String}=String[])
+function _remove_all_bounds!(data_eng::EngineeringModel{NetworkModel}; exclude::Vector{<:String}=String["energy_ub"], exclude_asset_type::Vector{String}=String[])
     for (k,v) in data_eng
         if isa(v, Dict) && k!="settings" && !(k in exclude_asset_type)
             for (_, comp) in v
@@ -170,23 +160,21 @@ end
 
 
 """
-    adjust_line_limits!(data::Dict{String,<:Any}, mult::Real)
+    adjust_line_limits!(data::EngineeringModel, mult::Real)
 
 Multiplies limits (`sm_ub` and/or `cm_ub`) on line objects (`line`, `linecode`, `switch`) by a multiplier `mult`
 """
-function adjust_line_limits!(data::Dict{String,<:Any}, mult::Real)
-    @assert iseng(data) "wrong data model type"
-
+function adjust_line_limits!(data::EngineeringModel, mult::Real)
     apply_pmd!(_adjust_line_limits!, data, mult; apply_to_subnetworks=true)
 end
 
 
 """
-    _adjust_line_limits!(data_eng::Dict{String,<:Any}, mult::Real)
+    _adjust_line_limits!(data_eng::EngineeringModel{NetworkModel}, mult::Real)
 
 Multiplies limits (`sm_ub` and/or `cm_ub`) on line objects (`line`, `linecode`, `switch`) by a multiplier `mult`
 """
-function _adjust_line_limits!(data_eng::Dict{String,<:Any}, mult::Real)
+function _adjust_line_limits!(data_eng::EngineeringModel{NetworkModel}, mult::Real)
     for type in ["linecode", "line", "switch"]
         if haskey(data_eng, type)
             for (_,obj) in data_eng[type]
@@ -203,23 +191,21 @@ end
 
 
 """
-    remove_line_limits!(data::Dict{String,<:Any})
+    remove_line_limits!(data::EngineeringModel)
 
 Removes fields `cm_ub` and `sm_ub` from lines, switches, and linecodes
 """
-function remove_line_limits!(data::Dict{String,<:Any})
-    @assert iseng(data) "wrong data model type"
-
+function remove_line_limits!(data::EngineeringModel)
     apply_pmd!(_remove_line_limits!, data; apply_to_subnetworks=true)
 end
 
 
 """
-    _remove_line_limits!(data_eng::Dict{String,<:Any})
+    _remove_line_limits!(data_eng::EngineeringModel{NetworkModel})
 
 Removes fields `cm_ub` and `sm_ub` from lines, switches, and linecodes
 """
-function _remove_line_limits!(data_eng::Dict{String,<:Any})
+function _remove_line_limits!(data_eng::EngineeringModel{NetworkModel})
     for type in ["linecode", "line", "switch"]
         if haskey(data_eng, type)
             for (_,obj) in data_eng[type]
@@ -232,23 +218,21 @@ end
 
 
 """
-    adjust_transformer_limits!(data::Dict{String,<:Any}, mult::Real)
+    adjust_transformer_limits!(data::EngineeringModel, mult::Real)
 
 Multiplies limits (`sm_ub` and/or `cm_ub`) on transformer objects by a multiplier `mult`
 """
-function adjust_transformer_limits!(data::Dict{String,<:Any}, mult::Real)
-    @assert iseng(data) "wrong data model type"
-
+function adjust_transformer_limits!(data::EngineeringModel, mult::Real)
     apply_pmd!(_adjust_transformer_limits!, data, mult; apply_to_subnetworks=true)
 end
 
 
 """
-    _adjust_transformer_limits!(data_eng::Dict{String,<:Any}, mult::Real)
+    _adjust_transformer_limits!(data_eng::EngineeringModel{NetworkModel}, mult::Real)
 
 Multiplies limits (`sm_ub` and/or `cm_ub`) on transformer objects by a multiplier `mult`
 """
-function _adjust_transformer_limits!(data_eng::Dict{String,<:Any}, mult::Real)
+function _adjust_transformer_limits!(data_eng::EngineeringModel{NetworkModel}, mult::Real)
     if haskey(data_eng, "transformer")
         for (_,obj) in data_eng["transformer"]
             if haskey(obj, "cm_ub")
@@ -263,23 +247,21 @@ end
 
 
 """
-    remove_transformer_limits!(data_eng::Dict{String,<:Any})
+    remove_transformer_limits!(data::EngineeringModel)
 
 Removes field `sm_ub` from transformers, xfmrcodes
 """
-function remove_transformer_limits!(data::Dict{String,<:Any})
-    @assert iseng(data) "wrong data model type"
-
+function remove_transformer_limits!(data::EngineeringModel)
     apply_pmd!(_remove_transformer_limits!, data; apply_to_subnetworks=true)
 end
 
 
 """
-    _remove_transformer_limits!(data_eng::Dict{String,<:Any})
+    _remove_transformer_limits!(data_eng::EngineeringModel{NetworkModel})
 
 Removes field `sm_ub` from transformers, xfmrcodes
 """
-function _remove_transformer_limits!(data_eng::Dict{String,<:Any})
+function _remove_transformer_limits!(data_eng::EngineeringModel{NetworkModel})
     for type in ["xfmrcode", "transformer"]
         if haskey(data_eng, type)
             for (_,obj) in data_eng[type]
@@ -291,14 +273,12 @@ end
 
 
 """
-    apply_voltage_angle_difference_bounds!(data::Dict{String,<:Any}, vad::Real=5.0)
+    apply_voltage_angle_difference_bounds!(data::EngineeringModel, vad::Real=5.0)
 
 Applies voltage angle difference bound given by `vad::Real` in degrees (_i.e._, the allowed drift of angle from one end
 of a line to another) to all lines. By default, `vad=5.0`.
 """
-function apply_voltage_angle_difference_bounds!(data::Dict{String,<:Any}, vad::Real=5.0)
-    @assert iseng(data) "wrong data model type"
-
+function apply_voltage_angle_difference_bounds!(data::EngineeringModel, vad::Real=5.0)
     apply_pmd!(_apply_voltage_angle_difference_bounds!, data, vad; apply_to_subnetworks=true)
 end
 
@@ -321,11 +301,11 @@ end
 
 """
     add_bus_absolute_vbounds!(
-        data_eng::Dict{String,Any};
+        data_eng::EngineeringModel{NetworkModel};
         phase_lb_pu::Real=0.9,
         phase_ub_pu::Real=1.1,
         neutral_ub_pu::Real=0.3
-    )::Dict{String,Any}
+    )::EngineeringModel{NetworkModel}
 
 Adds absolute (i.e. indivdially, not between a pair of terminals) voltage bounds through the 'vm_lb' and 'vm_ub' property.
 Bounds are specified in per unit, and automatically converted to SI units by calculating the voltage base.
@@ -333,11 +313,11 @@ If you change data_eng["settings"]["vbases_default"], the data model transformat
 Neutral terminals are automatically detected, and set to [0,phase_ub_pu*vbase].
 """
 function add_bus_absolute_vbounds!(
-    data_eng::Dict{String,Any};
+    data_eng::EngineeringModel{NetworkModel};
     phase_lb_pu::Real=0.9,
     phase_ub_pu::Real=1.1,
     neutral_ub_pu::Real=0.3
-    )::Dict{String,Any}
+    )::EngineeringModel{NetworkModel}
 
     nbts = _infer_neutral_terminals(data_eng)
     bus_vbase, _ = calc_voltage_bases(data_eng, data_eng["settings"]["vbases_default"])
@@ -359,7 +339,7 @@ This is done by starting from a list of all terminals which are either
 This initial list is then expanded to all terminals which are
 galvanically connected to terminals in the initial list.
 """
-function _infer_neutral_terminals(data_eng::Dict{String,Any})
+function _infer_neutral_terminals(data_eng::EngineeringModel{NetworkModel})
     # find all galvanic edges through lines and switches
     bts = [(b,t) for (b,bus) in data_eng["bus"] for t in bus["terminals"]]
     bt_neighbours = Dict(bt=>[] for bt in bts)
@@ -416,7 +396,7 @@ end
 
 """
     add_unit_vbounds!(
-        data_eng::Dict{String,Any};
+        data_eng::EngineeringModel{NetworkModel};
         lb_pu::Real=0.9,
         ub_pu::Real=1.1,
         delta_multiplier::Real=sqrt(3),
@@ -430,7 +410,7 @@ If you change data_eng["settings"]["vbases_default"], the data model transformat
 The delta multiplier controls the scaling of bounds of delta-connected units.
 """
 function add_unit_vbounds!(
-    data_eng::Dict{String,Any};
+    data_eng::EngineeringModel{NetworkModel};
     lb_pu::Real=0.9,
     ub_pu::Real=1.1,
     delta_multiplier::Real=sqrt(3),
@@ -489,7 +469,7 @@ end
 
 
 """
-    add_bus_pn_pp_ng_vbounds!(data_eng::Dict{String,Any}, phase_terminals::Vector, neutral_terminal;
+    add_bus_pn_pp_ng_vbounds!(data_eng::EngineeringModel{NetworkModel}, phase_terminals::Vector, neutral_terminal;
         pn_lb_pu::Union{Real,Missing}=missing,
         pn_ub_pu::Union{Real,Missing}=missing,
         pp_lb_pu::Union{Real,Missing}=missing,
@@ -500,7 +480,7 @@ end
 Adds symmetric phase-to-neutral and phase-to-phase voltage bounds when possible
 for each bus through the three-phase bus syntax.
 """
-function add_bus_pn_pp_ng_vbounds!(data_eng::Dict{String,Any}, phase_terminals::Vector, neutral_terminal;
+function add_bus_pn_pp_ng_vbounds!(data_eng::EngineeringModel{NetworkModel}, phase_terminals::Vector, neutral_terminal;
     pn_lb_pu::Union{Real,Missing}=missing,
     pn_ub_pu::Union{Real,Missing}=missing,
     pp_lb_pu::Union{Real,Missing}=missing,

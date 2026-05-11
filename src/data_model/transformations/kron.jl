@@ -1,21 +1,26 @@
 """
-    apply_kron_reduction!(data::Dict{String,<:Any}; kr_phases::Union{Vector{Int},Vector{String}}=[1,2,3], kr_neutral::Union{Int,String}=4)
+    apply_kron_reduction!(data::EngineeringModel{NetworkModel}; kr_phases::Union{Vector{Int},Vector{String}}=[1,2,3], kr_neutral::Union{Int,String}=4)
 
 Applies a Kron Reduction to the network, reducing out the `kr_neutral`, leaving only the `kr_phases`
 """
-function apply_kron_reduction!(data::Dict{String,<:Any}; kr_phases::Union{Vector{Int},Vector{String}}=[1, 2, 3], kr_neutral::Union{Int,String}=4)
-    @assert iseng(data) "wrong data model type"
+apply_kron_reduction!(data::EngineeringModel{NetworkModel}; kr_phases::Union{Vector{Int},Vector{String}}=[1, 2, 3], kr_neutral::Union{Int,String}=4) = _apply_kron_reduction!(data; kr_phases=kr_phases, kr_neutral=kr_neutral)
 
+
+"""
+    apply_kron_reduction!(data::EngineeringModel{MultinetworkModel}; kr_phases::Union{Vector{Int},Vector{String}}=[1,2,3], kr_neutral::Union{Int,String}=4)
+
+Applies a Kron Reduction to the network, reducing out the `kr_neutral`, leaving only the `kr_phases`
+"""
+function apply_kron_reduction!(data::EngineeringModel{MultinetworkModel}; kr_phases::Union{Vector{Int},Vector{String}}=[1, 2, 3], kr_neutral::Union{Int,String}=4)
     apply_pmd!(_apply_kron_reduction!, data; apply_to_subnetworks=true, kr_phases=kr_phases, kr_neutral=kr_neutral)
 end
-
 
 """
     _apply_kron_reduction!(data_eng::Dict{String,<:Any}; kr_phases::Union{Vector{Int},Vector{String}}=[1,2,3], kr_neutral::Union{Int,String}=4)
 
 Applies a Kron Reduction to the network, reducing out the `kr_neutral`, leaving only the `kr_phases`
 """
-function _apply_kron_reduction!(data_eng::Dict{String,<:Any}; kr_phases::Union{Vector{Int},Vector{String}}=[1, 2, 3], kr_neutral::Union{Int,String}=4)
+function _apply_kron_reduction!(data_eng::EngineeringModel{NetworkModel}; kr_phases::Union{Vector{Int},Vector{String}}=[1, 2, 3], kr_neutral::Union{Int,String}=4)
     if !get(data_eng, "is_kron_reduced", false)
         if haskey(data_eng, "bus")
             for (id, eng_obj) in data_eng["bus"]

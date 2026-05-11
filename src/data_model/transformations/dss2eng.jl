@@ -1,6 +1,6 @@
 # OpenDSS parser
 "Parses buscoords lon,lat (if present) into their respective buses"
-function _dss2eng_buscoords!(data_eng::Dict{String,<:Any}, data_dss::OpenDssDataModel)
+function _dss2eng_buscoords!(data_eng::EngineeringModel{NetworkModel}, data_dss::OpenDssDataModel)
     for (id, coords) in data_dss.buscoordinates
         if haskey(data_eng["bus"], id)
             bus = data_eng["bus"][id]
@@ -12,7 +12,7 @@ end
 
 
 "Adds nodes as buses to `data_eng` from `data_dss`"
-function _dss2eng_bus!(data_eng::Dict{String,<:Any}, data_dss::OpenDssDataModel, import_all::Bool=false)
+function _dss2eng_bus!(data_eng::EngineeringModel{NetworkModel}, data_dss::OpenDssDataModel, import_all::Bool=false)
     buses = _discover_buses(data_dss)
 
     for id in buses
@@ -26,7 +26,7 @@ end
 
 
 "Adds loadshapes to `data_eng` from `data_dss`"
-function _dss2eng_loadshape!(data_eng::Dict{String,<:Any}, data_dss::OpenDssDataModel, import_all::Bool=false)
+function _dss2eng_loadshape!(data_eng::EngineeringModel{NetworkModel}, data_dss::OpenDssDataModel, import_all::Bool=false)
     for (id, dss_obj) in get(data_dss, "loadshape", Dict{String,Any}())
         eng_obj = Dict{String,Any}(
             "time" => dss_obj["hour"],
@@ -70,7 +70,7 @@ Note that in the current feature set, fixed therefore equals constant
 # 7: Constant P and quadratic Q (i.e., fixed reactance)
 # 8: ZIP
 """
-function _dss2eng_load!(data_eng::Dict{String,<:Any}, data_dss::OpenDssDataModel, import_all::Bool, time_series::String="daily")
+function _dss2eng_load!(data_eng::EngineeringModel{NetworkModel}, data_dss::OpenDssDataModel, import_all::Bool, time_series::String="daily")
     for (id, dss_obj) in get(data_dss, "load", Dict{String,Any}())
         nphases = dss_obj["phases"]
         bus = _parse_bus_id(dss_obj["bus1"])[1]
@@ -130,7 +130,7 @@ end
 
 
 "Adds capacitors to `data_eng` from `data_dss`"
-function _dss2eng_capacitor!(data_eng::Dict{String,<:Any}, data_dss::OpenDssDataModel, import_all::Bool)
+function _dss2eng_capacitor!(data_eng::EngineeringModel{NetworkModel}, data_dss::OpenDssDataModel, import_all::Bool)
     for (id, dss_obj) in get(data_dss, "capacitor", Dict{String,Any}())
         nphases = dss_obj["phases"]
         conn = dss_obj["conn"]
@@ -226,7 +226,7 @@ end
 
 
 "Adds shunt reactors to `data_eng` from `data_dss`"
-function _dss2eng_reactor!(data_eng::Dict{String,<:Any}, data_dss::OpenDssDataModel, import_all::Bool)
+function _dss2eng_reactor!(data_eng::EngineeringModel{NetworkModel}, data_dss::OpenDssDataModel, import_all::Bool)
     for (id, dss_obj) in get(data_dss, "reactor", Dict{String,Any}())
         if isempty(dss_obj["bus2"])
             nphases = dss_obj["phases"]
@@ -299,7 +299,7 @@ end
 
 
 "Adds generators to `data_eng` from `data_dss`"
-function _dss2eng_generator!(data_eng::Dict{String,<:Any}, data_dss::OpenDssDataModel, import_all::Bool, time_series::String="daily")
+function _dss2eng_generator!(data_eng::EngineeringModel{NetworkModel}, data_dss::OpenDssDataModel, import_all::Bool, time_series::String="daily")
     for (id, dss_obj) in get(data_dss, "generator", Dict{String,Any}())
         nphases = dss_obj["phases"]
         conf = nphases==1 && dss_obj["kv"]==0.24 ? DELTA : WYE # check if generator is connected between split-phase terminals of triplex node (nominal line-line voltage=240V), TODO: better generalization
@@ -338,7 +338,7 @@ end
 
 
 "Adds vsources to `data_eng` from `data_dss`"
-function _dss2eng_vsource!(data_eng::Dict{String,<:Any}, data_dss::OpenDssDataModel, import_all::Bool, time_series::String="daily")
+function _dss2eng_vsource!(data_eng::EngineeringModel{NetworkModel}, data_dss::OpenDssDataModel, import_all::Bool, time_series::String="daily")
     for (id, dss_obj) in get(data_dss, "vsource", Dict{String,Any}())
         ph1_ang = dss_obj["angle"]
         vm_pu = dss_obj["pu"]
@@ -390,7 +390,7 @@ end
 
 
 "Adds lines to `data_eng` from `data_dss`"
-function _dss2eng_linecode!(data_eng::Dict{String,<:Any}, data_dss::OpenDssDataModel, import_all::Bool)
+function _dss2eng_linecode!(data_eng::EngineeringModel{NetworkModel}, data_dss::OpenDssDataModel, import_all::Bool)
     for (id, dss_obj) in get(data_dss, "linecode", Dict{String,Any}())
         eng_obj = Dict{String,Any}()
 
@@ -434,7 +434,7 @@ end
 
 
 "Adds lines to `data_eng` from `data_dss`"
-function _dss2eng_line!(data_eng::Dict{String,<:Any}, data_dss::OpenDssDataModel, import_all::Bool)
+function _dss2eng_line!(data_eng::EngineeringModel{NetworkModel}, data_dss::OpenDssDataModel, import_all::Bool)
     for (id, dss_obj) in get(data_dss, "line", Dict())
         if haskey(dss_obj, "basefreq") && dss_obj["basefreq"] != data_eng["settings"]["base_frequency"]
             @warn "basefreq=$(dss_obj["basefreq"]) on line.$id does not match circuit basefreq=$(data_eng["settings"]["base_frequency"])"
@@ -536,7 +536,7 @@ end
 
 
 "Adds transformers to `data_eng` from `data_dss`"
-function _dss2eng_xfmrcode!(data_eng::Dict{String,<:Any}, data_dss::OpenDssDataModel, import_all::Bool, sm_ub::String="emergency")
+function _dss2eng_xfmrcode!(data_eng::EngineeringModel{NetworkModel}, data_dss::OpenDssDataModel, import_all::Bool, sm_ub::String="emergency")
     @assert sm_ub in ["emergency", "normal"] "Unrecognized sm_ub '$sm_ub'. Must be either 'emergency' or 'normal'"
     sm_ub = sm_ub == "emergency" ? "emerghkva" : "normhkva"
 
@@ -571,7 +571,7 @@ end
 
 
 "Adds transformers to `data_eng` from `data_dss`"
-function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::OpenDssDataModel, import_all::Bool, sm_ub::String)
+function _dss2eng_transformer!(data_eng::EngineeringModel{NetworkModel}, data_dss::OpenDssDataModel, import_all::Bool, sm_ub::String)
     @assert sm_ub in ["emergency", "normal"] "Unrecognized sm_ub '$sm_ub'. Must be either 'emergency' or 'normal'"
     sm_ub = sm_ub == "emergency" ? "emerghkva" : "normhkva"
 
@@ -758,7 +758,7 @@ end
 
 
 "Adds pvsystems to `data_eng` from `data_dss`"
-function _dss2eng_pvsystem!(data_eng::Dict{String,<:Any}, data_dss::OpenDssDataModel, import_all::Bool, time_series::String="daily")
+function _dss2eng_pvsystem!(data_eng::EngineeringModel{NetworkModel}, data_dss::OpenDssDataModel, import_all::Bool, time_series::String="daily")
     for (id, dss_obj) in get(data_dss, "pvsystem", Dict{String,Any}())
         # TODO pick parameters for solar objects
 
@@ -806,7 +806,7 @@ end
 
 
 "Adds storage to `data_eng` from `data_dss`"
-function _dss2eng_storage!(data_eng::Dict{String,<:Any}, data_dss::OpenDssDataModel, import_all::Bool, time_series::String="daily")
+function _dss2eng_storage!(data_eng::EngineeringModel{NetworkModel}, data_dss::OpenDssDataModel, import_all::Bool, time_series::String="daily")
     for (id, dss_obj) in get(data_dss, "storage", Dict{String,Any}())
         nphases = dss_obj["phases"]
 
@@ -848,7 +848,7 @@ end
 
 
 "Adds regcontrol to `data_eng` from `data_dss`"
-function _dss2eng_regcontrol!(data_eng::Dict{String,<:Any}, data_dss::OpenDssDataModel, import_all::Bool)
+function _dss2eng_regcontrol!(data_eng::EngineeringModel{NetworkModel}, data_dss::OpenDssDataModel, import_all::Bool)
     for (id, dss_obj) in get(data_dss, "regcontrol", Dict{String,Any}())
 
         nrw = get(data_dss["transformer"]["$(dss_obj["transformer"])"],"windings",2)
@@ -877,7 +877,7 @@ end
 
 
 "Adds capcontrol to `data_eng` from `data_dss`"
-function _dss2eng_capcontrol!(data_eng::Dict{String,<:Any}, data_dss::OpenDssDataModel, import_all::Bool)
+function _dss2eng_capcontrol!(data_eng::EngineeringModel{NetworkModel}, data_dss::OpenDssDataModel, import_all::Bool)
     for (id, dss_obj) in get(data_dss, "capcontrol", Dict{String,Any}())
         type = dss_obj["type"]
         nphases = data_dss["capacitor"]["$(dss_obj["capacitor"])"]["phases"]
@@ -976,7 +976,7 @@ function parse_opendss(
     bank_transformers::Bool=true,
     time_series::String="daily",
     dss2eng_extensions::Vector{<:Function}=Function[],
-    )::Dict{String,Any}
+    )::EngineeringModel{NetworkModel}
 
     data_dss = parse_dss(io)
 
@@ -1026,11 +1026,13 @@ function parse_opendss(
     bank_transformers::Bool=true,
     time_series::String="daily",
     dss2eng_extensions::Vector{<:Function}=Function[],
-    )::Dict{String,Any}
+    )::EngineeringModel{NetworkModel}
 
-    data_eng = Dict{String,Any}(
-        "data_model" => ENGINEERING,
-        "settings" => Dict{String,Any}(),
+    data_eng = EngineeringModel{NetworkModel}(
+        Dict{String,Any}(
+            "data_model" => ENGINEERING,
+            "settings" => Dict{String,Any}(),
+        )
     )
 
     if import_all
@@ -1113,7 +1115,7 @@ Dict{String,Any}(
 
 `"vm_start"`, `"va_start"`, and `"vbase"` are expected to be in SI units. `"vbase"` is optional.
 """
-function add_voltage_starts!(eng::Dict{String,<:Any}, voltages::Dict{String,<:Any})
+function add_voltage_starts!(eng::EngineeringModel{NetworkModel}, voltages::Dict{String,<:Any})
     for (bus_id, obj) in voltages
         eng_obj = eng["bus"][bus_id]
 
@@ -1132,6 +1134,6 @@ end
 Function to add `vm_start` and `va_start` properties to buses from a voltages csv file exported from OpenDSS,
 using [`parse_dss_voltages_export`](@ref parse_dss_voltages_export)
 """
-function add_voltage_starts!(eng::Dict{String,<:Any}, voltages_file::String)
+function add_voltage_starts!(eng::EngineeringModel{NetworkModel}, voltages_file::String)
     add_voltage_starts!(eng, parse_dss_voltages_export(voltages_file))
 end

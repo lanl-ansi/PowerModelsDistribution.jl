@@ -61,7 +61,7 @@ end
 
 
 "converts impendance in Ohm/m by multiplying by length"
-function _impedance_conversion_ravens(data_eng::Dict{String,Any}, eng_obj::Dict{String,Any}, key::String)
+function _impedance_conversion_ravens(data_eng::Dict{String,<:Any}, eng_obj::Dict{String,<:Any}, key::String)
 
     _conductor_count =  data_eng["PerLengthPhaseImpedance.conductorCount"]
     _impedance_matrix = zeros(Float64, _conductor_count, _conductor_count)
@@ -77,9 +77,8 @@ function _impedance_conversion_ravens(data_eng::Dict{String,Any}, eng_obj::Dict{
     return _impedance_matrix .* get(eng_obj, "Conductor.length", 1.0)
 end
 
-
 "converts impendance in Ohm/m in EnergySource"
-function _impedance_conversion_ravens_energy_source(data_eng::Dict{String,Any}, eng_obj::Dict{String,Any}, z1::Complex, z0::Complex)
+function _impedance_conversion_ravens_energy_source(data_eng::Dict{String,Any}, eng_obj::Dict{String,<:Any}, z1::Complex, z0::Complex)
     # TODO : Single-phase
     a = 1*exp(120*im*π/180)
     A = [1 1 1; 1 a a^2; 1 a^2 a]
@@ -87,7 +86,7 @@ function _impedance_conversion_ravens_energy_source(data_eng::Dict{String,Any}, 
     Z_ABC = A^-1 * Z_012 * A
     return Z_ABC
 end
-
+_impedance_conversion_ravens_energy_source(data_ravens::RavensModel, eng_obj::Dict{String,<:Any}, z1::Complex, z0::Complex) = _impedance_conversion_ravens_energy_source(Dict{String,Any}(), Dict{String,Any}(), z1, z0)
 
 "converts admittance by multiplying by 2πωl"
 function _admittance_conversion_ravens(data_eng::Dict{String,<:Any}, eng_obj::Dict{String,<:Any}, key::String)
@@ -107,19 +106,27 @@ function _admittance_conversion_ravens(data_eng::Dict{String,<:Any}, eng_obj::Di
 end
 
 "extracts the name from a ravens reference string"
-function _extract_name(element)
-
+function _extract_name(element::String)
     name = replace(split(element, "::")[2], "'" => "")
     return name
 end
 
-"extracts the type from a ravens reference string"
-function _extract_type(element)
+"extracts the name from a ravens reference string"
+function _extract_name(element::ReferenceProxy)
+    return _extract_name(element.ref_string)
+end
 
+
+"extracts the type from a ravens reference string"
+function _extract_type(element::String)
     name = replace(split(element, "::")[1], "'" => "")
     return name
 end
 
+"extracts the type from a ravens reference string"
+function _extract_type(element::ReferenceProxy)
+    return _extract_type(element.ref_string)
+end
 
 "calculates the shunt admittance matrix based on terminals and b or g"
 function _calc_shunt_admittance_matrix(terminals, b)
@@ -156,6 +163,7 @@ function apply_voltage_bounds_math!(data::Dict{String,<:Any}; vm_lb::Union{Real,
     end
 end
 
+apply_voltage_bounds_math!(data::MathematicalModel; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1) = apply_voltage_bounds_math!(data.data; vm_lb=vm_lb, vm_ub=vm_ub)
 
 function build_base_voltage_graphs(data::Dict{String,<:Any})::Tuple{Dict{Int,String},Graphs.SimpleGraph}
     nodes = Dict(cn => n for (n, cn) in enumerate(keys(data["ConnectivityNode"])))
@@ -173,6 +181,21 @@ function build_base_voltage_graphs(data::Dict{String,<:Any})::Tuple{Dict{Int,Str
     return Dict{Int,String}(n => cn for (cn, n) in nodes), G
 end
 
+function build_base_voltage_graphs(data::RavensModel)::Tuple{Dict{Int,String},Graphs.SimpleGraph}
+    nodes = Dict(cn => n for (n, cn) in enumerate(keys(data["ConnectivityNode"])))
+    G = Graphs.SimpleGraph(length(nodes))
+
+    for edge_types in ["Conductor", "Switch"]
+        for (i, edge) in get(data, edge_types, Dict())
+            Graphs.add_edge!(G, nodes[edge["ConductingEquipment.Terminals"][1]["Terminal.ConnectivityNode"]["IdentifiedObject.name"]], nodes[edge["ConductingEquipment.Terminals"][2]["Terminal.ConnectivityNode"]["IdentifiedObject.name"]])
+        end
+    end
+
+    return Dict{Int,String}(n => cn for (cn, n) in nodes), G
+end
+
+
+Base.match(a::Regex, data::ReferenceProxy) = match(a, data.ref_string)
 
 function find_voltages(data::Dict{String,<:Any})::Dict{String,Any}
     voltages = Dict{String,Any}()
@@ -208,6 +231,40 @@ function find_voltages(data::Dict{String,<:Any})::Dict{String,Any}
     return voltages
 end
 
+function find_voltages(data::RavensModel)::Dict{String,Any}
+    voltages = Dict{String,Any}()
+
+    for (i, es) in get(data, "EnergySource", Dict())
+        nominal_voltage = get(es, "EnergySource.nominalVoltage", missing)
+        if !ismissing(nominal_voltage)
+            voltages[es["ConductingEquipment.Terminals"][1]["Terminal.ConnectivityNode"]["IdentifiedObject.name"]] = nominal_voltage
+        end
+    end
+
+    for (i, tr) in get(data, "PowerTransformer", Dict())
+        info_name = match(Regex("TransformerTankInfo::'(.*)'"), get(get(tr, "PowerTransformer.TransformerTank", [Dict()])[1], "PowerSystemResource.AssetDatasheet", "TransformerTankInfo::''")).captures[1]
+        trinfos = _recursive_dict_get(data, ["AssetInfo", "PowerTransformerInfo", info_name, "PowerTransformerInfo.TransformerTankInfos", info_name, "TransformerTankInfo.TransformerEndInfos"], [])
+
+        # Corrects voltage ratios for TransformerTanks with Single-phase Tanks datasheets
+        voltage_ratios = ones(length(tr["ConductingEquipment.Terminals"]))
+        for wdg_id in 1:1:length(tr["ConductingEquipment.Terminals"])
+            conns = length(_phasecode_map[tr["ConductingEquipment.Terminals"][wdg_id]["Terminal.phases"]])
+            voltage_ratios[wdg_id] = conns >= 3 ? sqrt(3) : 1.0
+        end
+
+        rated_u = merge(
+            filter(x -> !ismissing(x.second), Dict(get(trinfo, "TransformerEndInfo.endNumber", n) => get(trinfo, "TransformerEndInfo.ratedU", missing) * voltage_ratios[n] for (n, trinfo) in enumerate(trinfos))),
+            filter(x -> !ismissing(x.second), Dict(get(pte, "endNumber", n) => get(pte, "PowerTransformerEnd.ratedU", missing) for (n, pte) in enumerate(get(tr, "PowerTransformer.PowerTransformerEnd", []))))
+        )
+
+        for (n, term) in enumerate(get(tr, "ConductingEquipment.Terminals", []))
+            voltages[term["Terminal.ConnectivityNode"]["IdentifiedObject.name"]] = get(rated_u, n, missing)
+        end
+    end
+
+    return voltages
+end
+
 
 function find_base_voltages(data::Dict{String,<:Any})::Dict{String,Any}
     node_lookup, G = build_base_voltage_graphs(data)
@@ -229,6 +286,7 @@ function find_base_voltages(data::Dict{String,<:Any})::Dict{String,Any}
     return Dict{String,Any}(node_lookup[i] => get(voltage_per_cc, n, missing) for (n, cc) in enumerate(ccs) for i in cc)
 end
 
+find_base_voltages(data::RavensModel)::Dict{String,Any} = find_base_voltages(data.data)
 
 function _recursive_dict_get(dict::Dict, path::Vector{<:Any}, default::Any)::Any
     if length(path) > 1
@@ -237,6 +295,15 @@ function _recursive_dict_get(dict::Dict, path::Vector{<:Any}, default::Any)::Any
         return get(dict, path[1], default)
     end
 end
+
+function _recursive_dict_get(dict::RavensModel, path::Vector{<:Any}, default::Any)::Any
+    if length(path) > 1
+        return _recursive_dict_get(get(dict, path[1], Dict()), path[2:end], default)
+    else
+        return get(dict, path[1], default)
+    end
+end
+
 
 
 function _recursive_dict_set!(dict::Dict, path::Vector{<:Any}, value::Any)
@@ -275,6 +342,36 @@ function add_base_voltages!(data::Dict{String,<:Any}; overwrite::Bool=false)::No
                 continue
             else
                 cn = match(Regex("ConnectivityNode::'(.+)'"), item["ConductingEquipment.Terminals"][1]["Terminal.ConnectivityNode"]).captures[1]
+                _recursive_dict_set!(data, [path..., i, "ConductingEquipment.BaseVoltage"], "BaseVoltage::'PMD_BaseV_$(base_voltages[cn]/1000.0)_kV'")
+            end
+        end
+    end
+end
+
+function add_base_voltages!(data::RavensModel; overwrite::Bool=false)::Nothing
+    if overwrite || "BaseVoltage" ∉ keys(data)
+        data["BaseVoltage"] = Dict{String,Any}()
+    end
+
+    base_voltages = find_base_voltages(data)
+
+    unique_bv = unique(values(base_voltages))
+
+    for bv in unique_bv
+        data["BaseVoltage"]["PMD_BaseV_$(bv/1000.0)_kV"] = Dict{String,Any}(
+            "IdentifiedObject.name" => "PMD_BaseV_$(bv) V",
+            "IdentifiedObject.mRID" => "$(UUIDs.uuid4())",
+            "Ravens.cimObjectType" => "BaseVoltage",
+            "BaseVoltage.nominalVoltage" => bv
+        )
+    end
+
+    for path in ["EnergyConsumer", "EnergySource", "PowerElectronicsConnection", "RotatingMachine"]
+        for (i, item) in get(data, path, Dict())
+            if !overwrite && "ConductingEquipment.BaseVoltage" ∈ keys(item)
+                continue
+            else
+                cn = item["ConductingEquipment.Terminals"][1]["Terminal.ConnectivityNode"]["IdentifiedObject.name"]
                 _recursive_dict_set!(data, [path..., i, "ConductingEquipment.BaseVoltage"], "BaseVoltage::'PMD_BaseV_$(base_voltages[cn]/1000.0)_kV'")
             end
         end
@@ -370,3 +467,17 @@ function _build_voltage_limit(vbase::Real, vm_lb_pu::Real, vm_ub_pu::Real; accep
     )
 end
 
+function _add_bus_props!(data_math, math_obj, bus, bus_terminals, nphases)
+    # Add vmin/vmax/terminals info to fbus and tbus if missing
+    bus_data = data_math["bus"][string(bus)]
+    if !(haskey(bus_data, "terminals")) || (length(bus_data["terminals"]) < length(bus_terminals))
+        bus_data["terminals"] = bus_terminals
+        bus_data["vmin"] = fill(0.0, nphases)
+        bus_data["vmax"] = fill(Inf, nphases)
+        bus_data["grounded"] = zeros(Bool, nphases)
+    end
+end
+
+function ismultinetwork(data::RavensModel)::Bool
+    return ismultinetwork(data.data)
+end

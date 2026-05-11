@@ -3,7 +3,7 @@
 
 solve test mn mc problem
 """
-function _solve_mn_mc_opb(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
+function _solve_mn_mc_opb(data::Union{DistributionModel,String}, model_type::Type, solver; kwargs...)
     return solve_mc_model(data, model_type, solver, _build_mc_mn_opb; ref_extensions=[ref_add_connected_components!], multinetwork=true, kwargs...)
 end
 
@@ -30,13 +30,13 @@ end
 
 Ref-extension for opb problem type to add connected components ref
 """
-function ref_add_connected_components!(ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any})
+function ref_add_connected_components!(ref::Dict{Symbol,<:Any}, data::MathematicalModel)
     apply_pmd!(_ref_add_connected_components!, ref, data)
 end
 
 
 "adds connected components for opb problem type"
-function _ref_add_connected_components!(ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any})
+function _ref_add_connected_components!(ref::Dict{Symbol,<:Any}, data::MathematicalModel{NetworkModel})
     component_sets = calc_connected_components(data)
     ref[:components] = Dict(i => c for (i,c) in enumerate(sort(collect(component_sets); by = length)))
 end

@@ -595,6 +595,8 @@ function _calc_max_cost_index(data::Dict{String,<:Any})
     return max_index
 end
 
+_calc_max_cost_index(data::MathematicalModel{NetworkModel}) = _calc_max_cost_index(data.data)
+
 
 """
     calc_cost_pwl_lines(comp_dict::Dict)

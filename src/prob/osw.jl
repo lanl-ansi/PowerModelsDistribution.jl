@@ -1,11 +1,11 @@
 "Solve optimal switching problem"
-function _solve_mc_osw(data::Union{Dict{String,<:Any}, String}, model_type::Type, solver; kwargs...)
+function _solve_mc_osw(data::Union{DistributionModel,String}, model_type::Type, solver; kwargs...)
     return solve_mc_model(data, model_type, solver, _build_mc_osw; kwargs...)
 end
 
 
 "Solve mixed-integer optimal switching problem"
-function _solve_mc_osw_mi(data::Union{Dict{String,<:Any}, String}, model_type::Type, solver; kwargs...)
+function _solve_mc_osw_mi(data::Union{DistributionModel,String}, model_type::Type, solver; kwargs...)
     return solve_mc_model(data, model_type, solver, _build_mc_osw_mi; kwargs...)
 end
 

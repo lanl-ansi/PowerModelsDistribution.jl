@@ -85,8 +85,8 @@ end
 
 
 function transform_solution_ravens(
-    solution_math::Dict{String,<:Any},
-    data_math::Dict{String,<:Any};
+    solution_math::MathematicalModel,
+    data_math::MathematicalModel;
     map::Union{Vector{<:Dict{String,<:Any}},Missing}=missing,
     make_si::Bool=true,
     convert_rad2deg::Bool=true,
@@ -94,10 +94,7 @@ function transform_solution_ravens(
     make_si_extensions::Vector{<:Function}=Function[],
     dimensionalize_math_extensions::Dict{String,<:Dict{String,<:Vector{<:String}}}=Dict{String,Dict{String,Vector{String}}}(),
     fix_switch_states::Bool=false
-)::Dict{String,Any}
-
-    @assert ismath(data_math) "cannot be converted. Not a MATH model."
-
+)::RavensModel
     # convert solution to si
     solution_math = solution_make_si(
         solution_math,
@@ -267,7 +264,7 @@ function transform_solution_ravens(
                                 begin
                                     nw_ed = solution_math["nw"][nw][ed][ed_id]
                                     if haskey(nw_ed, "state")
-                                        sw_state = Int(nw_ed["state"]) == 0 ? true : false
+                                        sw_state = Int(round(nw_ed["state"])) == 0 ? true : false
                                     end
                                     Dict("AvSwitch.open" => sw_state)
                                 end
@@ -431,6 +428,3 @@ function transform_solution_ravens(
     return solution_ravens
 
 end
-
-
-

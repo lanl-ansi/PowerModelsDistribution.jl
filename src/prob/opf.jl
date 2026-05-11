@@ -8,7 +8,7 @@
 
 Solve Optimal Power Flow
 """
-function solve_mc_opf(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
+function solve_mc_opf(data::Union{DistributionModel,String}, model_type::Type, solver; kwargs...)
     return solve_mc_model(data, model_type, solver, build_mc_opf; kwargs...)
 end
 
@@ -23,7 +23,7 @@ end
 
 Solve multinetwork optimal power flow problem
 """
-function solve_mn_mc_opf(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
+function solve_mn_mc_opf(data::Union{DistributionModel,String}, model_type::Type, solver; kwargs...)
     return solve_mc_model(data, model_type, solver, build_mn_mc_opf; multinetwork=true, kwargs...)
 end
 

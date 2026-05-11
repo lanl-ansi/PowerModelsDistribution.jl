@@ -8,7 +8,8 @@ Helper function to check is data is ENGINEERING model
 """
 iseng(data::Dict{String,<:Any}) = _missing2false(get(data, "data_model", missing) == ENGINEERING)
 iseng(data::InfrastructureModel) = false
-
+iseng(data::EngineeringModel) = true
+iseng(data::DistributionModel) = false
 
 """
     ismath(data::Dict{String,Any})
@@ -17,6 +18,8 @@ Helper function to check if data is MATHEMATICAL model
 """
 ismath(data::Dict{String,<:Any}) = _missing2false(get(data, "data_model", missing) == MATHEMATICAL)
 ismath(data::InfrastructureModel) = false
+ismath(data::MathematicalModel) = true
+ismath(data::DistributionModel) = false
 
 
 """
@@ -136,7 +139,7 @@ end
 
 
 "initializes the base components that are expected by powermodelsdistribution in the mathematical model"
-function _init_base_components!(data_math::Dict{String,<:Any})
+function _init_base_components!(data_math::MathematicalModel{NetworkModel})
     for key in pmd_math_asset_types
         if !haskey(data_math, key)
             data_math[key] = Dict{String,Any}()
@@ -207,7 +210,7 @@ end
 
 "loss model builder for transformer decomposition"
 function _build_loss_model!(
-    data_math::Dict{String,<:Any},
+    data_math::MathematicalModel{NetworkModel},
     transformer_name::String,
     to_map::Vector{String},
     r_s::Vector{Float64},
@@ -589,7 +592,7 @@ end
 
 
 "initialization actions for unmapping"
-function _init_unmap_eng_obj!(data_eng::Dict{String,<:Any}, eng_obj_type::String, map::Dict{String,<:Any})::Dict{String,Any}
+function _init_unmap_eng_obj!(data_eng::EngineeringModel{NetworkModel}, eng_obj_type::String, map::Dict{String,<:Any})::Dict{String,Any}
     if !haskey(data_eng, eng_obj_type)
         data_eng[eng_obj_type] = Dict{String,Any}()
     end
@@ -601,8 +604,8 @@ end
 
 
 "returns component from the mathematical data model"
-function _get_math_obj(data_math::Dict{String,<:Any}, to_id::String)::Dict{String,Any}
-    math_type, math_id = split(to_id, '.')
+function _get_math_obj(data_math::MathematicalModel{NetworkModel}, to_id::String)::Dict{String,Any}
+    math_type, math_id = string.(split(to_id, '.'))
     return haskey(data_math, math_type) && haskey(data_math[math_type], math_id) ? data_math[math_type][math_id] : Dict{String,Any}()
 end
 
@@ -618,7 +621,7 @@ end
 
 
 "applies a xfmrcode to a transformer in preparation for converting to mathematical model"
-function _apply_xfmrcode!(eng_obj::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
+function _apply_xfmrcode!(eng_obj::Dict{String,<:Any}, data_eng::EngineeringModel{NetworkModel})
     if haskey(eng_obj, "xfmrcode") && haskey(data_eng, "xfmrcode") && haskey(data_eng["xfmrcode"], eng_obj["xfmrcode"])
         xfmrcode = data_eng["xfmrcode"][eng_obj["xfmrcode"]]
 
@@ -638,7 +641,7 @@ end
 
 
 "applies a linecode to a line in preparation for converting to mathematical model"
-function _apply_linecode!(eng_obj::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
+function _apply_linecode!(eng_obj::Dict{String,<:Any}, data_eng::Union{EngineeringModel,Dict{String,<:Any}})
     if haskey(eng_obj, "linecode") && haskey(data_eng, "linecode") && haskey(data_eng["linecode"], eng_obj["linecode"])
         linecode = data_eng["linecode"][eng_obj["linecode"]]
 
@@ -652,13 +655,13 @@ end
 
 
 "converts impendance in Ohm/m by multiplying by length"
-function _impedance_conversion(data_eng::Dict{String,<:Any}, eng_obj::Dict{String,<:Any}, key::String)
+function _impedance_conversion(data_eng::Union{EngineeringModel,Dict{String,<:Any}}, eng_obj::Dict{String,<:Any}, key::String)
     eng_obj[key] .* get(eng_obj, "length", 1.0)
 end
 
 
 "converts admittance by multiplying by 2πωl"
-function _admittance_conversion(data_eng::Dict{String,<:Any}, eng_obj::Dict{String,<:Any}, key::String)
+function _admittance_conversion(data_eng::Union{EngineeringModel,Dict{String,<:Any}}, eng_obj::Dict{String,<:Any}, key::String)
     2.0 .* pi .* data_eng["settings"]["base_frequency"] .* eng_obj[key] .* get(eng_obj, "length", 1.0) ./ 1e9
 end
 
@@ -686,7 +689,7 @@ end
 
 
 "slices branches based on connected terminals"
-function _slice_branches!(data_math::Dict{String,<:Any})
+function _slice_branches!(data_math::MathematicalModel{NetworkModel})
     for (_, branch) in data_math["branch"]
         if haskey(branch, "f_connections")
             N = length(branch["f_connections"])
@@ -699,7 +702,7 @@ end
 
 
 "finds maximal set of ungrounded phases"
-function _get_complete_conductor_set(data::Dict{String,<:Any})
+function _get_complete_conductor_set(data::EngineeringModel{NetworkModel})
     conductors = Set([])
     for (_, obj) in data["bus"]
         for t in obj["terminals"]
@@ -756,7 +759,7 @@ end
 
 
 "helper function to map non integer conductor ids into integers"
-function _map_conductor_ids!(data_math::Dict{String,<:Any})
+function _map_conductor_ids!(data_math::MathematicalModel{NetworkModel})
     if all(typeof(c) <: Int for c in data_math["conductor_ids"])
         cnd_map = Dict{Any,Int}(c => c for c in data_math["conductor_ids"])
     else

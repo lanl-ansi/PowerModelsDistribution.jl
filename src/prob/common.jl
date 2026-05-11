@@ -16,7 +16,7 @@ Internal solver interface that uses [`instantiate_mc_model`](@ref instantiate_mc
 See [`solve_mc_model`](@ref solve_mc_model)
 """
 function _solve_mc_model(
-    data::Dict{String,<:Any},
+    data::MathematicalModel,
     model_type::Type,
     optimizer,
     build_method::Function;
@@ -25,7 +25,7 @@ function _solve_mc_model(
     solution_processors::Vector{<:Function}=Function[],
     relax_integrality::Bool=false,
     kwargs...
-    )::Dict{String,Any}
+    )::MathematicalSolution
 
     if multinetwork != ismultinetwork(data)
         model_requirement = multinetwork ? "multi-network" : "single-network"
@@ -53,7 +53,7 @@ function _solve_mc_model(
     )
     @debug "pm model solve and solution time: $(time() - start_time)"
 
-    return result
+    return MathematicalSolution(result)
 end
 
 
@@ -92,7 +92,7 @@ functions via `ref_extensions` that have the signature:
 See the [Beginners Guide](@ref Introduction-to-PowerModelsDistribution) for an example.
 """
 function instantiate_mc_model(
-    data::Dict{String,<:Any},
+    data::DistributionModel,
     model_type::Type,
     build_method::Function;
     ref_extensions::Vector{<:Function}=Function[],
@@ -104,8 +104,8 @@ function instantiate_mc_model(
     kwargs...
     )
 
-    if iseng(data)
-        @info "Converting ENGINEERING data model to MATHEMATICAL first to build JuMP model"
+    if typeof(data) === EngineeringModel || typeof(data) === RavensModel
+        @info "Converting data model to MATHEMATICAL first to build JuMP model"
         data = transform_data_model(
             data;
             multinetwork=multinetwork,
@@ -117,7 +117,7 @@ function instantiate_mc_model(
     end
 
     return _IM.instantiate_model(
-        data,
+        data.data,
         model_type,
         build_method,
         ref_add_core!,
@@ -129,9 +129,8 @@ function instantiate_mc_model(
 end
 
 
-
 function instantiate_mc_model_ravens(
-    data::Dict{String,<:Any},
+    data::T,
     model_type::Type,
     build_method::Function;
     ref_extensions::Vector{<:Function}=Function[],
@@ -141,11 +140,10 @@ function instantiate_mc_model_ravens(
     ravens2math_passthrough::Dict{String,<:Vector{<:String}}=Dict{String,Vector{String}}(),
     make_pu_extensions::Vector{<:Function}=Function[],
     kwargs...
-    )
+    ) where T <: DistributionModel
 
-    if !ismath(data)
-        @info "Converting CIM-RAVENS data model to MATHEMATICAL first to build JuMP model"
-        data = transform_data_model_ravens(
+    if T !== MathematicalModel
+        data = transform_data_model(
                 data;
                 multinetwork=multinetwork,
                 global_keys=global_keys,
@@ -156,7 +154,7 @@ function instantiate_mc_model_ravens(
     end
 
     return _IM.instantiate_model(
-        data,
+        data.data,
         model_type,
         build_method,
         ref_add_core!,
@@ -201,7 +199,7 @@ For an explanation of `ref_extensions`, see [`instantiate_mc_model`](@ref instan
 For an explanation of `map_math2eng_extensions`, `make_si`, `make_si_extensions`, and `dimensionalize_math_extensions`, see [`solution_make_si`](@ref solution_make_si)
 """
 function solve_mc_model(
-    data::Dict{String,<:Any},
+    data::DistributionModel,
     model_type::Type,
     optimizer,
     build_mc::Function;
@@ -216,7 +214,7 @@ function solve_mc_model(
     make_si_extensions::Vector{<:Function}=Function[],
     dimensionalize_math_extensions::Dict{String,Dict{String,Vector{String}}}=Dict{String,Dict{String,Vector{String}}}(),
     kwargs...
-    )::Dict{String,Any}
+    )::Union{MathematicalSolution,EngineeringSolution,RavensModel}
 
 
     if iseng(data)
@@ -241,7 +239,7 @@ function solve_mc_model(
         )
 
         result["solution"] = transform_solution(
-            result["solution"],
+            MathematicalModel(result["solution"]; multinetwork=multinetwork),
             data_math;
             map_math2eng_extensions=map_math2eng_extensions,
             make_si=make_si,
@@ -261,6 +259,7 @@ function solve_mc_model(
             global_keys=global_keys,
             kwargs...
         )
+        result["solution"] = MathematicalModel(result["solution"]; multinetwork=multinetwork)
     else
         error("unrecognized data model format '$(get(data, "data_model", missing))'")
     end

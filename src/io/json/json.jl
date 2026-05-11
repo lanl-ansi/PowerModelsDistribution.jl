@@ -24,6 +24,18 @@ end
 
 
 """
+    parse_json(data::Dict{String,<:Any})
+
+parses json files that were dumped via JSON.print (or PMD.print_file)
+"""
+function parse_json(data::Dict{String,<:Any})
+    correct_json_import!(data)
+
+    return data
+end
+
+
+"""
     correct_json_import!(data::Dict{String,<:Any})
 
 helper function to correct data imported from json

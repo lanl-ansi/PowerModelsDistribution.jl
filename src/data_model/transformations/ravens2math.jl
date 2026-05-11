@@ -28,8 +28,8 @@ const pmd_ravens_asset_types = String[
 ]
 
 
-function transform_data_model_ravens(
-    data::Dict{String,<:Any};
+function transform_data_model(
+    data::RavensModel;
     kron_reduce::Bool=true,
     phase_project::Bool=false,
     multinetwork::Bool=false,
@@ -39,7 +39,7 @@ function transform_data_model_ravens(
     make_pu::Bool=true,
     make_pu_extensions::Vector{<:Function}=Function[],
     correct_network_data::Bool=true,
-    )::Dict{String,Any}
+)::MathematicalModel
 
     data_math = _map_ravens2math(
         data;
@@ -60,14 +60,14 @@ end
 
 "base function for converting ravens model to mathematical model"
 function _map_ravens2math(
-    data_ravens::Dict{String,<:Any};
+    data_ravens::RavensModel;
     multinetwork::Bool=false,
     kron_reduce::Bool=true,
     phase_project::Bool=false,
     ravens2math_extensions::Vector{<:Function}=Function[],
     ravens2math_passthrough::Dict{String,Vector{String}}=Dict{String,Vector{String}}(),
     global_keys::Set{String}=Set{String}(),
-    )::Dict{String,Any}
+)::MathematicalModel
 
     _data_ravens = deepcopy(data_ravens)
 
@@ -76,19 +76,29 @@ function _map_ravens2math(
     # TODO: Add settings (defaults)
     basemva = 1
     _settings = Dict("sbase_default" => basemva * 1e3,
-                    "voltage_scale_factor" => 1e3,
-                    "power_scale_factor" => 1e3,
-                    "base_frequency" => get(_data_ravens, "BaseFrequency", 60.0),
-                    "vbases_default" => Dict{String,Real}(),
+        "voltage_scale_factor" => 1e3,
+        "power_scale_factor" => 1e3,
+        "base_frequency" => get(_data_ravens, "BaseFrequency", 60.0),
+        "vbases_default" => Dict{String,Real}(),
     )
+
+    switch_close_actions_ub = Inf
+    for v in values(get(_data_ravens, "OptimizationAlgorithmProperties", Dict()))
+        _switch_close_actions_ub=get(v, "OptimizationAlgorithmProperties.switchCloseMaximum", Inf)
+        if _switch_close_actions_ub < switch_close_actions_ub
+            switch_close_actions_ub = _switch_close_actions_ub
+        end
+    end
 
     # Multinetwork
     if multinetwork
-        data_math = Dict{String,Any}(
-            "name" => get(_data_ravens, "name", ""),
-            "data_model" => MATHEMATICAL,
-            "multinetwork" => multinetwork,
-            "nw" => Dict{String,Any}()
+        data_math = MathematicalModel{MultinetworkModel}(
+            Dict{String,Any}(
+                "name" => get(_data_ravens, "name", ""),
+                "data_model" => MATHEMATICAL,
+                "multinetwork" => multinetwork,
+                "nw" => Dict{String,Any}()
+            )
         )
 
         if haskey(data_ravens, "BasicIntervalSchedule")
@@ -113,31 +123,36 @@ function _map_ravens2math(
             end
 
             # Vector to store nws dictionaries
-            nws_vect = Vector{Dict{String,Any}}(undef, min_length)
+            nws_vect = Vector{MathematicalModel{MultinetworkModel}}(undef, min_length)
 
             # Multithreaded loop to create each nw dictionary. Store them in vector (to allow multithreading)
-            Threads.@threads for n=1:1:min_length
-                nw_dict = Dict{String,Any}(
-                    string(n) => Dict{String,Any}(
-                        "per_unit" => get(_data_ravens, "per_unit", false),
-                        "is_projected" => get(_data_ravens, "is_projected", false),
-                        "is_kron_reduced" => get(_data_ravens, "is_kron_reduced", true), # TODO: Kron reduction?
-                        "settings" => deepcopy(_settings),
-                        "time_elapsed" => get(_data_ravens, "time_elapsed", 1.0),
+            Threads.@threads for n = 1:1:min_length
+                nw_dict = MathematicalModel{MultinetworkModel}(
+                    Dict{String,Any}(
+                        string(n) => MathematicalModel{NetworkModel}(
+                            Dict{String,Any}(
+                                "per_unit" => get(_data_ravens, "per_unit", false),
+                                "is_projected" => get(_data_ravens, "is_projected", false),
+                                "is_kron_reduced" => get(_data_ravens, "is_kron_reduced", true), # TODO: Kron reduction?
+                                "settings" => deepcopy(_settings),
+                                "time_elapsed" => get(_data_ravens, "time_elapsed", 1.0),
+                                "switch_close_actions_ub" => switch_close_actions_ub,
+                            )
+                        )
                     )
                 )
 
                 # Store nw dict in vector
                 nws_vect[n] = nw_dict
 
+                @warn typeof(nws_vect[n]) typeof(_data_ravens)
                 # Perform conversion ravens2math
                 apply_pmd!(_map_ravens2math_nw!, nws_vect[n], _data_ravens; ravens2math_passthrough=ravens2math_passthrough, ravens2math_extensions=ravens2math_extensions, nw=n)
-
             end
 
             # Merge dict in vector into data_math dictionary (other for loop to allow multithreading)
             for nw_dict in nws_vect
-                merge!(data_math["nw"], nw_dict)
+                merge!(data_math["nw"], nw_dict.data)
             end
 
         else
@@ -145,14 +160,17 @@ function _map_ravens2math(
         end
 
     else # No multinetwork
-        data_math = Dict{String,Any}(
-            "name" => get(_data_ravens, "name", ""),
-            "per_unit" => get(_data_ravens, "per_unit", false),
-            "data_model" => MATHEMATICAL,
-            "is_projected" => get(_data_ravens, "is_projected", false),
-            "is_kron_reduced" => get(_data_ravens, "is_kron_reduced", true), # TODO: Kron reduction?
-            "settings" => deepcopy(_settings),
-            "time_elapsed" => get(_data_ravens, "time_elapsed", 1.0),
+        data_math = MathematicalModel{NetworkModel}(
+            Dict{String,Any}(
+                "name" => get(_data_ravens, "name", ""),
+                "per_unit" => get(_data_ravens, "per_unit", false),
+                "data_model" => MATHEMATICAL,
+                "is_projected" => get(_data_ravens, "is_projected", false),
+                "is_kron_reduced" => get(_data_ravens, "is_kron_reduced", true), # TODO: Kron reduction?
+                "settings" => deepcopy(_settings),
+                "time_elapsed" => get(_data_ravens, "time_elapsed", 1.0),
+                "switch_close_actions_ub" => switch_close_actions_ub,
+            )
         )
         apply_pmd!(_map_ravens2math_nw!, data_math, _data_ravens; ravens2math_passthrough=ravens2math_passthrough, ravens2math_extensions=ravens2math_extensions)
     end
@@ -163,16 +181,14 @@ function _map_ravens2math(
         _collect_nw_bus_lookups!(data_math)
     end
 
-    return data_math
+    return MathematicalModel(data_math)
 end
 
 
 """
 """
-function _map_ravens2math_nw!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; ravens2math_passthrough::Dict{String,Vector{String}}=Dict{String,Vector{String}}(), ravens2math_extensions::Vector{<:Function}=Function[], nw::Int=nw_id_default)
-
-    if nw==0
-
+function _map_ravens2math_nw!(data_math::MathematicalModel, data_ravens::RavensModel; ravens2math_passthrough::Dict{String,Vector{String}}=Dict{String,Vector{String}}(), ravens2math_extensions::Vector{<:Function}=Function[], nw::Int=nw_id_default)
+    if nw == 0
         data_math["map"] = Vector{Dict{String,Any}}([
             Dict{String,Any}("unmap_function" => "_map_math2eng_root!")
         ])
@@ -224,22 +240,62 @@ function _map_ravens2math_nw!(data_math::Dict{String,<:Any}, data_ravens::Dict{S
         find_conductor_ids!(data_math[string(nw)])
         _map_conductor_ids!(data_math[string(nw)])
         _map_settings_vbases_default!(data_math[string(nw)])
-
     end
-
 end
 
 
 """
 Converts ravens connectivity_node components into mathematical bus components.
 """
-function _map_ravens2math_connectivity_node!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
+function _map_ravens2math_connectivity_node!(data_math::MathematicalModel{NetworkModel}, data_ravens::RavensModel; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
+    voltage_scale_factor_sqrt3 = data_math["settings"]["voltage_scale_factor"] * sqrt(3)
+
+    for (name, ravens_obj) in get(data_ravens, "ConnectivityNode", Dict{String,Any}())
+        index = length(data_math["bus"]) + 1
+        math_obj = _init_math_obj_ravens(ravens_obj["Ravens.cimObjectType"], name, ravens_obj, index; pass_props=pass_props)
+
+        # Set basic bus properties
+        math_obj["bus_i"] = index
+        math_obj["source_id"] = "ConnectivityNode.$name"
+        math_obj["bus_type"] = 4  # Default bus_type, - DISABLED
+        math_obj["vm_pair_lb"] = Tuple{Any,Any,Real}[]
+        math_obj["vm_pair_ub"] = Tuple{Any,Any,Real}[]
+
+        # Set voltage magnitude and angle
+        if haskey(ravens_obj, "SvVoltage.v")
+            math_obj["vm"] = (ravens_obj["SvVoltage.v"] / voltage_scale_factor_sqrt3)
+        end
+
+        if haskey(ravens_obj, "SvVoltage.angle")
+            math_obj["va"] = ravens_obj["SvVoltage.angle"]
+        end
+
+        # Store the mathematical bus object
+        data_math["bus"]["$(index)"] = math_obj
+
+        # Update bus lookup if necessary
+        data_math["bus_lookup"] = get(data_math, "bus_lookup", Dict{Any,Int}())
+        data_math["bus_lookup"][name] = index
+
+        # Map the ravens object to the math object
+        push!(data_math["map"], Dict(
+            "from" => name,
+            "to" => "bus.$index",
+            "unmap_function" => "_map_math2eng_bus!"
+        ))
+    end
+end
+
+"""
+Converts ravens connectivity_node components into mathematical bus components.
+"""
+function _map_ravens2math_connectivity_node!(data_math::MathematicalModel{NetworkModel}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
     voltage_scale_factor_sqrt3 = data_math["settings"]["voltage_scale_factor"] * sqrt(3)
     connectivity_nodes = get(data_ravens, "ConnectivityNode", Dict{String,Any}())
 
     for (name, ravens_obj) in connectivity_nodes
         index = length(data_math["bus"]) + 1
-        math_obj = _init_math_obj_ravens("ConnectivityNode", name, ravens_obj, index; pass_props=pass_props)
+        math_obj = _init_math_obj_ravens(ravens_obj["Ravens.cimObjectType"], name, ravens_obj, index; pass_props=pass_props)
 
         # Set basic bus properties
         math_obj["bus_i"] = index
@@ -273,17 +329,284 @@ function _map_ravens2math_connectivity_node!(data_math::Dict{String,<:Any}, data
     end
 end
 
+"""
+Converts ravens conductors (e.g., ACLineSegments) into mathematical branches.
+"""
+function _map_ravens2math_conductor!(data_math::MathematicalModel{NetworkModel}, data_ravens::RavensModel; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
+    for (name, ravens_obj) in get(data_ravens, "ACLineSegment", Dict{Any,Dict{String,Any}}())
+        math_obj = _init_math_obj_ravens(ravens_obj["Ravens.cimObjectType"], name, ravens_obj, length(data_math["branch"]) + 1; pass_props=pass_props)
+        nconds = length(ravens_obj["ACLineSegment.ACLineSegmentPhase"]) # number of conductors/wires
+        nphases = 0 # init number of phases
+        terminals = ravens_obj["ConductingEquipment.Terminals"]
+
+        f_node = _extract_name(terminals[1]["Terminal.ConnectivityNode"])
+        t_node = _extract_name(terminals[2]["Terminal.ConnectivityNode"])
+
+        math_obj["f_bus"] = data_math["bus_lookup"][f_node]
+        math_obj["t_bus"] = data_math["bus_lookup"][t_node]
+
+        bus_terminals = nconds >= 4 ? collect(1:nconds) : [_phase_map[phase["ACLineSegmentPhase.phase"]] for phase in ravens_obj["ACLineSegment.ACLineSegmentPhase"]]
+
+        # TODO: Kron reduce bus terminals by removing conn 4
+        reduce = false # flag for Kron reduction
+        if 4 in bus_terminals
+            reduce = true
+            bus_terminals = filter!(x -> x != 4, bus_terminals)
+            nphases = nconds - 1
+        else
+            nphases = nconds
+        end
+
+        # Add vmin/vmax/terminals info to fbus and tbus if missing
+        for bus in [math_obj["f_bus"], math_obj["t_bus"]]
+            bus_data = data_math["bus"][string(bus)]
+            if !(haskey(bus_data, "terminals")) || (length(bus_data["terminals"]) < length(bus_terminals))
+                bus_data["terminals"] = bus_terminals
+                bus_data["vmin"] = fill(0.0, nphases)
+                bus_data["vmax"] = fill(Inf, nphases)
+                bus_data["grounded"] = zeros(Bool, nphases)
+            end
+        end
+
+        math_obj["f_connections"] = bus_terminals
+        math_obj["t_connections"] = bus_terminals
+
+        # System frequency
+        base_freq = data_math["settings"]["base_frequency"]
+
+        if (haskey(ravens_obj, "ACLineSegment.PerLengthImpedance"))
+
+            impedance_name = _extract_name(ravens_obj["ACLineSegment.PerLengthImpedance"])
+            impedance_data = data_ravens["PerLengthPhaseImpedance"][impedance_name]
+
+            math_obj["br_r"] = _impedance_conversion_ravens(impedance_data, ravens_obj, "PhaseImpedanceData.r")
+            math_obj["br_x"] = _impedance_conversion_ravens(impedance_data, ravens_obj, "PhaseImpedanceData.x")
+
+            for (key, param) in [("b_fr", "PhaseImpedanceData.b"), ("b_to", "PhaseImpedanceData.b"), ("g_fr", "PhaseImpedanceData.g"), ("g_to", "PhaseImpedanceData.g")]
+                math_obj[key] = _admittance_conversion_ravens(impedance_data, ravens_obj, param)
+            end
+
+        elseif (haskey(ravens_obj, "ACLineSegment.WireSpacingInfo"))
+
+            # Get WireSpacingInfo
+            spacinginfo_name = _extract_name(ravens_obj["ACLineSegment.WireSpacingInfo"])
+            spacinginfo_data = data_ravens["AssetInfo"]["WireSpacingInfo"][spacinginfo_name]
+            wire_positions = spacinginfo_data["WireSpacingInfo.WirePositions"]
+            num_of_wires = length(wire_positions)
+
+            # TODO: Kron reduce bus terminals by removing conn 4 based on number of wires
+            if num_of_wires > nconds
+                reduce = true
+            end
+
+            # Coordinates
+            x_coords = Vector{Float64}(undef, num_of_wires)
+            y_coords = Vector{Float64}(undef, num_of_wires)
+
+            for i in 1:1:num_of_wires
+                seq_num = get(wire_positions[i], "WirePosition.sequenceNumber", i)
+                x_coords[seq_num] = get(wire_positions[i], "WirePosition.xCoord", 0.0)
+                y_coords[seq_num] = get(wire_positions[i], "WirePosition.yCoord", 0.0)
+            end
+
+            # angular frequency
+            ω = 2π * base_freq
+            ω₀ = 2π * base_freq
+
+            # Get data for each specific ACLineSegmentPhase
+            segmentphase_data = ravens_obj["ACLineSegment.ACLineSegmentPhase"]
+
+            # Wire Info.
+            gmr = Vector{Float64}(undef, nconds)   # gmr of Wire, default: radius of wire * 0.7788
+            radius = Vector{Float64}(undef, nconds)    # radius of Wire
+            rac = Vector{Float64}(undef, nconds)   # AC resistance
+            rdc = Vector{Float64}(undef, nconds)   # DC resistance, default: AC resistance / 1.02
+            dcable = Vector{Float64}(undef, nconds)   # diameter of Wire: radius of wire * 2
+
+            # Concentric Neutrals Info.
+            rstrand = Vector{Float64}(undef, nconds)  # resistance of CN cable
+            nstrand = Vector{Float64}(undef, nconds)  # number of CN conductors
+            dstrand = Vector{Float64}(undef, nconds)  # diameter of CN conductor
+            gmrstrand = Vector{Float64}(undef, nconds)    # gmr of CN conductor, default: radius of CN * 0.7788
+
+            # insulation info.
+            dins = Vector{Float64}(undef, nconds) # diameter over insulation (over jacket)
+            tins = Vector{Float64}(undef, nconds) # thickness of insulation
+
+            # tape shield info.
+            diashield = Vector{Float64}(undef, nconds)
+            tapelayer = Vector{Float64}(undef, nconds)
+            tapelap = Vector{Float64}(undef, nconds)
+
+            for i in 1:1:nconds
+
+                wireinfo_name = _extract_name(segmentphase_data[i]["PowerSystemResource.AssetDatasheet"])
+                wireinfo_data = data_ravens["AssetInfo"]["WireInfo"][wireinfo_name]
+
+                radius[i] = get(wireinfo_data, "WireInfo.radius", NaN)
+                @assert radius[i] != NaN "WireInfo radius not found! using NaN. Revise data."
+
+                # Note: gets rewritten as missing if not needed
+                dcable[i] = get(wireinfo_data, "ConcentricNeutralCableInfo.diameterOverNeutral", radius[i] * 2.0)
+
+                gmr[i] = get(wireinfo_data, "WireInfo.gmr", radius[i] * 0.778)
+
+                if wireinfo_data["Ravens.cimObjectType"] == "OverheadWireInfo"
+                    rac[i] = get(wireinfo_data, "WireInfo.rAC25", NaN)
+                    @assert rac[i] != NaN "WireInfo AC25 resistance is not found! using NaN. Revise input data."
+                    rdc[i] = rac[i] / 1.02
+                elseif wireinfo_data["Ravens.cimObjectType"] == "ConcentricNeutralCableInfo"
+                    rdc[i] = get(wireinfo_data, "WireInfo.rDC20", NaN)
+                    @assert rdc[i] != NaN "WireInfo rDC20 resistance is not found! using NaN. Revise input data."
+                    rac[i] = rdc[i] * 1.02
+                elseif wireinfo_data["Ravens.cimObjectType"] == "TapeShieldCableInfo"
+                    rdc[i] = get(wireinfo_data, "WireInfo.rDC20", NaN)
+                    @assert rdc[i] != NaN "WireInfo rDC20 resistance is not found! using NaN. Revise input data."
+                    rac[i] = rdc[i] * 1.02
+                else
+                    @error("Cable type not supported. Resistances (AC or DC) not found!")
+                end
+
+                # Concentric Neutrals Information.
+                rstrand[i] = get(wireinfo_data, "ConcentricNeutralCableInfo.neutralStrandRDC20", NaN)
+                nstrand[i] = get(wireinfo_data, "ConcentricNeutralCableInfo.neutralStrandCount", NaN)
+                dstrand[i] = get(wireinfo_data, "ConcentricNeutralCableInfo.neutralStrandRadius", NaN) * 2.0
+                gmrstrand[i] = get(wireinfo_data, "ConcentricNeutralCableInfo.neutralStrandGmr", (dstrand[i] / 2.0) * 0.778)
+
+                # insulation information
+                dins[i] = get(wireinfo_data, "CableInfo.diameterOverJacket", NaN)
+                tins[i] = get(wireinfo_data, "WireInfo.insulationThickness", NaN)
+
+                # Tape shielded cables information
+                diashield[i] = get(wireinfo_data, "CableInfo.diameterOverJacket", NaN) # diameter over tape shield
+                tapelayer[i] = get(wireinfo_data, "TapeShieldCableInfo.tapeThickness", NaN)  # tape shield thickness
+                tapelap[i] = get(wireinfo_data, "TapeShieldCableInfo.tapeLap", NaN)   #tape lap (default 20.0)
+
+            end
+
+            # Check for NaNs and replace with missing.
+            rstrand = findfirst(isnan, rstrand) !== nothing ? missing : rstrand
+            nstrand = findfirst(isnan, nstrand) !== nothing ? missing : nstrand
+            dcable = findfirst(isnan, dstrand) !== nothing ? missing : dcable   # use dstrand as signal for dcable to be missing
+            dstrand = findfirst(isnan, dstrand) !== nothing ? missing : dstrand
+            gmrstrand = findfirst(isnan, gmrstrand) !== nothing ? missing : gmrstrand
+            epsr = findfirst(isnan, dins) !== nothing ? missing : ones(nconds) .* 2.3 # use dins as signal for epsr to be missing
+            dins = findfirst(isnan, dins) !== nothing ? missing : dins
+            tins = findfirst(isnan, tins) !== nothing ? missing : tins
+            diashield = findfirst(isnan, tapelayer) !== nothing ? missing : diashield
+            tapelayer = findfirst(isnan, tapelayer) !== nothing ? missing : tapelayer # use tapelayer as signal for diashield to be missing
+            tapelap = findfirst(isnan, tapelap) !== nothing ? missing : tapelap
+
+            # TODO: earth model (using default)
+            earth_model = "deri"
+
+            # rho (default) - ρ = earth resistivity = 100 Ω-m
+            rho = 100
+
+            # Calculate line constants
+            z, y = calculate_line_constants(
+                x_coords,
+                y_coords,
+                ω,
+                gmr,
+                radius,
+                nconds,
+                earth_model,
+                rac,
+                ω₀,
+                rdc,
+                rho,
+                nphases,
+                rstrand,
+                nstrand,
+                dcable,
+                dstrand,
+                gmrstrand,
+                epsr,
+                dins,
+                tins,
+                diashield,
+                tapelayer,
+                tapelap
+            )
+
+            # Kron reduction
+            if reduce
+                z, y = _kron(z, y, nphases)
+            end
+
+            rs, xs = real(z), imag(z)
+            g, b = real(y), imag(y)
+
+            b_fr = (b ./ 2.0) .* base_freq
+            b_to = (b ./ 2.0) .* base_freq
+            g_fr = (g ./ 2.0) .* base_freq
+            g_to = (g ./ 2.0) .* base_freq
+
+            math_obj["br_r"] = _impedance_conversion_ravens(ravens_obj, rs)
+            math_obj["br_x"] = _impedance_conversion_ravens(ravens_obj, xs)
+
+            math_obj["b_fr"] = _admittance_conversion_ravens(ravens_obj, b_fr)
+            math_obj["b_to"] = _admittance_conversion_ravens(ravens_obj, b_to)
+
+            math_obj["g_fr"] = _admittance_conversion_ravens(ravens_obj, g_fr)
+            math_obj["g_to"] = _admittance_conversion_ravens(ravens_obj, g_to)
+
+        end
+
+        math_obj["angmin"] = get(ravens_obj, "vad_lb", fill(-60.0, nphases))
+        math_obj["angmax"] = get(ravens_obj, "vad_ub", fill(60.0, nphases))
+
+        if (haskey(terminals[1], "ACDCTerminal.OperationalLimitSet"))
+            oplimitset_id = _extract_name(terminals[1]["ACDCTerminal.OperationalLimitSet"])
+            oplimitset_valslist = data_ravens["OperationalLimitSet"][oplimitset_id]["OperationalLimitSet.OperationalLimitValue"]
+            oplimitset = Vector{Dict}(undef, length(oplimitset_valslist))
+            for i in 1:length(oplimitset_valslist)
+                oplimitset[i] = data_ravens["OperationalLimitSet"][oplimitset_id]["OperationalLimitSet.OperationalLimitValue"][i]
+            end
+        else
+            oplimitset = [Dict()]
+        end
+
+        limit_keys = [("CurrentLimit.value", "c_rating_a"), ("CurrentLimit.value", "c_rating_b"), ("CurrentLimit.value", "c_rating_c"),
+            ("ApparentPowerLimit.value", "rate_a"), ("ApparentPowerLimit.value", "rate_b"), ("ApparentPowerLimit.value", "rate_c")]
+
+        for i in 1:length(oplimitset)
+            val = fill(0.0, nphases)
+            for (f_key, t_key) in limit_keys
+                val = haskey(oplimitset[i], f_key) && val[1] <= oplimitset[i][f_key] ? fill(oplimitset[i][f_key], nphases) : fill(Inf, nphases)
+                math_obj[t_key] = val
+            end
+        end
+
+        math_obj["br_status"] = get(ravens_obj, "Equipment.inService", true) == true ? 1 : 0
+        f_bus_data = data_math["bus"][string(math_obj["f_bus"])]
+        t_bus_data = data_math["bus"][string(math_obj["t_bus"])]
+        if (math_obj["br_status"] == 1)
+            f_bus_data["bus_type"] = 1
+            t_bus_data["bus_type"] = 1
+        end
+
+        data_math["branch"]["$(math_obj["index"])"] = math_obj
+
+        push!(data_math["map"], Dict{String,Any}(
+            "from" => name,
+            "to" => "branch.$(math_obj["index"])",
+            "unmap_function" => "_map_math2eng_line!",
+        ))
+
+    end
+end
 
 """
 Converts ravens conductors (e.g., ACLineSegments) into mathematical branches.
 """
-function _map_ravens2math_conductor!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
-
+function _map_ravens2math_conductor!(data_math::MathematicalModel{NetworkModel}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
     if haskey(data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"], "Conductor")
         conductors = data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["Conductor"]
 
         for (name, ravens_obj) in get(conductors, "ACLineSegment", Dict{Any,Dict{String,Any}}())
-            math_obj = _init_math_obj_ravens("ACLineSegment", name, ravens_obj, length(data_math["branch"]) + 1; pass_props=pass_props)
+            math_obj = _init_math_obj_ravens(ravens_obj["Ravens.cimObjectType"], name, ravens_obj, length(data_math["branch"]) + 1; pass_props=pass_props)
             nconds = length(ravens_obj["ACLineSegment.ACLineSegmentPhase"]) # number of conductors/wires
             nphases = 0 # init number of phases
             terminals = ravens_obj["ConductingEquipment.Terminals"]
@@ -550,16 +873,12 @@ function _map_ravens2math_conductor!(data_math::Dict{String,<:Any}, data_ravens:
 end
 
 
-
 "converts ravens n-winding transformers into mathematical ideal 2-winding lossless transformer branches and impedance branches to represent the loss model"
-function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
-
-    conducting_equipment = data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]
+function _map_ravens2math_power_transformer!(data_math::MathematicalModel{NetworkModel}, data_ravens::RavensModel; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
     power_scale_factor = data_math["settings"]["power_scale_factor"]
     voltage_scale_factor = data_math["settings"]["voltage_scale_factor"]
-    voltage_scale_factor_sqrt3 = voltage_scale_factor * sqrt(3)
 
-    for (name, ravens_obj) in get(conducting_equipment, "PowerTransformer", Dict{Any,Dict{String,Any}}())
+    for (name, ravens_obj) in get(data_ravens, "PowerTransformer", Dict{Any,Dict{String,Any}}())
 
         # Build map first, so we can update it as we decompose the transformer
         push!(data_math["map"], Dict{String,Any}(
@@ -644,7 +963,7 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                 # Transformer data for each winding
                 vnom[wdg_endNumber] = wdgs[wdg_endNumber]["PowerTransformerEnd.ratedU"]
                 snom[wdg_endNumber] = wdgs[wdg_endNumber]["PowerTransformerEnd.ratedS"]
-                zbase[wdg_endNumber] = (vnom[wdg_endNumber]^2)/snom[wdg_endNumber]
+                zbase[wdg_endNumber] = (vnom[wdg_endNumber]^2) / snom[wdg_endNumber]
 
                 # Transformer impedance when values are missing for other windings.
                 xfmr_star_impedance = get(wdgs[wdg_endNumber], "TransformerEnd.StarImpedance", Dict())
@@ -653,7 +972,7 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                 if (xfmr_star_impedance == Dict())
                     xfmr_star_impedance_wdg1 = get(wdgs[1], "TransformerEnd.StarImpedance", Dict())
                     if (xfmr_star_impedance_wdg1 != Dict())
-                        xfmr_star_impedance_r = get(xfmr_star_impedance_wdg1, "TransformerStarImpedance.r", 0.0).*(zbase[wdg_endNumber]/zbase[1])
+                        xfmr_star_impedance_r = get(xfmr_star_impedance_wdg1, "TransformerStarImpedance.r", 0.0) .* (zbase[wdg_endNumber] / zbase[1])
                     end
                 end
 
@@ -663,21 +982,21 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                 if (xfmr_mesh_impedance == Dict())
                     xfmr_mesh_impedance_wdg1 = get(wdgs[1], "TransformerEnd.MeshImpedance", Dict())
                     if (xfmr_mesh_impedance_wdg1 != Dict())
-                        xfmr_mesh_impedance_r = get(xfmr_mesh_impedance_wdg1, "TransformerMeshImpedance.r", 0.0).*(zbase[wdg_endNumber]/zbase[1])
+                        xfmr_mesh_impedance_r = get(xfmr_mesh_impedance_wdg1, "TransformerMeshImpedance.r", 0.0) .* (zbase[wdg_endNumber] / zbase[1])
                     end
                 end
 
                 # resistance
-                r_s[wdg_endNumber] = get(wdgs[wdg_endNumber], "PowerTransformerEnd.r", (xfmr_star_impedance_r != 0.0 ? xfmr_star_impedance_r : xfmr_mesh_impedance_r)./2)    # divide by 2 because XFRMR Star Resistance includes both windings.
+                r_s[wdg_endNumber] = get(wdgs[wdg_endNumber], "PowerTransformerEnd.r", (xfmr_star_impedance_r != 0.0 ? xfmr_star_impedance_r : xfmr_mesh_impedance_r) ./ 2)    # divide by 2 because XFRMR Star Resistance includes both windings.
 
                 # reactance
                 x_sc[wdg_endNumber] = get(xfmr_mesh_impedance, "TransformerMeshImpedance.x",
-                                        get(xfmr_star_impedance, "TransformerStarImpedance.x", 0.0))
+                    get(xfmr_star_impedance, "TransformerStarImpedance.x", 0.0))
 
                 # admittance
                 transf_core_impedance = get(wdgs[wdg_endNumber], "TransformerEnd.CoreAdmittance", Dict())
-                g_sh[wdg_id] =  get(transf_core_impedance, "TransformerCoreAdmittance.g", 0.0)
-                b_sh[wdg_id] = - get(transf_core_impedance, "TransformerCoreAdmittance.b", 0.0)
+                g_sh[wdg_id] = get(transf_core_impedance, "TransformerCoreAdmittance.g", 0.0)
+                b_sh[wdg_id] = -get(transf_core_impedance, "TransformerCoreAdmittance.b", 0.0)
 
 
                 # Set RatioTapChanger in specific wdg
@@ -690,7 +1009,7 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                     hstep = get(rtc_data, "TapChanger.highStep", 16)
                     lstep = get(rtc_data, "TapChanger.lowStep", -16)
                     step_dist = abs(hstep) + abs(lstep)
-                    step_tap = 1/step_dist
+                    step_tap = 1 / step_dist
                     tm_step[wdg_endNumber] = fill(step_tap, nphases)
 
                     # tm_set
@@ -706,10 +1025,10 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                     end
 
                     # tm_ub/tm_lb
-                    neutralVoltPu = get(rtc_data, "TapChanger.neutralU", vnom[wdg_endNumber])/vnom[wdg_endNumber]
+                    neutralVoltPu = get(rtc_data, "TapChanger.neutralU", vnom[wdg_endNumber]) / vnom[wdg_endNumber]
                     step_volt_increment = get(rtc_data, "RatioTapChanger.stepVoltageIncrement", 100.0)
-                    volt_lb = neutralVoltPu + step_tap * (step_volt_increment/100.0) * lstep
-                    volt_ub = neutralVoltPu + step_tap * (step_volt_increment/100.0) * hstep
+                    volt_lb = neutralVoltPu + step_tap * (step_volt_increment / 100.0) * lstep
+                    volt_ub = neutralVoltPu + step_tap * (step_volt_increment / 100.0) * hstep
                     tm_lb[wdg_endNumber] = fill(volt_lb, nphases)
                     tm_ub[wdg_endNumber] = fill(volt_ub, nphases)
 
@@ -726,12 +1045,12 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                         end
 
                         reg_obj[wdg_endNumber] = Dict{String,Any}(
-                                "vreg" => fill(rtc_data["TapChanger.TapChangerControl"]["RegulatingControl.targetValue"], nphases),
-                                "band" =>  fill(rtc_data["TapChanger.TapChangerControl"]["RegulatingControl.targetDeadband"], nphases),
-                                "ptratio" => fill(ptRatio, nphases),
-                                "ctprim" => fill(ctRating, nphases),
-                                "r" => fill(rtc_data["TapChanger.TapChangerControl"]["TapChangerControl.lineDropR"], nphases),
-                                "x" => fill(rtc_data["TapChanger.TapChangerControl"]["TapChangerControl.lineDropX"], nphases)
+                            "vreg" => fill(rtc_data["TapChanger.TapChangerControl"]["RegulatingControl.targetValue"], nphases),
+                            "band" => fill(rtc_data["TapChanger.TapChangerControl"]["RegulatingControl.targetDeadband"], nphases),
+                            "ptratio" => fill(ptRatio, nphases),
+                            "ctprim" => fill(ctRating, nphases),
+                            "r" => fill(rtc_data["TapChanger.TapChangerControl"]["TapChangerControl.lineDropR"], nphases),
+                            "x" => fill(rtc_data["TapChanger.TapChangerControl"]["TapChangerControl.lineDropX"], nphases)
                         )
                     end
 
@@ -740,21 +1059,21 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                     tm_lb[wdg_id] = fill(0.9, nphases)
                     tm_ub[wdg_id] = fill(1.1, nphases)
                     tm_fix[wdg_id] = ones(Bool, nphases)
-                    tm_step[wdg_id] = fill(1/32, nphases)
+                    tm_step[wdg_id] = fill(1 / 32, nphases)
                 end
 
             end
 
             # data is measured externally, but we now refer it to the internal side - some values are referred to wdg 1
-            ratios = vnom/voltage_scale_factor
-            x_sc = (x_sc./ratios[1]^2)
-            r_s = r_s./ratios.^2
-            g_sh = g_sh[1]*ratios[1]^2
-            b_sh = b_sh[1]*ratios[1]^2
+            ratios = vnom / voltage_scale_factor
+            x_sc = (x_sc ./ ratios[1]^2)
+            r_s = r_s ./ ratios .^ 2
+            g_sh = g_sh[1] * ratios[1]^2
+            b_sh = b_sh[1] * ratios[1]^2
 
             # convert x_sc from list of upper triangle elements to an explicit dict
-            y_sh = g_sh + im*b_sh
-            z_sc = Dict([(key, im*x_sc[i]) for (i,key) in enumerate([(i,j) for i in 1:nrw for j in i+1:nrw])])
+            y_sh = g_sh + im * b_sh
+            z_sc = Dict([(key, im * x_sc[i]) for (i, key) in enumerate([(i, j) for i in 1:nrw for j in i+1:nrw])])
 
             # dimesions
             dims = length(tm_set[1])
@@ -786,7 +1105,7 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                 end
 
                 # make virtual bus and mark it for reduction
-                tm_nom = wdgs_confs[wdg_id]==DELTA ? wdgs[wdg_id]["PowerTransformerEnd.ratedU"]*sqrt(3)/voltage_scale_factor : wdgs[wdg_id]["PowerTransformerEnd.ratedU"]/voltage_scale_factor
+                tm_nom = wdgs_confs[wdg_id] == DELTA ? wdgs[wdg_id]["PowerTransformerEnd.ratedU"] * sqrt(3) / voltage_scale_factor : wdgs[wdg_id]["PowerTransformerEnd.ratedU"] / voltage_scale_factor
 
                 # Get correct f_node for winding
                 wdg_term = ravens_obj["ConductingEquipment.Terminals"][wdg_id]
@@ -794,21 +1113,21 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
 
                 # Transformer Object
                 transformer_2wa_obj = Dict{String,Any}(
-                    "name"          => "_virtual_transformer.$name.$wdg_id",
-                    "source_id"     => "_virtual_transformer.PowerTransformer.$name.$wdg_id",
-                    "f_bus"         => data_math["bus_lookup"][f_node_wdgterm],
-                    "t_bus"         => transformer_t_bus_w[wdg_id],
-                    "tm_nom"        => tm_nom,
+                    "name" => "_virtual_transformer.$name.$wdg_id",
+                    "source_id" => "_virtual_transformer.PowerTransformer.$name.$wdg_id",
+                    "f_bus" => data_math["bus_lookup"][f_node_wdgterm],
+                    "t_bus" => transformer_t_bus_w[wdg_id],
+                    "tm_nom" => tm_nom,
                     "f_connections" => connections[wdg_id],
                     "t_connections" => connections[1],
                     "configuration" => wdgs_confs[wdg_id],
-                    "polarity"      => polarity[wdg_id],
-                    "tm_set"        => tm_set[wdg_id],
-                    "tm_fix"        => tm_fix[wdg_id],
-                    "sm_ub"         => get(wdgs[wdg_id], "PowerTransformerEnd.ratedS", Inf)/power_scale_factor,
-                    "cm_ub"         => get(wdgs[wdg_id], "PowerTransformerEnd.ratedI", Inf),
-                    "status"        => status,
-                    "index"         => length(data_math["transformer"])+1
+                    "polarity" => polarity[wdg_id],
+                    "tm_set" => tm_set[wdg_id],
+                    "tm_fix" => tm_fix[wdg_id],
+                    "sm_ub" => get(wdgs[wdg_id], "PowerTransformerEnd.ratedS", Inf) / power_scale_factor,
+                    "cm_ub" => get(wdgs[wdg_id], "PowerTransformerEnd.ratedI", Inf),
+                    "status" => status,
+                    "index" => length(data_math["transformer"]) + 1
                 )
 
 
@@ -887,7 +1206,7 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
             tm_lb = Vector{Vector{Float64}}(fill(fill(0.9, nphases), nrw))
             tm_ub = Vector{Vector{Float64}}(fill(fill(1.1, nphases), nrw))
             tm_fix = Vector{Vector{Bool}}(fill(ones(Bool, nphases), nrw))
-            tm_step = Vector{Vector{Float64}}(fill(fill(1/32, nphases), nrw))
+            tm_step = Vector{Vector{Float64}}(fill(fill(1 / 32, nphases), nrw))
 
             for tank_id in 1:ntanks
 
@@ -896,7 +1215,7 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
 
                 # Tank Asset
                 tank_asset_name = _extract_name(tanks[tank_id]["PowerSystemResource.AssetDatasheet"])
-                tank_asset_data = data_ravens["AssetInfo"]["PowerTransformerInfo"][tank_asset_name]
+                tank_asset_data = data_ravens.data["AssetInfo"]["PowerTransformerInfo"][tank_asset_name]
 
                 for wdg_id in 1:nrw
 
@@ -913,7 +1232,7 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                     # Connections (based on _phasecode_map)
                     if haskey(_phasecode_map, wdg_phasecode)
                         phasecode_conns = _phasecode_map[wdg_phasecode]
-                        if !(length(phasecode_conns)>1)
+                        if !(length(phasecode_conns) > 1)
                             connections[wdg_endNumber][tank_id] = phasecode_conns[1]
                         else
                             connections[wdg_endNumber] = phasecode_conns
@@ -929,7 +1248,7 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                     zbase[wdg_endNumber] = (vnom[wdg_endNumber]^2) / snom_wdg
 
                     # Compute voltage ratios
-                    ratios[wdg_endNumber] = vnom[wdg_endNumber]/voltage_scale_factor
+                    ratios[wdg_endNumber] = vnom[wdg_endNumber] / voltage_scale_factor
 
                     # Transformer star impedance when values are missing for other windings.
                     xfmr_star_impedance = get(transf_end_info[wdg_endNumber], "TransformerEndInfo.TransformerStarImpedance", Dict())
@@ -937,47 +1256,47 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                     if (xfmr_star_impedance == Dict())
                         xfmr_star_impedance_wdg1 = get(transf_end_info[1], "TransformerEndInfo.TransformerStarImpedance", Dict())
                         if (xfmr_star_impedance_wdg1 != Dict())
-                            xfmr_star_impedance_r = get(xfmr_star_impedance_wdg1, "TransformerStarImpedance.r", 0.0).*(zbase[wdg_endNumber]/zbase[1])
+                            xfmr_star_impedance_r = get(xfmr_star_impedance_wdg1, "TransformerStarImpedance.r", 0.0) .* (zbase[wdg_endNumber] / zbase[1])
                         end
                     end
 
                     # resistance computation
-                    r_s[wdg_endNumber][tank_id] = get(transf_end_info[wdg_endNumber], "TransformerEndInfo.r", xfmr_star_impedance_r./2) # divide by 2 because XFRMR Star Resistance includes both windings.
+                    r_s[wdg_endNumber][tank_id] = get(transf_end_info[wdg_endNumber], "TransformerEndInfo.r", xfmr_star_impedance_r ./ 2) # divide by 2 because XFRMR Star Resistance includes both windings.
 
                     # reactance computation
                     x_sc[wdg_endNumber][tank_id] = get(transf_end_info[wdg_endNumber], "TransformerEndInfo.x",
-                                        get(xfmr_star_impedance, "TransformerStarImpedance.x", 0.0))
+                        get(xfmr_star_impedance, "TransformerStarImpedance.x", 0.0))
 
                     # -- alternative computation of xsc using sc tests
                     if haskey(transf_end_info[wdg_endNumber], "TransformerEndInfo.EnergisedEndShortCircuitTests")
                         leak_impedance_wdg = transf_end_info[wdg_endNumber]["TransformerEndInfo.EnergisedEndShortCircuitTests"][1]["ShortCircuitTest.leakageImpedance"]
-                        rs_pct = (r_s[wdg_endNumber][tank_id]/zbase[wdg_endNumber])*100.0
-                        x_sc[wdg_endNumber][tank_id] = (sqrt((leak_impedance_wdg/zbase[wdg_endNumber])^2 - (rs_pct+rs_pct)^2)/100)*zbase[wdg_endNumber]
+                        rs_pct = (r_s[wdg_endNumber][tank_id] / zbase[wdg_endNumber]) * 100.0
+                        x_sc[wdg_endNumber][tank_id] = (sqrt((leak_impedance_wdg / zbase[wdg_endNumber])^2 - (rs_pct + rs_pct)^2) / 100) * zbase[wdg_endNumber]
                     end
 
                     # RS and XSC computation based on ratios
-                    r_s[wdg_endNumber][tank_id] = r_s[wdg_endNumber][tank_id]/ratios[wdg_endNumber]^2
-                    x_sc[wdg_endNumber][tank_id] = (x_sc[wdg_endNumber][tank_id]/ratios[1]^2)   # w.r.t wdg1
+                    r_s[wdg_endNumber][tank_id] = r_s[wdg_endNumber][tank_id] / ratios[wdg_endNumber]^2
+                    x_sc[wdg_endNumber][tank_id] = (x_sc[wdg_endNumber][tank_id] / ratios[1]^2)   # w.r.t wdg1
 
                     # b_sh and g_sh are always w.r.t wdg #1
                     if wdg_endNumber == 1
                         transf_end_noloadtest = get(transf_end_info[wdg_endNumber], "TransformerEndInfo.EnergisedEndNoLoadTests", [Dict()])
                         loss = get(transf_end_noloadtest[1], "NoLoadTest.loss", 0.0)
-                        pctNoLoadLoss = (loss*100)/(snom_wdg/1000.0)    # loss is in kW, thus snom_wdg/1000.0
-                        noLoadLoss = pctNoLoadLoss/100.0
-                        g_sh_tank =  noLoadLoss/zbase[wdg_endNumber]
+                        pctNoLoadLoss = (loss * 100) / (snom_wdg / 1000.0)    # loss is in kW, thus snom_wdg/1000.0
+                        noLoadLoss = pctNoLoadLoss / 100.0
+                        g_sh_tank = noLoadLoss / zbase[wdg_endNumber]
                         exct_current = get(transf_end_noloadtest[1], "NoLoadTest.excitingCurrent", pctNoLoadLoss)
-                        cmag = sqrt(exct_current^2 - pctNoLoadLoss^2)/100   # cmag = pctImag/100 = sqrt(pctIexc^2 - pctNoLoadLoss^2)/100
-                        b_sh_tank = -(cmag)/zbase[wdg_endNumber]
+                        cmag = sqrt(exct_current^2 - pctNoLoadLoss^2) / 100   # cmag = pctImag/100 = sqrt(pctIexc^2 - pctNoLoadLoss^2)/100
+                        b_sh_tank = -(cmag) / zbase[wdg_endNumber]
                         # data is measured externally, but we now refer it to the internal side
-                        g_sh[tank_id] = g_sh_tank*ratios[1]^2   # w.r.t wdg1
-                        b_sh[tank_id] = b_sh_tank*ratios[1]^2   # w.r.t wdg1
+                        g_sh[tank_id] = g_sh_tank * ratios[1]^2   # w.r.t wdg1
+                        b_sh[tank_id] = b_sh_tank * ratios[1]^2   # w.r.t wdg1
                     end
 
                     # configuration
                     conf = transf_end_info[wdg_endNumber]["TransformerEndInfo.connectionKind"]
-                    if conf == "WindingConnection.Y" || conf == "WindingConnection.I" ||  conf == "WindingConnection.Yn"
-                        configuration[wdg_endNumber] =  WYE
+                    if conf == "WindingConnection.Y" || conf == "WindingConnection.I" || conf == "WindingConnection.Yn"
+                        configuration[wdg_endNumber] = WYE
                     elseif conf == "WindingConnection.D"
                         configuration[wdg_endNumber] = DELTA
                     else
@@ -1000,13 +1319,13 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                     if haskey(wdgs[wdg_endNumber], "TransformerEnd.RatioTapChanger")
 
                         rtc_name = _extract_name(wdgs[wdg_endNumber]["TransformerEnd.RatioTapChanger"])
-                        rtc_data = data_ravens["PowerSystemResource"]["TapChanger"]["RatioTapChanger"][rtc_name]
+                        rtc_data = data_ravens["RatioTapChanger"][rtc_name]
 
                         # tm_step
                         hstep = get(rtc_data, "TapChanger.highStep", 16)
                         lstep = get(rtc_data, "TapChanger.lowStep", -16)
                         step_dist = abs(hstep) + abs(lstep)
-                        step_tap = 1/step_dist
+                        step_tap = 1 / step_dist
                         tm_step[wdg_endNumber] = fill(step_tap, nphases)
 
                         # tm_set
@@ -1022,10 +1341,10 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                         end
 
                         # tm_ub/tm_lb
-                        neutralVoltPu = get(rtc_data, "TapChanger.neutralU", vnom[wdg_endNumber])/vnom[wdg_endNumber]
+                        neutralVoltPu = get(rtc_data, "TapChanger.neutralU", vnom[wdg_endNumber]) / vnom[wdg_endNumber]
                         step_volt_increment = get(rtc_data, "RatioTapChanger.stepVoltageIncrement", 100.0)
-                        volt_lb = neutralVoltPu + step_tap * (step_volt_increment/100.0) * lstep
-                        volt_ub = neutralVoltPu + step_tap * (step_volt_increment/100.0) * hstep
+                        volt_lb = neutralVoltPu + step_tap * (step_volt_increment / 100.0) * lstep
+                        volt_ub = neutralVoltPu + step_tap * (step_volt_increment / 100.0) * hstep
                         tm_lb[wdg_endNumber] = fill(volt_lb, nphases)
                         tm_ub[wdg_endNumber] = fill(volt_ub, nphases)
 
@@ -1042,12 +1361,12 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
                             end
 
                             reg_obj[wdg_endNumber] = Dict{String,Any}(
-                                    "vreg" => fill(rtc_data["TapChanger.TapChangerControl"]["RegulatingControl.targetValue"], nphases),
-                                    "band" =>  fill(rtc_data["TapChanger.TapChangerControl"]["RegulatingControl.targetDeadband"], nphases),
-                                    "ptratio" => fill(ptRatio, nphases),
-                                    "ctprim" => fill(ctRating, nphases),
-                                    "r" => fill(rtc_data["TapChanger.TapChangerControl"]["TapChangerControl.lineDropR"], nphases),
-                                    "x" => fill(rtc_data["TapChanger.TapChangerControl"]["TapChangerControl.lineDropX"], nphases)
+                                "vreg" => fill(rtc_data["TapChanger.TapChangerControl"]["RegulatingControl.targetValue"], nphases),
+                                "band" => fill(rtc_data["TapChanger.TapChangerControl"]["RegulatingControl.targetDeadband"], nphases),
+                                "ptratio" => fill(ptRatio, nphases),
+                                "ctprim" => fill(ctRating, nphases),
+                                "r" => fill(rtc_data["TapChanger.TapChangerControl"]["TapChangerControl.lineDropR"], nphases),
+                                "x" => fill(rtc_data["TapChanger.TapChangerControl"]["TapChangerControl.lineDropX"], nphases)
                             )
                         end
 
@@ -1100,8 +1419,8 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
             b_sh = b_sh[1]      # wrt to wdg 1
 
             # convert x_sc from list of upper triangle elements to an explicit dict
-            y_sh = g_sh + im*b_sh
-            z_sc = Dict([(key, im*x_sc[i]) for (i,key) in enumerate([(i,j) for i in 1:nrw for j in i+1:nrw])])
+            y_sh = g_sh + im * b_sh
+            z_sc = Dict([(key, im * x_sc[i]) for (i, key) in enumerate([(i, j) for i in 1:nrw for j in i+1:nrw])])
 
             # init Polarity
             polarity = fill(1, nrw)
@@ -1114,15 +1433,15 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
             transformer_t_bus_w = _build_loss_model!(data_math, name, to_map, r_s, z_sc, y_sh, connections[1]; nphases=nphases, status=status)
 
             # Compute total upper bounds based on number of tanks
-            sm_ub = sm_ub.*ntanks
-            cm_ub = cm_ub.*ntanks
+            sm_ub = sm_ub .* ntanks
+            cm_ub = cm_ub .* ntanks
 
             # Mathematical model for transformer
             for wdg_id in 1:nrw
                 # 2-WINDING TRANSFORMER
 
                 # correct polarity and connections
-                if wdg_id>1
+                if wdg_id > 1
                     if configuration[1] == DELTA && configuration[wdg_id] == WYE
                         polarity[wdg_id] = -1
                         connections[wdg_id] = _barrel_roll(connections[wdg_id][1:end], 1)
@@ -1135,28 +1454,28 @@ function _map_ravens2math_power_transformer!(data_math::Dict{String,<:Any}, data
 
                 # tm_nom depending on wdg configuration
                 if ntanks >= 3
-                    tm_nom = configuration[wdg_id]==DELTA ? vnom[wdg_id]/voltage_scale_factor : vnom[wdg_id]/voltage_scale_factor*sqrt(3)
+                    tm_nom = configuration[wdg_id] == DELTA ? vnom[wdg_id] / voltage_scale_factor : vnom[wdg_id] / voltage_scale_factor * sqrt(3)
                 else
-                    tm_nom = configuration[wdg_id]==DELTA ? vnom[wdg_id]/voltage_scale_factor : vnom[wdg_id]/voltage_scale_factor
+                    tm_nom = configuration[wdg_id] == DELTA ? vnom[wdg_id] / voltage_scale_factor : vnom[wdg_id] / voltage_scale_factor
                 end
 
                 # Transformer Object
                 transformer_2wa_obj = Dict{String,Any}(
-                    "name"          => "_virtual_transformer.$name.$wdg_id",
-                    "source_id"     => "_virtual_transformer.PowerTransformer.$name.$wdg_id",
-                    "f_bus"         => data_math["bus_lookup"][nodes[wdg_id]],
-                    "t_bus"         => transformer_t_bus_w[wdg_id],
-                    "tm_nom"        => tm_nom,
+                    "name" => "_virtual_transformer.$name.$wdg_id",
+                    "source_id" => "_virtual_transformer.PowerTransformer.$name.$wdg_id",
+                    "f_bus" => data_math["bus_lookup"][nodes[wdg_id]],
+                    "t_bus" => transformer_t_bus_w[wdg_id],
+                    "tm_nom" => tm_nom,
                     "f_connections" => connections[wdg_id],
                     "t_connections" => connections[1],
                     "configuration" => configuration[wdg_id],
-                    "polarity"      => polarity[wdg_id],
-                    "tm_set"        => tm_set[wdg_id],
-                    "tm_fix"        => tm_fix[wdg_id],
-                    "sm_ub"         => sm_ub[wdg_id]/power_scale_factor,
-                    "cm_ub"         => cm_ub[wdg_id], # TODO: this may need scaling
-                    "status"        => status,
-                    "index"         => length(data_math["transformer"])+1
+                    "polarity" => polarity[wdg_id],
+                    "tm_set" => tm_set[wdg_id],
+                    "tm_fix" => tm_fix[wdg_id],
+                    "sm_ub" => sm_ub[wdg_id] / power_scale_factor,
+                    "cm_ub" => cm_ub[wdg_id], # TODO: this may need scaling
+                    "status" => status,
+                    "index" => length(data_math["transformer"]) + 1
                 )
 
                 # RatioTapChanger
@@ -1188,20 +1507,19 @@ end
 """
 Converts ravens load components into mathematical load components.
 """
-function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
-    energy_connections = data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"]
+function _map_ravens2math_energy_consumer!(data_math::MathematicalModel{NetworkModel}, data_ravens::RavensModel; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
     power_scale_factor = data_math["settings"]["power_scale_factor"]
     voltage_scale_factor = data_math["settings"]["voltage_scale_factor"]
     voltage_scale_factor_sqrt3 = voltage_scale_factor * sqrt(3)
 
-    for (name, ravens_obj) in get(energy_connections, "EnergyConsumer", Dict{Any,Dict{String,Any}}())
-        math_obj = _init_math_obj_ravens("EnergyConsumer", name, ravens_obj, length(data_math["load"]) + 1; pass_props=pass_props)
+    for (name, ravens_obj) in get(data_ravens, "EnergyConsumer", Dict{Any,Dict{String,Any}}())
+        math_obj = _init_math_obj_ravens(ravens_obj["Ravens.cimObjectType"], name, ravens_obj, length(data_math["load"]) + 1; pass_props=pass_props)
 
         # Set the load bus based on connectivity node
         connectivity_node = _extract_name(ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.ConnectivityNode"])
         math_obj["load_bus"] = data_math["bus_lookup"][connectivity_node]
 
-        # Handle Load Response Characteristics
+        # TODO: Handle Load Response Characteristics by properties, not name
         load_response_characts = _extract_name(ravens_obj["EnergyConsumer.LoadResponse"])
         if load_response_characts == "Constant Z"
             math_obj["model"] = IMPEDANCE
@@ -1243,9 +1561,9 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
                 end
 
                 if lim_type == "OperationalLimitDirectionKind.high"
-                    op_limit_max = lim["VoltageLimit.value"]/voltage_scale_factor_sqrt3
+                    op_limit_max = lim["VoltageLimit.value"] / voltage_scale_factor_sqrt3
                 elseif lim_type == "OperationalLimitDirectionKind.low"
-                    op_limit_min = lim["VoltageLimit.value"]/voltage_scale_factor_sqrt3
+                    op_limit_min = lim["VoltageLimit.value"] / voltage_scale_factor_sqrt3
                 end
             end
 
@@ -1285,9 +1603,9 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
         end
 
         # Set p and q (w/ multinetwork support)
-        if nw==0
-            math_obj["pd"] = fill(get(ravens_obj, "EnergyConsumer.p", 0.0) / (power_scale_factor*nphases), nphases)
-            math_obj["qd"] = fill(get(ravens_obj, "EnergyConsumer.q", 0.0) / (power_scale_factor*nphases), nphases)
+        if nw == 0
+            math_obj["pd"] = fill(get(ravens_obj, "EnergyConsumer.p", 0.0) / (power_scale_factor * nphases), nphases)
+            math_obj["qd"] = fill(get(ravens_obj, "EnergyConsumer.q", 0.0) / (power_scale_factor * nphases), nphases)
         else
             # Get timeseries schedule
             if haskey(ravens_obj, "EnergyConsumer.LoadProfile")
@@ -1303,8 +1621,8 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
                         reactive_power[id] = get(phase_info, "EnergyConsumerPhase.q", 0.0)
                     end
                 else
-                    active_power = fill(get(ravens_obj, "EnergyConsumer.p", 0.0) / (power_scale_factor*nphases), nphases)
-                    reactive_power = fill(get(ravens_obj, "EnergyConsumer.q", 0.0) / (power_scale_factor*nphases), nphases)
+                    active_power = fill(get(ravens_obj, "EnergyConsumer.p", 0.0) / (power_scale_factor * nphases), nphases)
+                    reactive_power = fill(get(ravens_obj, "EnergyConsumer.q", 0.0) / (power_scale_factor * nphases), nphases)
                 end
 
                 schdl_name = _extract_name(ravens_obj["EnergyConsumer.LoadProfile"])
@@ -1325,28 +1643,28 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
 
                 if haskey(schdl, "BasicIntervalSchedule.value1Unit")
                     unit_symbol = schdl["BasicIntervalSchedule.value1Unit"]
-                    value1_unit = lowercase(unit_symbol[findfirst(isequal('.'), unit_symbol) + 1:end])
+                    value1_unit = lowercase(unit_symbol[findfirst(isequal('.'), unit_symbol)+1:end])
                     if value1_unit == "w"
-                        math_obj["pd"] = fill(get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value1", 0.0) * value1_multiplier / (power_scale_factor*nphases), nphases)
+                        math_obj["pd"] = fill(get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value1", 0.0) * value1_multiplier / (power_scale_factor * nphases), nphases)
                     end
                     if value1_unit == "var"
-                        math_obj["qd"] = fill(get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value1", 0.0) * value1_multiplier / (power_scale_factor*nphases), nphases)
+                        math_obj["qd"] = fill(get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value1", 0.0) * value1_multiplier / (power_scale_factor * nphases), nphases)
                     end
                 end
 
                 if haskey(schdl, "BasicIntervalSchedule.value2Unit")
                     unit_symbol = schdl["BasicIntervalSchedule.value2Unit"]
-                    value2_unit = lowercase(unit_symbol[findfirst(isequal('.'), unit_symbol) + 1:end])
+                    value2_unit = lowercase(unit_symbol[findfirst(isequal('.'), unit_symbol)+1:end])
                     if value2_unit == "w"
-                        math_obj["pd"] = fill(get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value2", 0.0) * value2_multiplier / (power_scale_factor*nphases), nphases)
+                        math_obj["pd"] = fill(get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value2", 0.0) * value2_multiplier / (power_scale_factor * nphases), nphases)
                     end
                     if value2_unit == "var"
-                        math_obj["qd"] = fill(get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value2", 0.0) * value2_multiplier / (power_scale_factor*nphases), nphases)
+                        math_obj["qd"] = fill(get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value2", 0.0) * value2_multiplier / (power_scale_factor * nphases), nphases)
                     end
                 end
 
                 # Multipliers instead of actual values
-                if !haskey(schdl, "BasicIntervalSchedule.value1Unit")
+                if get(schdl, "BasicIntervalSchedule.value1Unit", "UnitSymbol.none") == "UnitSymbol.none"
                     math_obj["pd"] = get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value1", 1.0) .* active_power ./ power_scale_factor
                     math_obj["qd"] = get(schdl["EnergyConsumerSchedule.RegularTimePoints"][nw], "RegularTimePoint.value1", 1.0) .* reactive_power ./ power_scale_factor
                 end
@@ -1369,11 +1687,11 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
 
         # Correct (if needed) single-phase DELTA connections
         if (math_obj["configuration"] == DELTA)
-            math_obj["vnom_kv"] = math_obj["vnom_kv"]*sqrt(3)
+            math_obj["vnom_kv"] = math_obj["vnom_kv"] * sqrt(3)
             if (nphases == 1)
                 math_obj["configuration"] = WYE
                 @warn "EnergyConsumer (load): $name has DELTA configuration but only 1 connection (phase). DELTA configurations must have at least 2 or 3 connections!. EnergyConsumer converted to WYE connection."
-                math_obj["vnom_kv"] = math_obj["vnom_kv"]/sqrt(3)
+                math_obj["vnom_kv"] = math_obj["vnom_kv"] / sqrt(3)
             end
         end
 
@@ -1393,7 +1711,7 @@ function _map_ravens2math_energy_consumer!(data_math::Dict{String,<:Any}, data_r
         end
 
         # Set bus type to PQ bus
-        if(math_obj["status"] == 1)
+        if (math_obj["status"] == 1)
             bus_conn["bus_type"] = 1
         end
 
@@ -1410,13 +1728,12 @@ end
 """
 Converts ravens voltage sources into mathematical generators and (if needed) impedance branches to represent the loss model.
 """
-function _map_ravens2math_energy_source!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
-    energy_connections = data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"]
+function _map_ravens2math_energy_source!(data_math::MathematicalModel{NetworkModel}, data_ravens::RavensModel; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
     voltage_scale_factor = data_math["settings"]["voltage_scale_factor"]
     voltage_scale_factor_sqrt3 = voltage_scale_factor * sqrt(3)
 
-    for (name, ravens_obj) in get(energy_connections, "EnergySource", Dict{Any,Dict{String,Any}}())
-        math_obj = _init_math_obj_ravens("EnergySource", name, ravens_obj, length(data_math["gen"]) + 1; pass_props=pass_props)
+    for (name, ravens_obj) in get(data_ravens, "EnergySource", Dict{Any,Dict{String,Any}}())
+        math_obj = _init_math_obj_ravens(ravens_obj["Ravens.cimObjectType"], name, ravens_obj, length(data_math["gen"]) + 1; pass_props=pass_props)
         math_obj["name"] = "_virtual_gen.energy_source.$name"
 
         # Get connectivity node info (bus info)
@@ -1460,7 +1777,7 @@ function _map_ravens2math_energy_source!(data_math::Dict{String,<:Any}, data_rav
         math_obj["gen_status"] = haskey(ravens_obj, "Equipment.inService") ? ravens_obj["Equipment.inService"] : true
         math_obj["gen_status"] = math_obj["gen_status"] == true ? 1 : 0
 
-        if(math_obj["gen_status"] == 1)
+        if (math_obj["gen_status"] == 1)
             bus_conn["bus_type"] = 3
         end
 
@@ -1502,7 +1819,7 @@ function _map_ravens2math_energy_source!(data_math::Dict{String,<:Any}, data_rav
         map_to = "gen.$(math_obj["index"])"
         if !all(isapprox.(rs, 0)) && !all(isapprox.(xs, 0))
 
-            if(math_obj["gen_status"] == 1)
+            if (math_obj["gen_status"] == 1)
                 bus_conn["bus_type"] = 1
             else
                 bus_conn["bus_type"] = 4    # Virtual bus becomes the new slack bus
@@ -1532,7 +1849,7 @@ function _map_ravens2math_energy_source!(data_math::Dict{String,<:Any}, data_rav
             r0 = get(ravens_obj, "EnergySource.r0", 0.0)
             x = get(ravens_obj, "EnergySource.x", 0.0)
             x0 = get(ravens_obj, "EnergySource.x0", 0.0)
-            Z_ABC = _impedance_conversion_ravens_energy_source(data_ravens, ravens_obj, r+x*1im, r0+x0*1im)
+            Z_ABC = _impedance_conversion_ravens_energy_source(data_ravens, ravens_obj, r + x * 1im, r0 + x0 * 1im)
 
             branch_obj = Dict(
                 "name" => "_virtual_branch.EnergySource.$name",
@@ -1578,22 +1895,125 @@ function _map_ravens2math_energy_source!(data_math::Dict{String,<:Any}, data_rav
 end
 
 
-
 "converts engineering generators into mathematical generators"
-function _map_ravens2math_rotating_machine!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
-    energy_connections = data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"]
+function _map_ravens2math_rotating_machine!(data_math::MathematicalModel{NetworkModel}, data_ravens::RavensModel; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
+    power_scale_factor = data_math["settings"]["power_scale_factor"]
+    voltage_scale_factor = data_math["settings"]["voltage_scale_factor"]
 
-    if haskey(energy_connections, "RegulatingCondEq")
+    for (name, ravens_obj) in get(data_ravens, "RotatingMachine", Dict{Any,Dict{String,Any}}())
+        math_obj = _init_math_obj_ravens(ravens_obj["Ravens.cimObjectType"], name, ravens_obj, length(data_math["gen"]) + 1; pass_props=pass_props)
 
-        regulating_cond_eq = energy_connections["RegulatingCondEq"]
-        power_scale_factor = data_math["settings"]["power_scale_factor"]
-        voltage_scale_factor = data_math["settings"]["voltage_scale_factor"]
+        # Connections/phases obtained from Terminals
+        connections = _phasecode_map[get(ravens_obj["ConductingEquipment.Terminals"][1], "Terminal.phases", "PhaseCode.ABC")]
 
-        for (name, ravens_obj) in get(regulating_cond_eq, "RotatingMachine", Dict{Any,Dict{String,Any}}())
+        nconductors = length(connections)
+        math_obj["connections"] = connections
 
-            math_obj = _init_math_obj_ravens("RotatingMachine", name, ravens_obj, length(data_math["gen"])+1; pass_props=pass_props)
+        connectivity_node = _extract_name(ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.ConnectivityNode"])
+        math_obj["gen_bus"] = data_math["bus_lookup"][connectivity_node]
+        math_obj["gen_status"] = get(ravens_obj, "Equipment.inService", true)
+        math_obj["gen_status"] = status = math_obj["gen_status"] == true ? 1 : 0
 
-            # Connections/phases obtained from Terminals
+        # TODO: control mode do not exist in the RAVENS-CIM (Need to be added)
+        math_obj["control_mode"] = control_mode = Int(get(ravens_obj, "control_mode", FREQUENCYDROOP))
+
+        # Set Pmax and Pmin for generator
+        if haskey(ravens_obj, "RotatingMachine.GeneratingUnit")
+            math_obj["pmin"] = ((get(ravens_obj["RotatingMachine.GeneratingUnit"], "GeneratingUnit.minOperatingP", 0) * ones(nconductors)) ./ nconductors) ./ (power_scale_factor)
+            math_obj["pmax"] = ((get(ravens_obj["RotatingMachine.GeneratingUnit"], "GeneratingUnit.maxOperatingP", Inf) * ones(nconductors)) ./ nconductors) ./ (power_scale_factor)
+        else
+            math_obj["pmin"] = (zeros(nconductors) ./ nconductors) ./ (power_scale_factor)
+            math_obj["pmax"] = ((get(ravens_obj, "RotatingMachine.ratedS", Inf) * get(ravens_obj, "RotatingMachine.ratedPowerFactor", 1.0) * ones(nconductors)) ./ nconductors) ./ (power_scale_factor)
+        end
+
+        # Set bus type
+        bus_type = 4
+        if (status == 1)
+            bus_type = 1
+        end
+
+        data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"] = _compute_bus_type(bus_type, status, control_mode)
+
+        # Set the nominal voltage
+        bus_conn = data_math["bus"]["$(math_obj["gen_bus"])"]
+        base_voltage_ref = _extract_name(ravens_obj["ConductingEquipment.BaseVoltage"])
+        nominal_voltage = data_ravens["BaseVoltage"][base_voltage_ref]["BaseVoltage.nominalVoltage"]
+        base_voltage = nominal_voltage / sqrt(nconductors)
+        math_obj["vbase"] = base_voltage / voltage_scale_factor
+
+        math_obj["vg"] = ((get(ravens_obj, "RotatingMachine.ratedU", nominal_voltage)) / nominal_voltage) * ones(nconductors)
+
+        if control_mode == Int(ISOCHRONOUS) && status == 1
+            data_math["bus"]["$(math_obj["gen_bus"])"]["vm"] = ((get(ravens_obj, "RotatingMachine.ratedU", nominal_voltage)) / nominal_voltage) * ones(nconductors)
+            data_math["bus"]["$(math_obj["gen_bus"])"]["vmax"] = ((get(ravens_obj, "RotatingMachine.ratedU", nominal_voltage)) / nominal_voltage) * ones(nconductors)
+            data_math["bus"]["$(math_obj["gen_bus"])"]["vmin"] = ((get(ravens_obj, "RotatingMachine.ratedU", nominal_voltage)) / nominal_voltage) * ones(nconductors)
+            data_math["bus"]["$(math_obj["gen_bus"])"]["va"] = [0.0, -120, 120, zeros(length(data_math["bus"]["$(math_obj["gen_bus"])"]) - 3)...][data_math["bus"]["$(math_obj["gen_bus"])"]["terminals"]]
+        end
+
+        # Set min and max Q
+        if haskey(ravens_obj, "RotatingMachine.minQ")
+            math_obj["qmin"] = ((ravens_obj["RotatingMachine.minQ"] * ones(nconductors)) ./ nconductors) ./ (power_scale_factor)
+        elseif haskey(ravens_obj, "SynchronousMachine.minQ")
+            math_obj["qmin"] = ((ravens_obj["SynchronousMachine.minQ"] * ones(nconductors)) ./ nconductors) ./ (power_scale_factor)
+        elseif haskey(ravens_obj, "RotatingMachine.ratedPowerFactor")
+            Srated = get(ravens_obj, "RotatingMachine.ratedS", Inf)
+            PFrated = get(ravens_obj, "RotatingMachine.ratedPowerFactor", 1.0)
+            Prated = Srated * PFrated
+            math_obj["qmin"] = -((sqrt(Srated^2 - Prated^2) * ones(nconductors)) ./ nconductors) ./ (power_scale_factor)
+        else
+            math_obj["qmin"] = fill(-Inf, nconductors)
+        end
+
+        if haskey(ravens_obj, "RotatingMachine.maxQ")
+            math_obj["qmax"] = ((ravens_obj["RotatingMachine.maxQ"] * ones(nconductors)) ./ nconductors) ./ (power_scale_factor)
+        elseif haskey(ravens_obj, "SynchronousMachine.maxQ")
+            math_obj["qmax"] = ((ravens_obj["SynchronousMachine.maxQ"] * ones(nconductors)) ./ nconductors) ./ (power_scale_factor)
+        elseif haskey(ravens_obj, "RotatingMachine.ratedPowerFactor")
+            Srated = get(ravens_obj, "RotatingMachine.ratedS", Inf)
+            PFrated = get(ravens_obj, "RotatingMachine.ratedPowerFactor", 1.0)
+            Prated = Srated * PFrated
+            math_obj["qmax"] = ((sqrt(Srated^2 - Prated^2) * ones(nconductors)) ./ nconductors) ./ (power_scale_factor)
+        else
+            math_obj["qmax"] = fill(Inf, nconductors)
+        end
+
+        # Set pg and qg
+        math_obj["pg"] = (get(ravens_obj, "RotatingMachine.p", 0.0) * -ones(nconductors) ./ nconductors) ./ (power_scale_factor)
+        math_obj["qg"] = (get(ravens_obj, "RotatingMachine.q", 0.0) * -ones(nconductors) ./ nconductors) ./ (power_scale_factor)
+
+        # TODO: add a polynomial parameters to be added to gen cost
+        _add_gen_cost_model!(math_obj, ravens_obj)
+
+        # TODO: configuration for generators is not available on CIM (yet)
+        math_obj["configuration"] = get(ravens_obj, "configuration", WYE)
+
+        # Set index
+        data_math["gen"]["$(math_obj["index"])"] = math_obj
+
+        push!(data_math["map"], Dict{String,Any}(
+            "from" => name,
+            "to" => "gen.$(math_obj["index"])",
+            "unmap_function" => "_map_math2eng_generator!",
+        ))
+    end
+
+end
+
+
+"converts ravens power_electronics units such as PVs and Batteries into mathematical components"
+function _map_ravens2math_power_electronics!(data_math::MathematicalModel{NetworkModel}, data_ravens::RavensModel; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
+    power_scale_factor = data_math["settings"]["power_scale_factor"]
+    voltage_scale_factor = data_math["settings"]["voltage_scale_factor"]
+
+    for (name, ravens_obj) in get(data_ravens, "PowerElectronicsConnection", Dict{Any,Dict{String,Any}}())
+        # Get type of PowerElectronicsUnit
+        pec_type = get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "Ravens.cimObjectType", "")
+
+        if (pec_type == "PhotoVoltaicUnit")
+
+            math_obj = _init_math_obj_ravens(ravens_obj["Ravens.cimObjectType"], name, ravens_obj, length(data_math["gen"]) + 1; pass_props=pass_props)
+
+            # Connections/phases
             connections = _phasecode_map[get(ravens_obj["ConductingEquipment.Terminals"][1], "Terminal.phases", "PhaseCode.ABC")]
 
             nconductors = length(connections)
@@ -1607,74 +2027,113 @@ function _map_ravens2math_rotating_machine!(data_math::Dict{String,<:Any}, data_
             # TODO: control mode do not exist in the RAVENS-CIM (Need to be added)
             math_obj["control_mode"] = control_mode = Int(get(ravens_obj, "control_mode", FREQUENCYDROOP))
 
-            # Set Pmax and Pmin for generator
-            if haskey(ravens_obj, "RotatingMachine.GeneratingUnit")
-                math_obj["pmin"] = ((get(ravens_obj["RotatingMachine.GeneratingUnit"], "GeneratingUnit.minOperatingP", 0) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
-                math_obj["pmax"] = ((get(ravens_obj["RotatingMachine.GeneratingUnit"], "GeneratingUnit.maxOperatingP", Inf) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
-            else
-                math_obj["pmin"] = (zeros(nconductors) ./ nconductors)./(power_scale_factor)
-                math_obj["pmax"] = ((get(ravens_obj, "RotatingMachine.ratedS", Inf) * get(ravens_obj, "RotatingMachine.ratedPowerFactor", 1.0) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
-            end
-
             # Set bus type
             bus_type = 4
-            if(status == 1)
+            if (status == 1)
                 bus_type = 1
             end
 
             data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"] = _compute_bus_type(bus_type, status, control_mode)
 
             # Set the nominal voltage
-            bus_conn =  data_math["bus"]["$(math_obj["gen_bus"])"]
+            bus_conn = data_math["bus"]["$(math_obj["gen_bus"])"]
             base_voltage_ref = _extract_name(ravens_obj["ConductingEquipment.BaseVoltage"])
             nominal_voltage = data_ravens["BaseVoltage"][base_voltage_ref]["BaseVoltage.nominalVoltage"]
-            base_voltage =  nominal_voltage / sqrt(nconductors)
-            math_obj["vbase"] =  base_voltage / voltage_scale_factor
-
+            base_voltage = nominal_voltage / sqrt(nconductors)
+            math_obj["vbase"] = base_voltage / voltage_scale_factor
 
             if control_mode == Int(ISOCHRONOUS) && status == 1
-                data_math["bus"]["$(math_obj["gen_bus"])"]["vm"] = ((get(ravens_obj, "RotatingMachine.ratedU", nominal_voltage))/nominal_voltage)* ones(nconductors)
-                data_math["bus"]["$(math_obj["gen_bus"])"]["vmax"] = ((get(ravens_obj, "RotatingMachine.ratedU", nominal_voltage))/nominal_voltage)* ones(nconductors)
-                data_math["bus"]["$(math_obj["gen_bus"])"]["vmin"] = ((get(ravens_obj, "RotatingMachine.ratedU", nominal_voltage))/nominal_voltage)* ones(nconductors)
+                data_math["bus"]["$(math_obj["gen_bus"])"]["vm"] = ((get(ravens_obj, "PowerElectronicsConnection.ratedU", nominal_voltage)) / nominal_voltage) * ones(nconductors)
+                data_math["bus"]["$(math_obj["gen_bus"])"]["vmax"] = ((get(ravens_obj, "PowerElectronicsConnection.ratedU", nominal_voltage)) / nominal_voltage) * ones(nconductors)
+                data_math["bus"]["$(math_obj["gen_bus"])"]["vmin"] = ((get(ravens_obj, "PowerElectronicsConnection.ratedU", nominal_voltage)) / nominal_voltage) * ones(nconductors)
                 data_math["bus"]["$(math_obj["gen_bus"])"]["va"] = [0.0, -120, 120, zeros(length(data_math["bus"]["$(math_obj["gen_bus"])"]) - 3)...][data_math["bus"]["$(math_obj["gen_bus"])"]["terminals"]]
+                data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"] = 3
             end
 
-            # Set min and max Q
-            if haskey(ravens_obj, "RotatingMachine.minQ")
-                math_obj["qmin"] = ((ravens_obj["RotatingMachine.minQ"] * ones(nconductors)) ./ nconductors)./(power_scale_factor)
-            elseif haskey(ravens_obj, "SynchronousMachine.minQ")
-                math_obj["qmin"] = ((ravens_obj["SynchronousMachine.minQ"] * ones(nconductors)) ./ nconductors)./(power_scale_factor)
-            elseif haskey(ravens_obj, "RotatingMachine.ratedPowerFactor")
-                Srated = get(ravens_obj, "RotatingMachine.ratedS", Inf)
-                PFrated = get(ravens_obj, "RotatingMachine.ratedPowerFactor", 1.0)
-                Prated = Srated*PFrated
-                math_obj["qmin"] = -((sqrt(Srated^2 - Prated^2) * ones(nconductors)) ./ nconductors) ./ (power_scale_factor)
+            # Set vg
+            if nconductors > 1
+                m = sqrt(3)
             else
-                math_obj["qmin"] = fill(-Inf, nconductors)
+                m = 1
             end
-
-            if haskey(ravens_obj, "RotatingMachine.maxQ")
-                math_obj["qmax"] = ((ravens_obj["RotatingMachine.maxQ"] * ones(nconductors)) ./ nconductors)./(power_scale_factor)
-            elseif haskey(ravens_obj, "SynchronousMachine.maxQ")
-                math_obj["qmax"] = ((ravens_obj["SynchronousMachine.maxQ"] * ones(nconductors)) ./ nconductors)./(power_scale_factor)
-            elseif haskey(ravens_obj, "RotatingMachine.ratedPowerFactor")
-                Srated = get(ravens_obj, "RotatingMachine.ratedS", Inf)
-                PFrated = get(ravens_obj, "RotatingMachine.ratedPowerFactor", 1.0)
-                Prated = Srated*PFrated
-                math_obj["qmax"] = ((sqrt(Srated^2 - Prated^2) * ones(nconductors)) ./ nconductors) ./ (power_scale_factor)
-            else
-                math_obj["qmax"] = fill(Inf, nconductors)
+            for (fr_k, to_k) in [("PowerElectronicsConnection.ratedU", "vg")]
+                if haskey(ravens_obj, fr_k)
+                    math_obj[to_k] = (nominal_voltage / m) * ones(nconductors) / voltage_scale_factor
+                end
             end
-
-            # Set pg and qg
-            math_obj["pg"] = (get(ravens_obj, "RotatingMachine.p", 0.0) * -ones(nconductors) ./ nconductors)./(power_scale_factor)
-            math_obj["qg"] = (get(ravens_obj, "RotatingMachine.q", 0.0) * -ones(nconductors) ./ nconductors)./(power_scale_factor)
-
-            # TODO: add a polynomial parameters to be added to gen cost
-            _add_gen_cost_model!(math_obj, ravens_obj)
 
             # TODO: configuration for generators is not available on CIM (yet)
             math_obj["configuration"] = get(ravens_obj, "configuration", WYE)
+
+
+            # TODO: refactor the calculation of N when connections and configuration issues are solved.
+            N = math_obj["configuration"] == DELTA && length(connections) == 1 ? 1 : _infer_int_dim(connections, math_obj["configuration"], false) # if solar is delta-connected to triplex node, N can be equal to 1
+
+            # Set pg/pmax and qg/qmax (w/ multinetwork support)
+            if nw == 0
+                if !haskey(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "PowerElectronicsUnit.maxP")
+                    math_obj["pmax"] = ((get(ravens_obj, "PowerElectronicsConnection.ratedS", Inf) * ones(nconductors)) ./ nconductors) ./ (power_scale_factor)
+                else
+                    math_obj["pmax"] = ((get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "PowerElectronicsUnit.maxP", Inf) * ones(nconductors)) ./ nconductors) ./ (power_scale_factor)
+                end
+                math_obj["pg"] = (get(ravens_obj, "PowerElectronicsConnection.p", 0.0) * -ones(nconductors) ./ nconductors) ./ (power_scale_factor)
+            else
+
+                # Get timeseries schedule
+                if haskey(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "PhotoVoltaicUnit.GenerationProfile")
+
+                    # initialization of pg values for multiplier case
+                    pmax = zeros(Float64, nconductors)
+                    pg = zeros(Float64, nconductors)
+                    pmax = (get(ravens_obj, "PowerElectronicsConnection.p", 0.0) * -ones(nconductors) ./ nconductors) ./ (power_scale_factor)
+                    pg = (get(ravens_obj, "PowerElectronicsConnection.p", 0.0) * -ones(nconductors) ./ nconductors) ./ (power_scale_factor)
+
+                    curve_name = _extract_name(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"]["PhotoVoltaicUnit.GenerationProfile"])
+                    curve = data_ravens["Curve"][curve_name]
+
+                    # multiplier modifier
+                    if haskey(curve, "Curve.y1Multiplier")
+                        value1_multiplier = _multipliers_map[curve["Curve.y1Multiplier"]]
+                    else
+                        value1_multiplier = 1.0
+                    end
+
+                    # Actual values
+                    if haskey(curve, "Curve.y1Unit")
+                        unit_symbol = curve["Curve.y1Unit"]
+                        value1_unit = lowercase(unit_symbol[findfirst(isequal('.'), unit_symbol)+1:end])
+                        if value1_unit == "w"
+                            math_obj["pg"] = (get(curve["Curve.CurveDatas"][nw], "CurveData.y1value", 0.0) * value1_multiplier * -ones(nconductors) ./ nconductors) ./ (power_scale_factor)
+                            math_obj["pmax"] = math_obj["pg"] .* -1
+                        end
+                    end
+
+                    # Multipliers instead of actual values
+                    if !haskey(curve, "Curve.y1Unit")
+                        math_obj["pg"] = -get(curve["Curve.CurveDatas"][nw], "CurveData.y1value", 1.0) .* pg
+                        math_obj["pmax"] = math_obj["pg"] .* -1
+                    end
+
+                else
+                    if !haskey(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "PowerElectronicsUnit.maxP")
+                        math_obj["pmax"] = ((get(ravens_obj, "PowerElectronicsConnection.ratedS", Inf) * ones(nconductors)) ./ nconductors) ./ (power_scale_factor)
+                    else
+                        math_obj["pmax"] = ((get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "PowerElectronicsUnit.maxP", Inf) * ones(nconductors)) ./ nconductors) ./ (power_scale_factor)
+                    end
+                    math_obj["pg"] = (get(ravens_obj, "PowerElectronicsConnection.p", 0.0) * -ones(nconductors) ./ nconductors) ./ (power_scale_factor)
+
+                    # @error("No timeseries, dispatch profile or multinetwork information found!")
+                end
+
+            end
+
+            math_obj["pmin"] = ((get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "PowerElectronicsUnit.minP", 0.0) * ones(nconductors)) ./ nconductors) ./ (power_scale_factor)
+            math_obj["qmin"] = ((get(ravens_obj, "PowerElectronicsConnection.minQ", -0) * ones(nconductors)) ./ nconductors) ./ (power_scale_factor)
+            math_obj["qmax"] = ((get(ravens_obj, "PowerElectronicsConnection.maxQ", 0) * ones(nconductors)) ./ nconductors) ./ (power_scale_factor)
+            math_obj["qg"] = (get(ravens_obj, "PowerElectronicsConnection.q", 0.0) * -ones(nconductors) ./ nconductors) ./ (power_scale_factor)
+
+            # TODO: add a polynomial parameters to be added to gen cost
+            _add_gen_cost_model!(math_obj, ravens_obj)
 
             # Set index
             data_math["gen"]["$(math_obj["index"])"] = math_obj
@@ -1682,256 +2141,103 @@ function _map_ravens2math_rotating_machine!(data_math::Dict{String,<:Any}, data_
             push!(data_math["map"], Dict{String,Any}(
                 "from" => name,
                 "to" => "gen.$(math_obj["index"])",
-                "unmap_function" => "_map_math2eng_generator!",
+                "unmap_function" => "_map_math2eng_solar!",
             ))
-        end
 
-    end
+        elseif (pec_type == "BatteryUnit")
 
-end
+            math_obj = _init_math_obj_ravens(ravens_obj["Ravens.cimObjectType"], name, ravens_obj, length(data_math["storage"]) + 1; pass_props=pass_props)
 
+            # Connections/phases
+            connections = _phasecode_map[get(ravens_obj["ConductingEquipment.Terminals"][1], "Terminal.phases", "PhaseCode.ABC")]
+            nconductors = length(connections)
+            math_obj["connections"] = connections
 
-"converts ravens power_electronics units such as PVs and Batteries into mathematical components"
-function _map_ravens2math_power_electronics!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
-    energy_connections = data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"]
+            # Set the bus
+            connectivity_node = _extract_name(ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.ConnectivityNode"])
+            math_obj["storage_bus"] = data_math["bus_lookup"][connectivity_node]
+            math_obj["status"] = get(ravens_obj, "Equipment.inService", true)
+            math_obj["status"] = status = math_obj["status"] == true ? 1 : 0
 
-    if haskey(energy_connections, "RegulatingCondEq")
+            # TODO: configuration for generators is not available on CIM (yet)
+            math_obj["configuration"] = get(ravens_obj, "configuration", WYE)
 
-        regulating_cond_eq = energy_connections["RegulatingCondEq"]
-        power_scale_factor = data_math["settings"]["power_scale_factor"]
-        voltage_scale_factor = data_math["settings"]["voltage_scale_factor"]
+            # Set battery parameters
+            math_obj["energy"] = ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"]["BatteryUnit.storedE"] / power_scale_factor
 
-        for (name, ravens_obj) in get(regulating_cond_eq, "PowerElectronicsConnection", Dict{Any,Dict{String,Any}}())
-
-            # Get type of PowerElectronicsUnit
-            pec_type = get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "Ravens.cimObjectType", "")
-
-            if (pec_type == "PhotoVoltaicUnit")
-
-                math_obj = _init_math_obj_ravens("PhotoVoltaicUnit", name, ravens_obj, length(data_math["gen"])+1; pass_props=pass_props)
-
-                # Connections/phases
-                connections = _phasecode_map[get(ravens_obj["ConductingEquipment.Terminals"][1], "Terminal.phases", "PhaseCode.ABC")]
-
-                nconductors = length(connections)
-                math_obj["connections"] = connections
-
-                connectivity_node = _extract_name(ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.ConnectivityNode"])
-                math_obj["gen_bus"] = data_math["bus_lookup"][connectivity_node]
-                math_obj["gen_status"] = get(ravens_obj, "Equipment.inService", true)
-                math_obj["gen_status"] = status = math_obj["gen_status"] == true ? 1 : 0
-
-                # TODO: control mode do not exist in the RAVENS-CIM (Need to be added)
-                math_obj["control_mode"] = control_mode = Int(get(ravens_obj, "control_mode", FREQUENCYDROOP))
-
-                # Set bus type
-                bus_type = 4
-                if(status == 1)
-                    bus_type = 1
-                end
-
-                data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"] = _compute_bus_type(bus_type, status, control_mode)
-
-                # Set the nominal voltage
-                bus_conn =  data_math["bus"]["$(math_obj["gen_bus"])"]
-                base_voltage_ref = _extract_name(ravens_obj["ConductingEquipment.BaseVoltage"])
-                nominal_voltage = data_ravens["BaseVoltage"][base_voltage_ref]["BaseVoltage.nominalVoltage"]
-                base_voltage =  nominal_voltage / sqrt(nconductors)
-                math_obj["vbase"] =  base_voltage / voltage_scale_factor
-
-                if control_mode == Int(ISOCHRONOUS) && status == 1
-                    data_math["bus"]["$(math_obj["gen_bus"])"]["vm"] = ((get(ravens_obj, "PowerElectronicsConnection.ratedU", nominal_voltage))/nominal_voltage)* ones(nconductors)
-                    data_math["bus"]["$(math_obj["gen_bus"])"]["vmax"] = ((get(ravens_obj, "PowerElectronicsConnection.ratedU", nominal_voltage))/nominal_voltage)* ones(nconductors)
-                    data_math["bus"]["$(math_obj["gen_bus"])"]["vmin"] = ((get(ravens_obj, "PowerElectronicsConnection.ratedU", nominal_voltage))/nominal_voltage)* ones(nconductors)
-                    data_math["bus"]["$(math_obj["gen_bus"])"]["va"] = [0.0, -120, 120, zeros(length(data_math["bus"]["$(math_obj["gen_bus"])"]) - 3)...][data_math["bus"]["$(math_obj["gen_bus"])"]["terminals"]]
-                    data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"] = 3
-                end
-
-                # Set vg
-                if nconductors > 1
-                    m = sqrt(3)
-                else
-                    m = 1
-                end
-                for (fr_k, to_k) in [("PowerElectronicsConnection.ratedU", "vg")]
-                    if haskey(ravens_obj, fr_k)
-                        math_obj[to_k] = (nominal_voltage/m)*ones(nconductors)/voltage_scale_factor
-                    end
-                end
-
-                # TODO: configuration for generators is not available on CIM (yet)
-                math_obj["configuration"] = get(ravens_obj, "configuration", WYE)
-
-
-                # TODO: refactor the calculation of N when connections and configuration issues are solved.
-                N = math_obj["configuration"]==DELTA && length(connections)==1 ? 1 : _infer_int_dim(connections,  math_obj["configuration"], false) # if solar is delta-connected to triplex node, N can be equal to 1
-
-                # Set pg/pmax and qg/qmax (w/ multinetwork support)
-                if nw==0
-                    if !haskey(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "PowerElectronicsUnit.maxP")
-                        math_obj["pmax"] = ((get(ravens_obj, "PowerElectronicsConnection.ratedS", Inf) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
-                    else
-                        math_obj["pmax"] = ((get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "PowerElectronicsUnit.maxP", Inf) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
-                    end
-                    math_obj["pg"] = (get(ravens_obj, "PowerElectronicsConnection.p", 0.0) * -ones(nconductors) ./ nconductors)./(power_scale_factor)
-                else
-
-                    # Get timeseries schedule
-                    if haskey(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "PhotoVoltaicUnit.GenerationProfile")
-
-                        # initialization of pg values for multiplier case
-                        pmax = zeros(Float64, nconductors)
-                        pg = zeros(Float64, nconductors)
-                        pmax = (get(ravens_obj, "PowerElectronicsConnection.p", 0.0) * -ones(nconductors) ./ nconductors)./(power_scale_factor)
-                        pg = (get(ravens_obj, "PowerElectronicsConnection.p", 0.0) * -ones(nconductors) ./ nconductors)./(power_scale_factor)
-
-                        curve_name = _extract_name(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"]["PhotoVoltaicUnit.GenerationProfile"])
-                        curve = data_ravens["Curve"][curve_name]
-
-                        # multiplier modifier
-                        if haskey(curve, "Curve.y1Multiplier")
-                            value1_multiplier = _multipliers_map[curve["Curve.y1Multiplier"]]
-                        else
-                            value1_multiplier = 1.0
-                        end
-
-                        # Actual values
-                        if haskey(curve, "Curve.y1Unit")
-                            unit_symbol = curve["Curve.y1Unit"]
-                            value1_unit = lowercase(unit_symbol[findfirst(isequal('.'), unit_symbol) + 1:end])
-                            if value1_unit == "w"
-                                math_obj["pg"] = (get(curve["Curve.CurveDatas"][nw], "CurveData.y1value", 0.0) * value1_multiplier * -ones(nconductors) ./ nconductors)./(power_scale_factor)
-                                math_obj["pmax"] = math_obj["pg"].*-1
-                            end
-                        end
-
-                        # Multipliers instead of actual values
-                        if !haskey(curve, "Curve.y1Unit")
-                            math_obj["pg"] = -get(curve["Curve.CurveDatas"][nw], "CurveData.y1value", 1.0) .* pg
-                            math_obj["pmax"] = math_obj["pg"].*-1
-                        end
-
-                    else
-                        @error("No timeseries, dispatch profile or multinetwork information found!")
-                    end
-
-                end
-
-                math_obj["pmin"] = ((get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "PowerElectronicsUnit.minP", 0.0) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
-                math_obj["qmin"] = ((get(ravens_obj, "PowerElectronicsConnection.minQ", -0) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
-                math_obj["qmax"] = ((get(ravens_obj, "PowerElectronicsConnection.maxQ", 0) * ones(nconductors)) ./ nconductors)./(power_scale_factor)
-                math_obj["qg"] = (get(ravens_obj, "PowerElectronicsConnection.q", 0.0) * -ones(nconductors) ./ nconductors)./(power_scale_factor)
-
-                # TODO: add a polynomial parameters to be added to gen cost
-                _add_gen_cost_model!(math_obj, ravens_obj)
-
-                # Set index
-                data_math["gen"]["$(math_obj["index"])"] = math_obj
-
-                push!(data_math["map"], Dict{String,Any}(
-                    "from" => name,
-                    "to" => "gen.$(math_obj["index"])",
-                    "unmap_function" => "_map_math2eng_solar!",
-                ))
-
-            elseif (pec_type == "BatteryUnit")
-
-                math_obj = _init_math_obj_ravens("BatteryUnit", name, ravens_obj, length(data_math["storage"])+1; pass_props=pass_props)
-
-                # Connections/phases
-                connections = _phasecode_map[get(ravens_obj["ConductingEquipment.Terminals"][1], "Terminal.phases", "PhaseCode.ABC")]
-                nconductors = length(connections)
-                math_obj["connections"] = connections
-
-                # Set the bus
-                connectivity_node = _extract_name(ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.ConnectivityNode"])
-                math_obj["storage_bus"] = data_math["bus_lookup"][connectivity_node]
-                math_obj["status"] = get(ravens_obj, "Equipment.inService", true)
-                math_obj["status"] = status = math_obj["status"] == true ? 1 : 0
-
-                # TODO: configuration for generators is not available on CIM (yet)
-                math_obj["configuration"] = get(ravens_obj, "configuration", WYE)
-
-                # Set battery parameters
-                math_obj["energy"] = ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"]["BatteryUnit.storedE"]/power_scale_factor
-
-                if !haskey(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "BatteryUnit.BatteryUnitEfficiency")
-                    math_obj["energy_rating"] = ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"]["BatteryUnit.ratedE"]/power_scale_factor
-                    math_obj["charge_efficiency"] = 100.0
-                    math_obj["discharge_efficiency"] = 100.0
-                    math_obj["p_loss"] = 0
-                    math_obj["q_loss"] = 0
-                else
-                    math_obj["energy_rating"] = ((get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"]["BatteryUnit.BatteryUnitEfficiency"], "BatteryUnitEfficiency.limitEnergy", 100.0)/100.0)*ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"]["BatteryUnit.ratedE"])/power_scale_factor
-                    math_obj["charge_efficiency"] = get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "BatteryUnitEfficiency.efficiencyCharge", 100.0) / 100.0
-                    math_obj["discharge_efficiency"] = get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "BatteryUnitEfficiency.efficiencyDischarge", 100.0) / 100.0
-                    # TODO: These are still missing from the RAVENS Schema
-                    math_obj["p_loss"] = get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "BatteryUnitEfficiency.idlingActivePower", 0)./(power_scale_factor)
-                    math_obj["q_loss"] = get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "BatteryUnitEfficiency.idlingReactivePower", 0)./(power_scale_factor)
-                end
-
-                if !haskey(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "PowerElectronicsUnit.maxP")
-                    math_obj["charge_rating"] = (get(ravens_obj, "PowerElectronicsConnection.ratedS", Inf))./(power_scale_factor)
-                    math_obj["discharge_rating"] = math_obj["charge_rating"]
-                else
-                    math_obj["charge_rating"] = -(get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "PowerElectronicsUnit.minP", Inf))./(power_scale_factor)
-                    math_obj["discharge_rating"] = (get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "PowerElectronicsUnit.maxP", Inf))./(power_scale_factor)
-                end
-
-                math_obj["thermal_rating"] = get(ravens_obj, "PowerElectronicsConnection.ratedS", Inf)/power_scale_factor
-
-                math_obj["qmin"] = (get(ravens_obj, "PowerElectronicsConnection.minQ", -math_obj["discharge_rating"]*power_scale_factor))./(power_scale_factor)
-                math_obj["qmax"] = (get(ravens_obj, "PowerElectronicsConnection.maxQ", math_obj["charge_rating"]*power_scale_factor))./(power_scale_factor)
-
-                # TODO: verify that these CIM terms are equivalent to the needed values.
-                math_obj["r"] = get(ravens_obj, "PowerElectronicsConnection.r", 0)
-                math_obj["x"] = get(ravens_obj, "PowerElectronicsConnection.x", 0)
-
-                # TODO: control mode do not exist in the RAVENS-CIM (Need to be added)
-                math_obj["control_mode"] = control_mode = Int(get(ravens_obj, "control_mode", FREQUENCYDROOP))
-
-                # Set the ps and qs
-                math_obj["ps"] = (-get(ravens_obj, "PowerElectronicsConnection.p", 0.0))./(power_scale_factor)
-                math_obj["qs"] = (-get(ravens_obj, "PowerElectronicsConnection.q", 0.0))./(power_scale_factor)
-
-                # Set bus type
-                bus_type = 4
-                if(status == 1)
-                    bus_type = 1
-                    if haskey(ravens_obj, "PowerElectronicsConnection.PowerElectronicsOperatingMode")
-                        mode = ravens_obj["PowerElectronicsConnection.PowerElectronicsOperatingMode"]["PowerElectronicsOperatingMode.mode"]
-                        if mode == "OperatingModeKind.gridForming"
-                            bus_type = 2
-                        end
-                    end
-                end
-
-                data_math["bus"]["$(math_obj["storage_bus"])"]["bus_type"] = _compute_bus_type(bus_type, status, control_mode)
-
-                if control_mode == Int(ISOCHRONOUS) && math_obj["status"] == 1
-                    data_math["bus"]["$(math_obj["storage_bus"])"]["va"] = [0.0, -120, 120, zeros(length(data_math["bus"]["$(math_obj["storage_bus"])"]) - 3)...][data_math["bus"]["$(math_obj["storage_bus"])"]["terminals"]]
-                end
-
-                data_math["storage"]["$(math_obj["index"])"] = math_obj
-
-                push!(data_math["map"], Dict{String,Any}(
-                    "from" => name,
-                    "to" => "storage.$(math_obj["index"])",
-                    "unmap_function" => "_map_math2eng_storage!",
-                ))
+            if !haskey(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "BatteryUnit.BatteryUnitEfficiency")
+                math_obj["energy_rating"] = ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"]["BatteryUnit.ratedE"] / power_scale_factor
+                math_obj["charge_efficiency"] = 100.0
+                math_obj["discharge_efficiency"] = 100.0
+                math_obj["p_loss"] = 0
+                math_obj["q_loss"] = 0
+            else
+                math_obj["energy_rating"] = ((get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"]["BatteryUnit.BatteryUnitEfficiency"], "BatteryUnitEfficiency.limitEnergy", 100.0) / 100.0) * ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"]["BatteryUnit.ratedE"]) / power_scale_factor
+                math_obj["charge_efficiency"] = get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "BatteryUnitEfficiency.efficiencyCharge", 100.0) / 100.0
+                math_obj["discharge_efficiency"] = get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "BatteryUnitEfficiency.efficiencyDischarge", 100.0) / 100.0
+                # TODO: These are still missing from the RAVENS Schema
+                math_obj["p_loss"] = get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "BatteryUnitEfficiency.idlingActivePower", 0) ./ (power_scale_factor)
+                math_obj["q_loss"] = get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "BatteryUnitEfficiency.idlingReactivePower", 0) ./ (power_scale_factor)
             end
+
+            if !haskey(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "PowerElectronicsUnit.maxP")
+                math_obj["charge_rating"] = (get(ravens_obj, "PowerElectronicsConnection.ratedS", Inf)) ./ (power_scale_factor)
+                math_obj["discharge_rating"] = math_obj["charge_rating"]
+            else
+                math_obj["charge_rating"] = -(get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "PowerElectronicsUnit.minP", Inf)) ./ (power_scale_factor)
+                math_obj["discharge_rating"] = (get(ravens_obj["PowerElectronicsConnection.PowerElectronicsUnit"], "PowerElectronicsUnit.maxP", Inf)) ./ (power_scale_factor)
+            end
+
+            math_obj["thermal_rating"] = get(ravens_obj, "PowerElectronicsConnection.ratedS", Inf) / power_scale_factor
+
+            math_obj["qmin"] = (get(ravens_obj, "PowerElectronicsConnection.minQ", -math_obj["discharge_rating"] * power_scale_factor)) ./ (power_scale_factor)
+            math_obj["qmax"] = (get(ravens_obj, "PowerElectronicsConnection.maxQ", math_obj["charge_rating"] * power_scale_factor)) ./ (power_scale_factor)
+
+            # TODO: verify that these CIM terms are equivalent to the needed values.
+            math_obj["r"] = get(ravens_obj, "PowerElectronicsConnection.r", 0)
+            math_obj["x"] = get(ravens_obj, "PowerElectronicsConnection.x", 0)
+
+            # TODO: control mode do not exist in the RAVENS-CIM (Need to be added)
+            math_obj["control_mode"] = control_mode = Int(get(ravens_obj, "control_mode", FREQUENCYDROOP))
+
+            # Set the ps and qs
+            math_obj["ps"] = (-get(ravens_obj, "PowerElectronicsConnection.p", 0.0)) ./ (power_scale_factor)
+            math_obj["qs"] = (-get(ravens_obj, "PowerElectronicsConnection.q", 0.0)) ./ (power_scale_factor)
+
+            # Set bus type
+            bus_type = 4
+            if (status == 1)
+                bus_type = 1
+                if haskey(ravens_obj, "PowerElectronicsConnection.PowerElectronicsOperatingMode")
+                    mode = ravens_obj["PowerElectronicsConnection.PowerElectronicsOperatingMode"]["PowerElectronicsOperatingMode.mode"]
+                    if mode == "OperatingModeKind.gridForming"
+                        bus_type = 2
+                    end
+                end
+            end
+
+            data_math["bus"]["$(math_obj["storage_bus"])"]["bus_type"] = _compute_bus_type(bus_type, status, control_mode)
+
+            if control_mode == Int(ISOCHRONOUS) && math_obj["status"] == 1
+                data_math["bus"]["$(math_obj["storage_bus"])"]["va"] = [0.0, -120, 120, zeros(length(data_math["bus"]["$(math_obj["storage_bus"])"]) - 3)...][data_math["bus"]["$(math_obj["storage_bus"])"]["terminals"]]
+            end
+
+            data_math["storage"]["$(math_obj["index"])"] = math_obj
+
+            push!(data_math["map"], Dict{String,Any}(
+                "from" => name,
+                "to" => "storage.$(math_obj["index"])",
+                "unmap_function" => "_map_math2eng_storage!",
+            ))
         end
     end
 end
 
 
 "converts ravens switches into mathematical switches and (if neeed) impedance branches to represent loss model"
-function _map_ravens2math_switch!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
-    conducting_equipment = data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]
-
-    for (name, ravens_obj) in get(conducting_equipment, "Switch", Dict{Any,Dict{String,Any}}())
-
-        math_obj = _init_math_obj_ravens("Switch", name, ravens_obj, length(data_math["switch"])+1; pass_props=pass_props)
+function _map_ravens2math_switch!(data_math::MathematicalModel{NetworkModel}, data_ravens::RavensModel; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
+    for (name, ravens_obj) in get(data_ravens, "Switch", Dict{Any,Dict{String,Any}}())
+        math_obj = _init_math_obj_ravens(ravens_obj["Ravens.cimObjectType"], name, ravens_obj, length(data_math["switch"]) + 1; pass_props=pass_props)
 
         # Terminals and phases
         terminals = ravens_obj["ConductingEquipment.Terminals"]
@@ -1985,7 +2291,7 @@ function _map_ravens2math_switch!(data_math::Dict{String,<:Any}, data_ravens::Di
 
         f_bus_data = data_math["bus"][string(math_obj["f_bus"])]
         t_bus_data = data_math["bus"][string(math_obj["t_bus"])]
-        if(math_obj["status"] == 1)
+        if (math_obj["status"] == 1)
             f_bus_data["bus_type"] = 1
             t_bus_data["bus_type"] = 1
         end
@@ -2013,7 +2319,7 @@ function _map_ravens2math_switch!(data_math::Dict{String,<:Any}, data_ravens::Di
         # Current and Power Limits
         if haskey(ravens_obj, "PowerSystemResource.AssetDatasheet")
             swinfo_name = _extract_name(ravens_obj["PowerSystemResource.AssetDatasheet"])
-            swinfo_data = data_ravens["AssetInfo"]["SwitchInfo"][swinfo_name]
+            swinfo_data = data_ravens.data["AssetInfo"]["SwitchInfo"][swinfo_name]
             math_obj["current_rating"] = fill(get(swinfo_data, "SwitchInfo.breakingCapacity", get(swinfo_data, "SwitchInfo.ratedCurrent", Inf)), nphases)
             math_obj["sm_ub"] = math_obj["current_rating"] .* get(swinfo_data, "SwitchInfo.ratedVoltage", Inf)
         else
@@ -2037,74 +2343,67 @@ function _map_ravens2math_switch!(data_math::Dict{String,<:Any}, data_ravens::Di
             "to" => map_to,
             "unmap_function" => "_map_math2eng_switch!",
         ))
-
     end
-
 end
 
 
 "converts ravens generic shunt components into mathematical shunt components"
-function _map_ravens2math_shunt_compensator!(data_math::Dict{String,<:Any}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
-    energy_connections = data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"]
+function _map_ravens2math_shunt_compensator!(data_math::MathematicalModel{NetworkModel}, data_ravens::RavensModel; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
+    power_scale_factor = data_math["settings"]["power_scale_factor"]
+    voltage_scale_factor = data_math["settings"]["voltage_scale_factor"]
 
-    if haskey(energy_connections, "RegulatingCondEq")
-        regulating_cond_eq = energy_connections["RegulatingCondEq"]
-        power_scale_factor = data_math["settings"]["power_scale_factor"]
-        voltage_scale_factor = data_math["settings"]["voltage_scale_factor"]
+    for (name, ravens_obj) in get(data_ravens, "ShuntCompensator", Dict{Any,Dict{String,Any}}())
 
-        for (name, ravens_obj) in get(regulating_cond_eq, "ShuntCompensator", Dict{Any,Dict{String,Any}}())
+        math_obj = _init_math_obj("ShuntCompensator", name, ravens_obj, length(data_math["shunt"]) + 1; pass_props=pass_props)
 
-            math_obj = _init_math_obj("ShuntCompensator", name, ravens_obj, length(data_math["shunt"])+1; pass_props=pass_props)
+        # Get connectivity node info (bus info)
+        connectivity_node = _extract_name(ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.ConnectivityNode"])
+        math_obj["shunt_bus"] = data_math["bus_lookup"][connectivity_node]
 
-            # Get connectivity node info (bus info)
-            connectivity_node = _extract_name(ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.ConnectivityNode"])
-            math_obj["shunt_bus"] = data_math["bus_lookup"][connectivity_node]
+        # Status
+        status = haskey(ravens_obj, "Equipment.inService") ? ravens_obj["Equipment.inService"] : true
+        math_obj["status"] = status == true ? 1 : 0
 
-            # Status
-            status = haskey(ravens_obj, "Equipment.inService") ? ravens_obj["Equipment.inService"] : true
-            math_obj["status"] = status == true ? 1 : 0
+        bus_info = string(math_obj["shunt_bus"])
+        bus_conn = data_math["bus"][bus_info]
 
-            bus_info = string(math_obj["shunt_bus"])
-            bus_conn = data_math["bus"][bus_info]
-
-            if(math_obj["status"] == 1)
-                bus_conn["bus_type"] = 1
-            end
-
-            # Connections/phases obtained from Terminals
-            connections = _phasecode_map[get(ravens_obj["ConductingEquipment.Terminals"][1], "Terminal.phases", "PhaseCode.ABC")]
-
-            math_obj["connections"] = connections
-            terminals = connections
-
-            # TODO: dispatchable
-            math_obj["dispatchable"] = 0
-
-            # bs - TODO: make sure b matrix is being calculated correctly
-            b = ravens_obj["LinearShuntCompensator.bPerSection"]
-            B = _calc_shunt_admittance_matrix(terminals, b)
-            math_obj["bs"] = B
-
-            # gs
-            if haskey(ravens_obj, "LinearShuntCompensator.gPerSection")
-                g = ravens_obj["LinearShuntCompensator.gPerSection"]
-                G = _calc_shunt_admittance_matrix(terminals, g)
-                math_obj["gs"] = G
-            else
-                math_obj["gs"] = zeros(size(math_obj["bs"]))
-            end
-
-            # Index
-            data_math["shunt"]["$(math_obj["index"])"] = math_obj
-
-            # TODO: Add CapControl
-            # .....
-
-            push!(data_math["map"], Dict{String,Any}(
-                "from" => name,
-                "to" => "shunt.$(math_obj["index"])",
-                "unmap_function" => "_map_math2eng_shunt!",
-            ))
+        if (math_obj["status"] == 1)
+            bus_conn["bus_type"] = 1
         end
+
+        # Connections/phases obtained from Terminals
+        connections = _phasecode_map[get(ravens_obj["ConductingEquipment.Terminals"][1], "Terminal.phases", "PhaseCode.ABC")]
+
+        math_obj["connections"] = connections
+        terminals = connections
+
+        # TODO: dispatchable
+        math_obj["dispatchable"] = 0
+
+        # bs - TODO: make sure b matrix is being calculated correctly
+        b = ravens_obj["LinearShuntCompensator.bPerSection"]
+        B = _calc_shunt_admittance_matrix(terminals, b)
+        math_obj["bs"] = B
+
+        # gs
+        if haskey(ravens_obj, "LinearShuntCompensator.gPerSection")
+            g = ravens_obj["LinearShuntCompensator.gPerSection"]
+            G = _calc_shunt_admittance_matrix(terminals, g)
+            math_obj["gs"] = G
+        else
+            math_obj["gs"] = zeros(size(math_obj["bs"]))
+        end
+
+        # Index
+        data_math["shunt"]["$(math_obj["index"])"] = math_obj
+
+        # TODO: Add CapControl
+        # .....
+
+        push!(data_math["map"], Dict{String,Any}(
+            "from" => name,
+            "to" => "shunt.$(math_obj["index"])",
+            "unmap_function" => "_map_math2eng_shunt!",
+        ))
     end
 end

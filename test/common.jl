@@ -71,6 +71,7 @@ function add_neutral_lb_from_soldss(data_eng, sol_dss)
     return de
 end
 
+compare_sol_dss_pmd(sol_dss::Dict{String,<:Any}, sol_pmd::EngineeringModel, data_eng::EngineeringModel, data_math::MathematicalModel; kwargs...) = compare_sol_dss_pmd(sol_dss, sol_pmd.data, data_eng.data, data_math.data; kwargs...)
 
 "Compares a PMD and OpenDSS solution, and returns the largest difference in voltage profile in per unit."
 function compare_sol_dss_pmd(sol_dss::Dict{String,<:Any}, sol_pmd::Dict{String,<:Any}, data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}; compare_math::Bool=false, verbose::Bool=true, floating_buses::Vector=[], skip_buses::Vector=[], v_err_print_tol::Real=1E-6)

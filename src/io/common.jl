@@ -42,8 +42,8 @@ For explanation of `make_pu` and `make_pu_extensions`, see [`make_per_unit!`](@r
 """
 function parse_file(
     io::IO,
-    filetype::Union{AbstractString,Missing}=missing;
-    data_model::DataModel=ENGINEERING,
+    filetype::Union{String,Missing}=missing;
+    data_model::Union{Type,DataModel}=Nothing,
     import_all::Bool=false,
     bank_transformers::Bool=true,
     transformations::Vector{<:Any}=[],
@@ -57,75 +57,70 @@ function parse_file(
     kron_reduce::Bool=true,
     phase_project::Bool=false,
     time_series::String="daily"
-    )::Dict{String,Any}
+)::DistributionModel
 
-    pmd_data = Dict{String,Any}()
-    if ismissing(filetype) || filetype == "json"
-        try
-            pmd_data = parse_json(io)
-            filetype = "json"
-        catch err
-            filetype = "dss"
-        end
+    if data_model isa DataModel
+        data_model = data_model == ENGINEERING ? EngineeringModel : data_model == MATHEMATICAL ? MathematicalModel : error("Unrecognized data_model=$(data_model)")
     end
 
-    if filetype == "dss"
-        pmd_data = parse_opendss(io;
+    data = nothing
+    if ismissing(filetype) || filetype == "json"
+        raw_data = JSON.parse(io)
+        if haskey(raw_data, "Version")
+            data = RavensModel(raw_data)
+        elseif haskey(raw_data, "data_model")
+            data = parse_json(raw_data)
+        else
+            # default to trying RavensModel
+            data = RavensModel(raw_data)
+        end
+    elseif filetype == "dss"
+        data = parse_opendss(io;
             import_all=import_all,
             bank_transformers=bank_transformers,
             time_series=time_series,
             dss2eng_extensions=dss2eng_extensions,
         )
-
-        for transform! in transformations
-            @assert isa(transform!, Function) || isa(transform!, Tuple{<:Function,Vararg{Pair{String,<:Any}}})
-
-            if isa(transform!, Tuple)
-                transform![1](pmd_data; [Symbol(k)=>v for (k,v) in transform![2:end]]...)
-            else
-                transform!(pmd_data)
-            end
-        end
-
-        if multinetwork
-            pmd_data = make_multinetwork(pmd_data; global_keys=global_keys)
-        end
-
-        if data_model == MATHEMATICAL
-            pmd_data = transform_data_model(
-                pmd_data;
-                make_pu=make_pu,
-                make_pu_extensions=make_pu_extensions,
-                kron_reduce=kron_reduce,
-                phase_project=phase_project,
-                multinetwork=multinetwork,
-                global_keys=global_keys,
-                eng2math_extensions=eng2math_extensions,
-                eng2math_passthrough=eng2math_passthrough,
-            )
-        end
-    elseif filetype == "json"
-
-        ## TODO: may not be needed
-        # if data_model == MATHEMATICAL && !ismath(pmd_data)
-        #     pmd_data = transform_data_model(pmd_data;
-        #         make_pu=make_pu,
-        #         make_pu_extensions=make_pu_extensions,
-        #         kron_reduce=kron_reduce,
-        #         phase_project=phase_project,
-        #         multinetwork=multinetwork,
-        #         global_keys=global_keys,
-        #         eng2math_extensions=eng2math_extensions,
-        #         eng2math_passthrough=eng2math_passthrough,
-        #     )
-        # end
-
-
     else
-        error("only .dss and .json files are supported")
+        error("Unable to parse file")
     end
 
-    return pmd_data
+    if isnothing(data)
+        error("Unable to parse model")
+    end
+
+    if data_model === Nothing
+        data_model = typeof(data)
+    end
+
+    for transform! in transformations
+        @assert isa(transform!, Function) || isa(transform!, Tuple{<:Function,Vararg{Pair{String,<:Any}}})
+
+        if isa(transform!, Tuple)
+            transform![1](data; [Symbol(k) => v for (k, v) in transform![2:end]]...)
+        else
+            transform!(data)
+        end
+    end
+
+    data = transform_data_model(
+        data_model,
+        data;
+        make_pu=make_pu,
+        make_pu_extensions=make_pu_extensions,
+        kron_reduce=kron_reduce,
+        phase_project=phase_project,
+        multinetwork=multinetwork,
+        global_keys=global_keys,
+        eng2math_extensions=eng2math_extensions,
+        eng2math_passthrough=eng2math_passthrough,
+    )
+
+    if get_model_type(data_model) == MultinetworkModel || multinetwork
+        data = make_multinetwork(data; global_keys=global_keys)
+    end
+
+    return data
 end
 
 
@@ -134,13 +129,23 @@ end
 
 Loads file into IOStream and passes it onto [`parse_file`](@ref parse_file)
 """
-function parse_file(file::String; kwargs...)::Dict{String,Any}
+function parse_file(file::String; kwargs...)::DistributionModel
     data = open(file) do io
-        parse_file(io, split(lowercase(file), '.')[end]; kwargs...)
+        parse_file(io, lowercase(splitext(file)[2][2:end]); kwargs...)
     end
 
     return data
 end
+
+
+function parse_ravens_json(path::String)::RavensModel
+end
+
+function parse_legacy_json(path::String)::DistributionModel
+end
+
+# function parse_dss(path::String)::DssModel
+# end
 
 
 """
@@ -155,7 +160,7 @@ If `make_pu` is false, converting to per-unit will be skipped.
 
 See [`make_per_unit!`](@ref make_per_unit!)
 """
-function correct_network_data!(data::Dict{String,Any}; make_pu::Bool=true, make_pu_extensions::Vector{<:Function}=Function[])
+function correct_network_data!(data::DistributionModel; make_pu::Bool=true, make_pu_extensions::Vector{<:Function}=Function[])
     if iseng(data)
         check_eng_data_model(data)
     elseif ismath(data)

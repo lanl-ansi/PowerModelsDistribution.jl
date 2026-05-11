@@ -61,6 +61,30 @@ end
 
 
 """
+    apply_pmd!(func!::Function, data::DistributionModel; apply_to_subnetworks::Bool=true, kwargs...)
+
+Version of `apply_pmd!` that supports kwargs
+"""
+apply_pmd!(func!::Function, data::DistributionModel{NetworkModel}; apply_to_subnetworks::Bool=true, kwargs...) = func!(data; kwargs...)
+
+
+"""
+    apply_pmd!(func!::Function, data::DistributionModel{MultinetworkModel}; apply_to_subnetworks::Bool=true, kwargs...)
+
+Version of `apply_pmd!` that supports kwargs
+"""
+function apply_pmd!(func!::Function, data::DistributionModel{MultinetworkModel}; apply_to_subnetworks::Bool=true, kwargs...)
+    if apply_to_subnetworks
+        for (nw, nw_data) in data.nw
+            func!(nw_data; kwargs...)
+        end
+    else
+        func!(data; kwargs...)
+    end
+end
+
+
+"""
     apply_pmd!(func!::Function, data::Dict{String,<:Any}; apply_to_subnetworks::Bool=true, kwargs...)
 
 Version of `apply_pmd!` that supports kwargs
@@ -76,6 +100,30 @@ function apply_pmd!(func!::Function, data1::Dict{String,<:Any}, data2::Dict{Stri
         end
     else
         func!(data1_it, data2_it; kwargs...)
+    end
+end
+
+
+"""
+    apply_pmd!(func!::Function, data1::DistributionModel, data2::DistributionModel; kwargs...)
+
+Version of `apply_pmd!` that supports two models
+"""
+apply_pmd!(func!::Function, data1::DistributionModel{NetworkModel}, data2::DistributionModel{NetworkModel}; apply_to_subnetworks::Bool=true, kwargs...) = func!(data1, data2; kwargs...)
+
+
+"""
+    apply_pmd!(func!::Function, data1::DistributionModel{MultinetworkModel}, data2::DistributionModel{MultinetworkModel}; apply_to_subnetworks::Bool=true, kwargs...)
+
+Version of `apply_pmd!` that supports kwargs
+"""
+function apply_pmd!(func!::Function, data1::DistributionModel{MultinetworkModel}, data2::DistributionModel{MultinetworkModel}; apply_to_subnetworks::Bool=true, kwargs...)
+    if apply_to_subnetworks
+        for (nw, nw_data) in data1.nw
+            func!(nw_data, data2.nw[nw]; kwargs...)
+        end
+    else
+        func!(data1, data2; kwargs...)
     end
 end
 
@@ -99,6 +147,30 @@ end
 
 
 """
+    apply_pmd!(func!::Function, data::DistributionModel{NetworkModel}, args...; kwargs...)
+
+Version of `apply_pmd!` that supports args and kwargs
+"""
+apply_pmd!(func!::Function, data::DistributionModel{NetworkModel}, args...; apply_to_subnetworks::Bool=true, kwargs...) = func!(data, args...; kwargs...)
+
+
+"""
+    apply_pmd!(func!::Function, data::DistributionModel{MultinetworkModel}, args...; apply_to_subnetworks::Bool=true, kwargs...)
+
+Version of `apply_pmd!` that supports args and kwargs
+"""
+function apply_pmd!(func!::Function, data::DistributionModel{MultinetworkModel}, args...; apply_to_subnetworks::Bool=true, kwargs...)
+    if apply_to_subnetworks
+        for (nw, nw_data) in data.nw
+            func!(nw_data, args...; kwargs...)
+        end
+    else
+        func!(data, args...; kwargs...)
+    end
+end
+
+
+"""
     get_pmd_data(data::Dict{String, <:Any})
 
 Convenience function for retrieving the power-distribution-only portion of network data
@@ -107,6 +179,7 @@ function get_pmd_data(data::Dict{String, <:Any})
     return _IM.ismultiinfrastructure(data) ? data["it"][pmd_it_name] : data
 end
 
+get_pmd_data(data::DistributionModel)::DistributionModel = data
 
 "BOUND manipulation methods (0*Inf->0 is often desired)"
 _sum_rm_nan(X::Vector) = sum([X[(!).(isnan.(X))]..., 0.0])
@@ -183,6 +256,8 @@ function count_nodes(data::Dict{String,<:Any})::Int
     return n_nodes
 end
 
+count_nodes(data::Union{MathematicalModel,EngineeringModel})::Int = count_nodes(data.data)
+
 """
     count_nodes(data::Dict{String,<:Any})::Int
 
@@ -244,16 +319,15 @@ end
 
 Counts active ungrounded connections on edge components
 """
-function count_active_connections(data::Dict{String,<:Any})::Int
-    data_model = get(data, "data_model", MATHEMATICAL)
-    edge_elements = data_model == MATHEMATICAL ? PowerModelsDistribution._math_edge_elements : PowerModelsDistribution._eng_edge_elements
+function count_active_connections(data::T)::Int where T <: DistributionModel{NetworkModel}
+    edge_elements = T === MathematicalModel{NetworkModel} ? PowerModelsDistribution._math_edge_elements : PowerModelsDistribution._eng_edge_elements
     # bus_connections = Dict(id => [] for (id, _) in data["bus"])
     active_connections = 0
 
     for edge_type in edge_elements
         for (_, component) in get(data, edge_type, Dict())
             counted_connections = Set([])
-            if edge_type == "transformer" && !haskey(component, "f_connections") && data_model == ENGINEERING
+            if edge_type == "transformer" && !haskey(component, "f_connections") && T === EngineeringModel{NetworkModel}
                 for (wdg, connections) in enumerate(component["connections"])
                     for terminal in connections
                         if !(terminal in counted_connections)
@@ -268,7 +342,7 @@ function count_active_connections(data::Dict{String,<:Any})::Int
                 for (bus, connections) in [(component["f_bus"], component["f_connections"]), (component["t_bus"], component["t_connections"])]
                     for (i, terminal) in enumerate(connections)
                         if !(terminal in counted_connections)
-                            if data_model == ENGINEERING
+                            if T === EngineeringModel{NetworkModel}
                                 if edge_type == "transformer" && (get(data, "is_kron_reduced", false) || (component["configuration"] == WYE && terminal != connections[end]))
                                     push!(counted_connections, terminal)
                                     active_connections += 1
@@ -307,8 +381,7 @@ end
 
 Counts active ungrounded terminals on buses
 """
-function count_active_terminals(data::Dict{String,<:Any}; count_grounded::Bool=false)::Int
-    data_model = get(data, "data_model", MATHEMATICAL)
+function count_active_terminals(data::T; count_grounded::Bool=false)::Int where T <: DistributionModel{NetworkModel}
     active_terminal_count = 0
     for (_,bus) in data["bus"]
         counted_terminals = []
@@ -318,7 +391,7 @@ function count_active_terminals(data::Dict{String,<:Any}; count_grounded::Bool=f
                     push!(counted_terminals, terminal)
                     active_terminal_count += 1
                 else
-                    if data_model == ENGINEERING
+                    if T === EngineeringModel{NetworkModel}
                         if !(terminal in bus["grounded"])
                             push!(counted_terminals, terminal)
                             active_terminal_count += 1
@@ -817,19 +890,16 @@ end
 
 checks that voltage angle differences are within 90 deg., if not tightens to a default of 10deg (adjustable)
 """
-function correct_mc_voltage_angle_differences!(data::Dict{String,<:Any}, default_pad::Real=deg2rad(10.0))
-    @assert ismath(data)
-
+function correct_mc_voltage_angle_differences!(data::MathematicalModel, default_pad::Real=deg2rad(10.0))
     apply_pmd!(_correct_mc_voltage_angle_differences!, data, default_pad)
 end
-
 
 """
     _correct_mc_voltage_angle_differences!(data::Dict{String,<:Any}, default_pad::Real=deg2rad(10.0))
 
 checks that voltage angle differences are within 90 deg., if not tightens to a default of 10deg (adjustable)
 """
-function _correct_mc_voltage_angle_differences!(nw::Dict{String,<:Any}, default_pad::Real=deg2rad(10.0))::Set{Int}
+function _correct_mc_voltage_angle_differences!(nw::MathematicalModel{NetworkModel}, default_pad::Real=deg2rad(10.0))::Set{Int}
     @assert("per_unit" in keys(nw) && nw["per_unit"])
     default_pad_deg = round(rad2deg(default_pad), digits=2)
 
@@ -871,19 +941,16 @@ end
 
 checks that each branch has non-negative thermal ratings and removes zero thermal ratings
 """
-function correct_mc_thermal_limits!(data::Dict{String,<:Any})
-    @assert ismath(data)
-
+function correct_mc_thermal_limits!(data::MathematicalModel)
     apply_pmd!(_correct_mc_thermal_limits!, data)
 end
-
 
 """
     _correct_mc_thermal_limits!(data::Dict{String,<:Any})
 
 checks that each branch has non-negative thermal ratings and removes zero thermal ratings
 """
-function _correct_mc_thermal_limits!(nw::Dict{String,<:Any})::Set{Int}
+function _correct_mc_thermal_limits!(nw::MathematicalModel{NetworkModel})::Set{Int}
     modified = Set{Int}()
 
     branches = [branch for branch in values(nw["branch"])]
@@ -950,7 +1017,7 @@ end
 
 computes load blocks based on switch locations
 """
-identify_load_blocks(data::Dict{String,<:Any})::Set{Set} = calc_connected_components(data; type="load_blocks")
+identify_load_blocks(data::DistributionModel{NetworkModel})::Set{Set} = calc_connected_components(data; type="load_blocks")
 
 
 """
@@ -958,7 +1025,7 @@ identify_load_blocks(data::Dict{String,<:Any})::Set{Set} = calc_connected_compon
 
 computes connected blocks currently in the model based on switch states
 """
-identify_blocks(data::Dict{String,<:Any})::Set{Set} = calc_connected_components(data; type="blocks")
+identify_blocks(data::DistributionModel{NetworkModel})::Set{Set} = calc_connected_components(data; type="blocks")
 
 
 """
@@ -966,7 +1033,7 @@ identify_blocks(data::Dict{String,<:Any})::Set{Set} = calc_connected_components(
 
 computes component islands base only on edge and bus status
 """
-identify_islands(data::Dict{String,<:Any})::Set{Set} = calc_connected_components(data)
+identify_islands(data::DistributionModel{NetworkModel})::Set{Set} = calc_connected_components(data)
 
 
 """
@@ -975,16 +1042,12 @@ identify_islands(data::Dict{String,<:Any})::Set{Set} = calc_connected_components
 computes the connected components of the network graph
 returns a set of sets of bus ids, each set is a connected component
 """
-function calc_connected_components(data::Dict{String,<:Any}; edges::Union{Missing, Vector{String}}=missing, type::Union{Missing,String}=missing, check_enabled::Bool=true)::Set{Set}
+function calc_connected_components(data::DistributionModel{NetworkModel}; edges::Union{Missing, Vector{String}}=missing, type::Union{Missing,String}=missing, check_enabled::Bool=true)::Set{Set}
     pmd_data = get_pmd_data(data)
 
-    if ismultinetwork(pmd_data)
-        error("multinetwork data is not yet supported, recommend to use on each subnetwork independently")
-    end
-
-    if get(pmd_data, "data_model", MATHEMATICAL) == ENGINEERING
+    if typeof(data) === EngineeringModel{NetworkModel}
         return _calc_connected_components_eng(pmd_data; edges=ismissing(edges) ? _eng_edge_elements : edges, type=type, check_enabled=check_enabled)
-    elseif get(pmd_data, "data_model", MATHEMATICAL) == MATHEMATICAL
+    elseif typeof(data) === MathematicalModel{NetworkModel}
         return _calc_connected_components_math(pmd_data; edges=ismissing(edges) ? _math_edge_elements : edges, type=type, check_enabled=check_enabled)
     else
         error("data_model `$(get(pmd_data, "data_model", MATHEMATICAL))` is unrecongized")
@@ -996,9 +1059,7 @@ end
 computes the connected components of the network graph
 returns a set of sets of bus ids, each set is a connected component
 """
-function _calc_connected_components_eng(data; edges::Vector{<:String}=_eng_edge_elements, type::Union{Missing,String}=missing, check_enabled::Bool=true)::Set{Set{String}}
-    @assert get(data, "data_model", MATHEMATICAL) == ENGINEERING
-
+function _calc_connected_components_eng(data::EngineeringModel{NetworkModel}; edges::Vector{<:String}=_eng_edge_elements, type::Union{Missing,String}=missing, check_enabled::Bool=true)::Set{Set{String}}
     active_bus = Dict{String,Dict{String,Any}}(x for x in data["bus"] if x.second["status"] == ENABLED || !check_enabled)
     active_bus_ids = Set{String}([i for (i,bus) in active_bus])
 
@@ -1054,9 +1115,7 @@ end
 computes the connected components of the network graph
 returns a set of sets of bus ids, each set is a connected component
 """
-function _calc_connected_components_math(data::Dict{String,<:Any}; edges::Vector{<:String}=_math_edge_elements, type::Union{Missing,String}=missing, check_enabled::Bool=true)::Set{Set{Int}}
-    @assert get(data, "data_model", MATHEMATICAL) == MATHEMATICAL
-
+function _calc_connected_components_math(data::MathematicalModel{NetworkModel}; edges::Vector{<:String}=_math_edge_elements, type::Union{Missing,String}=missing, check_enabled::Bool=true)::Set{Set{Int}}
     active_bus = Dict{String,Dict{String,Any}}(x for x in data["bus"] if x.second[pmd_math_component_status["bus"]] != pmd_math_component_status_inactive["bus"] || !check_enabled)
     active_bus_ids = Set{Int}([parse(Int,i) for (i,bus) in active_bus])
 
@@ -1064,21 +1123,28 @@ function _calc_connected_components_math(data::Dict{String,<:Any}; edges::Vector
     for edge_type in edges
         for (id, edge_obj) in get(data, edge_type, Dict{Any,Dict{String,Any}}())
             if edge_obj[pmd_math_component_status[edge_type]] != pmd_math_component_status_inactive[edge_type] || !check_enabled
+
+                f = edge_obj["f_bus"]
+                t = edge_obj["t_bus"]
+                if !(haskey(neighbors, f) && haskey(neighbors, t))
+                    continue
+                end
+
                 if edge_type == "switch" && !ismissing(type)
                     if type == "load_blocks"
                         if edge_obj["dispatchable"] != 1 && edge_obj["state"] == 1
-                            push!(neighbors[edge_obj["f_bus"]], edge_obj["t_bus"])
-                            push!(neighbors[edge_obj["t_bus"]], edge_obj["f_bus"])
+                            push!(neighbors[f], t)
+                            push!(neighbors[t], f)
                         end
                     elseif type == "blocks"
                         if edge_obj["state"] != 0
-                            push!(neighbors[edge_obj["f_bus"]], edge_obj["t_bus"])
-                            push!(neighbors[edge_obj["t_bus"]], edge_obj["f_bus"])
+                            push!(neighbors[f], t)
+                            push!(neighbors[t], f)
                         end
                     end
                 else
-                    push!(neighbors[edge_obj["f_bus"]], edge_obj["t_bus"])
-                    push!(neighbors[edge_obj["t_bus"]], edge_obj["f_bus"])
+                    push!(neighbors[f], t)
+                    push!(neighbors[t], f)
                 end
             end
         end
@@ -1140,15 +1206,15 @@ end
 
 checks that all parallel branches have the same orientation
 """
-function correct_branch_directions!(data::Dict{String,<:Any})
+function correct_branch_directions!(data::MathematicalModel)
     apply_pmd!(_correct_branch_directions!, data)
 end
 
 
 "checks that all parallel branches have the same orientation"
-function _correct_branch_directions!(pm_data::Dict{String,<:Any})
+function _correct_branch_directions!(data_math::MathematicalModel{NetworkModel})
     orientations = Set()
-    for (i, branch) in pm_data["branch"]
+    for (i, branch) in data_math["branch"]
         orientation = (branch["f_bus"], branch["t_bus"])
         orientation_rev = (branch["t_bus"], branch["f_bus"])
 
@@ -1182,14 +1248,14 @@ end
 
 checks that all branches connect two distinct buses
 """
-function check_branch_loops(data::Dict{String,<:Any})
+function check_branch_loops(data::MathematicalModel)
     apply_pmd!(_check_branch_loops, data)
 end
 
 
 "checks that all branches connect two distinct buses"
-function _check_branch_loops(pm_data::Dict{String, <:Any})
-    for (i, branch) in pm_data["branch"]
+function _check_branch_loops(data_math::MathematicalModel{NetworkModel})
+    for (i, branch) in data_math["branch"]
         if branch["f_bus"] == branch["t_bus"]
             error("both sides of branch $(i) connect to bus $(branch["f_bus"])")
         end
@@ -1202,13 +1268,13 @@ end
 
 checks that all buses are unique and other components link to valid buses
 """
-function check_connectivity(data::Dict{String,<:Any})
+function check_connectivity(data::MathematicalModel)
     apply_pmd!(_check_connectivity, data)
 end
 
 
 "checks that all buses are unique and other components link to valid buses"
-function _check_connectivity(data::Dict{String,<:Any})
+function _check_connectivity(data::MathematicalModel{NetworkModel})
     bus_ids = Set(bus["index"] for (i,bus) in data["bus"])
     @assert(length(bus_ids) == length(data["bus"])) # if this is not true something very bad is going on
 
@@ -1265,9 +1331,7 @@ active generator and there is a single type 3 bus (i.e., slack bus) with an
 active connected generator.
 assumes that the network is a single connected component
 """
-function correct_bus_types!(data::Dict{String,<:Any})
-    @assert ismath(data)
-
+function correct_bus_types!(data::MathematicalModel)
     apply_pmd!(_correct_bus_types!, data)
 end
 
@@ -1278,20 +1342,20 @@ the primary checks are that all type 2 buses (i.e., PV) have a connected and
 active generator and there is a single type 3 bus (i.e., slack bus) with an
 active connected generator. Assumes that the network is a single connected component
 """
-function _correct_bus_types!(pm_data::Dict{String,<:Any})::Set{Int}
+function _correct_bus_types!(data_math::MathematicalModel{NetworkModel})::Set{Int}
     modified = Set{Int}()
 
-    islands = identify_islands(pm_data)
+    islands = identify_islands(data_math)
 
     for island in islands
-        if !all(bus[pmd_math_component_status["bus"]] != pmd_math_component_status_inactive["bus"] for (_,bus) in pm_data["bus"] if bus["bus_i"] in island)
+        if !all(bus[pmd_math_component_status["bus"]] != pmd_math_component_status_inactive["bus"] for (_,bus) in data_math["bus"] if bus["bus_i"] in island)
             continue
         end
-        bus_gens = Dict{String,Vector{String}}(i => String[] for (i,bus) in pm_data["bus"] if bus["bus_i"] in island)
+        bus_gens = Dict{String,Vector{String}}(i => String[] for (i,bus) in data_math["bus"] if bus["bus_i"] in island)
 
         for type in ["gen", "storage"]
-            if haskey(pm_data, type)
-                for (i,gen) in pm_data[type]
+            if haskey(data_math, type)
+                for (i,gen) in data_math[type]
                     if gen[pmd_math_component_status[type]] != pmd_math_component_status_inactive[type] && gen["$(type)_bus"] in island
                         push!(bus_gens[string(gen["$(type)_bus"])], i)
                     end
@@ -1300,7 +1364,7 @@ function _correct_bus_types!(pm_data::Dict{String,<:Any})::Set{Int}
         end
 
         slack_found = false
-        for (i, bus) in filter(x->x.second["bus_i"] in island, pm_data["bus"])
+        for (i, bus) in filter(x->x.second["bus_i"] in island, data_math["bus"])
             if bus["bus_type"] == 1
                 if !isempty(bus_gens[i]) # PQ
                     @info "active generators found at bus $(bus["bus_i"]), updating to bus type from $(bus["bus_type"]) to 2"
@@ -1335,16 +1399,16 @@ function _correct_bus_types!(pm_data::Dict{String,<:Any})::Set{Int}
         end
 
         if !slack_found
-            der = _biggest_der(pm_data; island=island)
+            der = _biggest_der(data_math; island=island)
             if !isempty(der)
-                ref_bus = pm_data["bus"]["$(der["bus"])"]
+                ref_bus = data_math["bus"]["$(der["bus"])"]
                 ref_bus["bus_type"] = 3
                 push!(modified, der["bus"])
                 @info "no reference bus found, setting bus $(der["bus"]) as reference based on $(der["type"]) $(der["id"])"
             else
                 @info "no generators found in the given network data, disabling island"
                 for bus in island
-                    pm_data["bus"]["$bus"]["bus_type"] = 4
+                    data_math["bus"]["$bus"]["bus_type"] = 4
                     push!(modified, bus)
                 end
             end
@@ -1356,15 +1420,15 @@ end
 
 
 "finds the largest active generation asset (gen, storage) in an island"
-function _biggest_der(pm_data::Dict{String,<:Any}; island::Set{Int}=Set{Int}([bus["bus_i"] for (_,bus) in get(pm_data, "bus", Dict())]))::Dict{String,Any}
-    if length(filter(x->x.second["gen_bus"] in island && x.second["gen_status"] == 1, get(pm_data, "gen", Dict()))) + length(filter(x->x.second["storage_bus"] in island && x.second["status"] == 1, get(pm_data, "storage", Dict()))) == 0
+function _biggest_der(data_math::MathematicalModel; island::Set{Int}=Set{Int}([bus["bus_i"] for (_,bus) in get(data_math, "bus", Dict())]))::Dict{String,Any}
+    if length(filter(x->x.second["gen_bus"] in island && x.second["gen_status"] == 1, get(data_math, "gen", Dict()))) + length(filter(x->x.second["storage_bus"] in island && x.second["status"] == 1, get(data_math, "storage", Dict()))) == 0
         @debug "there are no active DERs in the island $island"
     end
 
     biggest_der = Dict{String,Any}()
     biggest_value = -Inf
 
-    for (id,gen) in filter(x->x.second["gen_bus"] in island && x.second["gen_status"] == 1, get(pm_data, "gen", Dict()))
+    for (id,gen) in filter(x->x.second["gen_bus"] in island && x.second["gen_status"] == 1, get(data_math, "gen", Dict()))
         pmax = maximum(get(gen, "pmax", fill(Inf, length(gen["connections"]))))
         if pmax > biggest_value
             biggest_der["type"] = "gen"
@@ -1374,7 +1438,7 @@ function _biggest_der(pm_data::Dict{String,<:Any}; island::Set{Int}=Set{Int}([bu
         end
     end
 
-    for (id,strg) in filter(x->x.second["storage_bus"] in island && x.second["status"] == 1, get(pm_data, "storage", Dict()))
+    for (id,strg) in filter(x->x.second["storage_bus"] in island && x.second["status"] == 1, get(data_math, "storage", Dict()))
         pmax = maximum(get(strg, "thermal_rating", fill(Inf, length(strg["connections"]))))
         if pmax > biggest_value
             biggest_der["type"] = "gen"
@@ -1412,21 +1476,20 @@ end
 
 
 """
-    propagate_network_topology!(data::Dict{String,Any})
+    propagate_network_topology!(data::MathematicalModel)
 
 helper function to propagate bus status to any connected components
 """
-function propagate_network_topology!(data::Dict{String,Any})
+function propagate_network_topology!(data::MathematicalModel)
     apply_pmd!(_propagate_network_topology!, data)
 end
 
-
 """
-    _propagate_network_topology!(data::Dict{String,Any})
+    _propagate_network_topology!(data::MathematicalModel{NetworkModel})
 
 helper function to propagate bus status to any connected components
 """
-function _propagate_network_topology!(data::Dict{String,Any})
+function _propagate_network_topology!(data::MathematicalModel{NetworkModel})
     for type in ["branch", "transformer", "switch"]
         if haskey(data, type)
             for (_,obj) in data[type]
@@ -1455,14 +1518,14 @@ end
 
 throws warnings if cost functions are malformed
 """
-function correct_cost_functions!(data::Dict{String,<:Any})
+function correct_cost_functions!(data::MathematicalModel)
     apply_pmd!(_correct_cost_functions!, data)
 end
 
 
 "throws warnings if cost functions are malformed"
-function _correct_cost_functions!(pm_data::Dict{String,<:Any})
-    for (i,gen) in pm_data["gen"]
+function _correct_cost_functions!(data_math::MathematicalModel{NetworkModel})
+    for (i,gen) in data_math["gen"]
         _correct_cost_function!(i, gen, "generator", "pmin", "pmax")
     end
 end
@@ -1567,20 +1630,19 @@ end
 
 
 """
-    simplify_cost_terms!(data::Dict{String,<:Any})
+    simplify_cost_terms!(data::MathematicalModel)
 
 trims zeros from higher order cost terms
 """
-function simplify_cost_terms!(data::Dict{String,<:Any})
+function simplify_cost_terms!(data::MathematicalModel)
     apply_pmd!(_simplify_cost_terms!, data)
 end
 
 
 ""
-function _simplify_cost_terms!(pm_data::Dict{String,<:Any})
-
-    if haskey(pm_data, "gen")
-        for (i, gen) in pm_data["gen"]
+function _simplify_cost_terms!(data_math::MathematicalModel{NetworkModel})
+    if haskey(data_math, "gen")
+        for (i, gen) in data_math["gen"]
             if haskey(gen, "model") && gen["model"] == 2
                 ncost = length(gen["cost"])
                 for j in 1:ncost
@@ -1601,11 +1663,11 @@ end
 
 
 """
-    standardize_cost_terms!(data::Dict{String,<:Any}; order=-1)
+    standardize_cost_terms!(data::MathematicalModel; order=-1)
 
 ensures all polynomial costs functions have the same number of terms
 """
-function standardize_cost_terms!(data::Dict{String,<:Any}; order=-1)
+function standardize_cost_terms!(data::MathematicalModel; order=-1)
     pm_data = get_pmd_data(data)
 
     comp_max_order = 1
@@ -1651,7 +1713,6 @@ function standardize_cost_terms!(data::Dict{String,<:Any}; order=-1)
     end
 
 end
-
 
 "ensures all polynomial costs functions have at exactly comp_order terms"
 function _standardize_cost_terms!(components::Dict{String,<:Any}, comp_order::Int, cost_comp_name::String; nw::String="")

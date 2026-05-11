@@ -61,6 +61,7 @@ module PowerModelsDistribution
     include("data_model/dss/edge_constructors.jl")
     include("data_model/dss/data_constructors.jl")
 
+    include("data_model/base/ravens.jl")
     include("data_model/base/interfaces.jl")
     include("data_model/base/parse.jl")
     include("data_model/base/show.jl")

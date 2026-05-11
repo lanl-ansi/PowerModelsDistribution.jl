@@ -15,7 +15,7 @@ const _pmd_math_global_keys = Set{String}([
 Checks if power model struct is multinetwork
 """
 ismultinetwork(pm::AbstractUnbalancedPowerModel) = ismultinetwork(pm, pmd_it_sym)
-
+ismultinetwork(data::Union{EngineeringModel,MathematicalModel}) = ismultinetwork(data.data)
 
 """
     make_multinetwork(
@@ -44,41 +44,36 @@ used after the fact to re-sort the subnetworks.
 `sparse` is currently unsupported, and is only included for future compatibility
 """
 function make_multinetwork(
-    data::Dict{String,<:Any};
+    data::DistributionModel{NetworkModel};
     sparse::Bool=false,
     time_elapsed::Union{Missing,Real,Vector{<:Real}}=missing,
     global_keys::Set{String}=Set{String}(),
-    )::Dict{String,Any}
+    )::DistributionModel{MultinetworkModel}
 
-    if ismultinetwork(data)
-        @info "data is already multinetwork, returning"
-        return data
-    elseif iseng(data)
-        return _make_multinetwork_eng(data; sparse=sparse, time_elapsed=time_elapsed, global_keys=global_keys)
-    elseif ismath(data)
-        return _make_multinetwork_math(data; global_keys=global_keys)
-    end
+    return _make_multinetwork(data; sparse=sparse, time_elapsed=time_elapsed, global_keys=global_keys)
 end
 
+function make_multinetwork(data::DistributionModel{MultinetworkModel}; kwargs...)::DistributionModel{MultinetworkModel}
+    @info "data is already multinetwork, returning"
+    return data
+end
 
 "Expands an ENGINEERING data structure into a multinetwork, see [`make_multinetwork`](@ref make_multinetwork)"
-function _make_multinetwork_eng(
-    data_eng::Dict{String,<:Any};
+function _make_multinetwork(
+    data_eng::EngineeringModel{NetworkModel};
     sparse::Bool=false,
     time_elapsed::Union{Missing,Real,Vector{<:Real}}=missing,
     global_keys::Set{String}=Set{String}(),
-    )::Dict{String,Any}
-
-    @assert iseng(data_eng) "wrong data model for _make_multinetwork_eng"
+    )::EngineeringModel{MultinetworkModel}
 
     mn_data = Dict{String,Any}(
-        k => data_eng[k] for k in union(_pmd_eng_global_keys, global_keys) if haskey(data_eng, k)
+        k => data_eng.data[k] for k in union(_pmd_eng_global_keys, global_keys) if haskey(data_eng.data, k)
     )
     mn_data["multinetwork"] = true
 
     ts_lookup = Dict(
         type => Dict(
-            name => obj["time_series"] for (name, obj) in get(data_eng, type, Dict()) if !isempty(get(obj, "time_series", Dict()))
+            name => obj["time_series"] for (name, obj) in get(data_eng.data, type, Dict()) if !isempty(get(obj, "time_series", Dict()))
         ) for type in pmd_eng_asset_types
     )
 
@@ -86,8 +81,8 @@ function _make_multinetwork_eng(
     for (type, ts_info) in ts_lookup
         for ts_dict in values(ts_info)
             for ts_id in values(ts_dict)
-                if haskey(get(data_eng, "time_series", Dict()), ts_id)
-                    push!(times, data_eng["time_series"][ts_id]["time"]...)
+                if haskey(get(data_eng.data, "time_series", Dict()), ts_id)
+                    push!(times, data_eng.data["time_series"][ts_id]["time"]...)
                 end
             end
         end
@@ -124,7 +119,7 @@ function _make_multinetwork_eng(
     if length(times) == 0
         mn_data["nw"] = Dict{String,Any}(
             "0" => Dict{String,Any}(
-                k => v for (k,v) in data_eng if !(k in _pmd_eng_global_keys)
+                k => v for (k,v) in data_eng.data if !(k in _pmd_eng_global_keys)
             )
         )
         mn_data["nw"]["0"]["time"] = 0
@@ -139,7 +134,7 @@ function _make_multinetwork_eng(
         mn_data["mn_lookup"] = mn_lookup
 
         _nw = Dict{String,Any}(
-            k => deepcopy(v) for (k,v) in data_eng if !(k in _pmd_eng_global_keys)
+            k => deepcopy(v) for (k,v) in data_eng.data if !(k in _pmd_eng_global_keys)
         )
         for n in sort([n for n in keys(mn_data["nw"])])
             time = mn_lookup["$n"]
@@ -148,14 +143,14 @@ function _make_multinetwork_eng(
             for (type, ts_info) in ts_lookup
                 for (obj_name, ts_dict) in ts_info
                     for (property_name, ts_name) in ts_dict
-                        if haskey(get(data_eng, "time_series", Dict()), ts_name)
-                            ts = data_eng["time_series"][ts_name]
+                        if haskey(get(data_eng.data, "time_series", Dict()), ts_name)
+                            ts = data_eng.data["time_series"][ts_name]
                             if time in ts["time"]
                                 idx = findfirst(x->x==time, ts["time"])
                                 if ts["replace"]
                                     _nw[type][obj_name][property_name] = zeros(size(_nw[type][obj_name][property_name])) .+ ts["values"][idx]
                                 else
-                                    _nw[type][obj_name][property_name] = deepcopy(data_eng[type][obj_name][property_name]) .* ts["values"][idx]
+                                    _nw[type][obj_name][property_name] = deepcopy(data_eng.data[type][obj_name][property_name]) .* ts["values"][idx]
                                 end
                             end
                         end
@@ -168,13 +163,13 @@ function _make_multinetwork_eng(
 
     set_time_elapsed!(mn_data, time_elapsed)
 
-    return mn_data
+    return EngineeringModel(mn_data)
 end
 
 
 "Expands an MATHEMATICAL data structure into a multinetwork, see [`make_multinetwork`](@ref make_multinetwork)"
 function _make_multinetwork_math(
-    data_math::Dict{String,<:Any};
+    data_math::MathematicalModel{NetworkModel};
     global_keys::Set{String}=Set{String}(),
     )::Dict{String,Any}
 

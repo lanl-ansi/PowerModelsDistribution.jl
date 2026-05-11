@@ -1,7 +1,7 @@
 """
     transform_solution(
         solution_math::Dict{String,<:Any},
-        data_math::Dict{String,<:Any};
+        data_math::MathematicalModel{NetworkModel};
         map::Union{Vector{<:Dict{String,<:Any}},Missing}=missing,
         make_si::Bool=true,
         convert_rad2deg::Bool=true,
@@ -55,18 +55,15 @@ Important things to note are that
 1. `"to"` can be multiple objects or a single object
 """
 function transform_solution(
-    solution_math::Dict{String,<:Any},
-    data_math::Dict{String,<:Any};
+    solution_math::MathematicalModel{T},
+    data_math::MathematicalModel;
     map::Union{Vector{<:Dict{String,<:Any}},Missing}=missing,
     make_si::Bool=true,
     convert_rad2deg::Bool=true,
     map_math2eng_extensions::Dict{String,<:Function}=Dict{String,Function}(),
     make_si_extensions::Vector{<:Function}=Function[],
     dimensionalize_math_extensions::Dict{String,<:Dict{String,<:Vector{<:String}}}=Dict{String,Dict{String,Vector{String}}}()
-)::Dict{String,Any}
-
-    @assert ismath(data_math) "cannot be converted to an engineering model"
-
+    )::EngineeringModel{T} where T
     # convert solution to si?
     solution_math = solution_make_si(
         solution_math,
@@ -86,8 +83,8 @@ function transform_solution(
         nws_math_data = Dict("0" => data_math)
     end
 
-    nws_eng_sol = Dict(k => Dict{String,Any}() for k in keys(nws_math_sol))
-    solution_eng = Dict{String,Any}("nw" => nws_eng_sol)
+    nws_eng_sol = Dict(k => EngineeringModel{NetworkModel}(Dict{String,Any}()) for k in keys(nws_math_sol))
+    solution_eng = EngineeringModel{MultinetworkModel}(Dict{String,Any}("nw" => nws_eng_sol))
 
     # apply unmap functions
     if ismultinetwork(data_math) && ismissing(map)
@@ -138,16 +135,19 @@ function transform_solution(
 
     # if !multinetwork, correct solution dict
     if !ismultinetwork(data_math)
-        merge!(solution_eng, nws_eng_sol["0"])
-        delete!(solution_eng, "nw")
+        _solution_eng = solution_eng.data
+        merge!(_solution_eng, nws_eng_sol["0"].data)
+        delete!(_solution_eng, "nw")
+        solution_eng = EngineeringModel{NetworkModel}(_solution_eng)
     end
 
     return solution_eng
 end
 
+transform_solution(solution_math::Dict{String,<:Any}, data_math::MathematicalModel{T}; kwargs...) where T = transform_solution(MathematicalModel(solution_math; multinetwork=T === MultinetworkModel), data_math; kwargs...)
 
 ""
-function _map_math2eng_voltage_source!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+function _map_math2eng_voltage_source!(data_eng::EngineeringModel{NetworkModel}, data_math::MathematicalModel{NetworkModel}, map::Dict{String,<:Any})
     if !haskey(data_eng, "voltage_source")
         data_eng["voltage_source"] = Dict{String,Any}()
     end
@@ -170,7 +170,7 @@ end
 
 
 ""
-function _map_math2eng_bus!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+function _map_math2eng_bus!(data_eng::EngineeringModel{NetworkModel}, data_math::MathematicalModel{NetworkModel}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "bus", map)
     math_obj = _get_math_obj(data_math, map["to"])
 
@@ -183,7 +183,7 @@ end
 
 
 ""
-function _map_math2eng_load!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+function _map_math2eng_load!(data_eng::EngineeringModel{NetworkModel}, data_math::MathematicalModel{NetworkModel}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "load", map)
     if length(map["to"]) == 3    # If ZIP loads, combine individual components
         load_ids = [index for (comp_type, index) in split.(map["to"], ".", limit=2)]
@@ -206,7 +206,7 @@ end
 
 
 ""
-function _map_math2eng_shunt!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+function _map_math2eng_shunt!(data_eng::EngineeringModel{NetworkModel}, data_math::MathematicalModel{NetworkModel}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "shunt", map)
     math_obj = _get_math_obj(data_math, map["to"])
 
@@ -219,7 +219,7 @@ end
 
 
 ""
-function _map_math2eng_generator!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+function _map_math2eng_generator!(data_eng::EngineeringModel{NetworkModel}, data_math::MathematicalModel{NetworkModel}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "generator", map)
     math_obj = _get_math_obj(data_math, map["to"])
 
@@ -232,7 +232,7 @@ end
 
 
 ""
-function _map_math2eng_solar!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+function _map_math2eng_solar!(data_eng::EngineeringModel{NetworkModel}, data_math::MathematicalModel{NetworkModel}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "solar", map)
     math_obj = _get_math_obj(data_math, map["to"])
 
@@ -245,7 +245,7 @@ end
 
 
 ""
-function _map_math2eng_storage!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+function _map_math2eng_storage!(data_eng::EngineeringModel{NetworkModel}, data_math::MathematicalModel{NetworkModel}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "storage", map)
     math_obj = _get_math_obj(data_math, map["to"])
 
@@ -258,7 +258,7 @@ end
 
 
 ""
-function _map_math2eng_line!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+function _map_math2eng_line!(data_eng::EngineeringModel{NetworkModel}, data_math::MathematicalModel{NetworkModel}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "line", map)
     math_obj = _get_math_obj(data_math, map["to"])
 
@@ -271,7 +271,7 @@ end
 
 
 ""
-function _map_math2eng_switch!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+function _map_math2eng_switch!(data_eng::EngineeringModel{NetworkModel}, data_math::MathematicalModel{NetworkModel}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "switch", map)
 
     if isa(map["to"], String)
@@ -311,7 +311,7 @@ end
 
 
 ""
-function _map_math2eng_transformer!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+function _map_math2eng_transformer!(data_eng::EngineeringModel{NetworkModel}, data_math::MathematicalModel{NetworkModel}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "transformer", map)
 
     trans_2wa_ids = [index for (comp_type, index) in split.(map["to"], ".", limit=2) if comp_type == "transformer"]
@@ -332,7 +332,7 @@ end
 
 
 ""
-function _map_math2eng_root!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+function _map_math2eng_root!(data_eng::EngineeringModel, data_math::MathematicalModel{NetworkModel}, map::Dict{String,<:Any})
     if !ismultinetwork(data_math)
         data_eng["settings"] = Dict{String,Any}("sbase" => get(get(data_math, "settings", Dict{String,Any}()), "sbase", NaN))  # in case of no solution
         data_eng["per_unit"] = get(data_math, "per_unit", true)
