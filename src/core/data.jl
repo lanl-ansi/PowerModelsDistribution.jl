@@ -840,21 +840,21 @@ function _correct_mc_voltage_angle_differences!(nw::Dict{String,<:Any}, default_
         angmax = branch["angmax"]
 
         if any(angmin .<= -pi/2)
-            @warn "this code only supports angmin values in -90 deg. to 90 deg., tightening the value on branch $(i) from $(rad2deg(angmin)) to -$(default_pad_deg) deg."
+            @_warn "this code only supports angmin values in -90 deg. to 90 deg., tightening the value on branch $(i) from $(rad2deg(angmin)) to -$(default_pad_deg) deg."
             branch["angmin"][angmin .<= -pi/2] .= -default_pad
 
             push!(modified, branch["index"])
         end
 
         if any(angmax .>= pi/2)
-            @warn "this code only supports angmax values in -90 deg. to 90 deg., tightening the value on branch $(i) from $(rad2deg(angmax)) to $(default_pad_deg) deg."
+            @_warn "this code only supports angmax values in -90 deg. to 90 deg., tightening the value on branch $(i) from $(rad2deg(angmax)) to $(default_pad_deg) deg."
             branch["angmax"][angmax .>= pi/2] .= default_pad
 
             push!(modified, branch["index"])
         end
 
         if any((angmin .== 0.0) .& (angmax .== 0.0))
-            @warn "angmin and angmax values are 0, widening these values on branch $(i) to +/- $(default_pad_deg) deg."
+            @_warn "angmin and angmax values are 0, widening these values on branch $(i) to +/- $(default_pad_deg) deg."
             branch["angmin"][(angmin .== 0.0) .& (angmax .== 0.0)] .= -default_pad
             branch["angmax"][(angmin .== 0.0) .& (angmax .== 0.0)] .=  default_pad
 
@@ -902,7 +902,7 @@ function _correct_mc_thermal_limits!(nw::Dict{String,<:Any})::Set{Int}
 
                 if all(isapprox.(rate_value, 0.0))
                     delete!(branch, rate_key)
-                    @warn "removing zero $(rate_key) limit on branch $(branch["index"])"
+                    @_warn "removing zero $(rate_key) limit on branch $(branch["index"])"
 
                     push!(modified, branch["index"])
                 end
@@ -1129,7 +1129,7 @@ function _rescale_cost_model!(comp::Dict{String,<:Any}, scale::Real)
                 comp["cost"][i] = item*(scale^(degree-i))
             end
         else
-            @warn "Skipping cost model of type $(comp["model"]) in per unit transformation"
+            @_warn "Skipping cost model of type $(comp["model"]) in per unit transformation"
         end
     end
 end
@@ -1153,7 +1153,7 @@ function _correct_branch_directions!(pm_data::Dict{String,<:Any})
         orientation_rev = (branch["t_bus"], branch["f_bus"])
 
         if in(orientation_rev, orientations)
-            @warn "reversing the orientation of branch $(i) $(orientation) to be consistent with other parallel branches"
+            @_warn "reversing the orientation of branch $(i) $(orientation) to be consistent with other parallel branches"
             branch_orginal = copy(branch)
             branch["f_bus"] = branch_orginal["t_bus"]
             branch["t_bus"] = branch_orginal["f_bus"]
@@ -1303,13 +1303,13 @@ function _correct_bus_types!(pm_data::Dict{String,<:Any})::Set{Int}
         for (i, bus) in filter(x->x.second["bus_i"] in island, pm_data["bus"])
             if bus["bus_type"] == 1
                 if !isempty(bus_gens[i]) # PQ
-                    @info "active generators found at bus $(bus["bus_i"]), updating to bus type from $(bus["bus_type"]) to 2"
+                    @_info "active generators found at bus $(bus["bus_i"]), updating to bus type from $(bus["bus_type"]) to 2"
                     bus["bus_type"] = 2
                     push!(modified, bus["bus_i"])
                 end
             elseif bus["bus_type"] == 2 # PV
                 if isempty(bus_gens[i])
-                    @info "no active generators found at bus $(bus["bus_i"]), updating to bus type from $(bus["bus_type"]) to 1"
+                    @_info "no active generators found at bus $(bus["bus_i"]), updating to bus type from $(bus["bus_type"]) to 1"
                     bus["bus_type"] = 1
                     push!(modified, bus["bus_i"])
                 end
@@ -1317,7 +1317,7 @@ function _correct_bus_types!(pm_data::Dict{String,<:Any})::Set{Int}
                 if !isempty(bus_gens[i])
                     slack_found = true
                 else
-                    @info "no active generators found at bus $(bus["bus_i"]), updating to bus type from $(bus["bus_type"]) to 1"
+                    @_info "no active generators found at bus $(bus["bus_i"]), updating to bus type from $(bus["bus_type"]) to 1"
                     bus["bus_type"] = 1
                     push!(modified, bus["bus_i"])
                 end
@@ -1328,7 +1328,7 @@ function _correct_bus_types!(pm_data::Dict{String,<:Any})::Set{Int}
                 if length(bus_gens[i]) != 0
                     new_bus_type = 2
                 end
-                @info "bus $(bus["bus_i"]) has an unrecongized bus_type $(bus["bus_type"]), updating to bus_type $(new_bus_type)"
+                @_info "bus $(bus["bus_i"]) has an unrecongized bus_type $(bus["bus_type"]), updating to bus_type $(new_bus_type)"
                 bus["bus_type"] = new_bus_type
                 push!(modified, bus["bus_i"])
             end
@@ -1340,9 +1340,9 @@ function _correct_bus_types!(pm_data::Dict{String,<:Any})::Set{Int}
                 ref_bus = pm_data["bus"]["$(der["bus"])"]
                 ref_bus["bus_type"] = 3
                 push!(modified, der["bus"])
-                @info "no reference bus found, setting bus $(der["bus"]) as reference based on $(der["type"]) $(der["id"])"
+                @_info "no reference bus found, setting bus $(der["bus"]) as reference based on $(der["type"]) $(der["id"])"
             else
-                @info "no generators found in the given network data, disabling island"
+                @_info "no generators found in the given network data, disabling island"
                 for bus in island
                     pm_data["bus"]["$bus"]["bus_type"] = 4
                     push!(modified, bus)
@@ -1358,7 +1358,7 @@ end
 "finds the largest active generation asset (gen, storage) in an island"
 function _biggest_der(pm_data::Dict{String,<:Any}; island::Set{Int}=Set{Int}([bus["bus_i"] for (_,bus) in get(pm_data, "bus", Dict())]))::Dict{String,Any}
     if length(filter(x->x.second["gen_bus"] in island && x.second["gen_status"] == 1, get(pm_data, "gen", Dict()))) + length(filter(x->x.second["storage_bus"] in island && x.second["status"] == 1, get(pm_data, "storage", Dict()))) == 0
-        @debug "there are no active DERs in the island $island"
+        @_debug "there are no active DERs in the island $island"
     end
 
     biggest_der = Dict{String,Any}()
@@ -1493,7 +1493,7 @@ function _correct_cost_function!(id, comp, type_name, pmin_key, pmax_key)
                 error("ncost of $(comp["ncost"]) not consistent with $(length(comp["cost"])) cost values on $(type_name) $(id)")
             end
         else
-            @warn "Unknown cost model of type $(comp["model"]) on $(type_name) $(id)"
+            @_warn "Unknown cost model of type $(comp["model"]) on $(type_name) $(id)"
         end
     end
 
@@ -1517,7 +1517,7 @@ function _remove_pwl_cost_duplicates!(id, comp, type_name; tolerance=1e-2)
     end
 
     if length(unique_costs) < length(comp["cost"])
-        @warn "removing duplicate points from pwl cost on $(type_name) $(id), $(comp["cost"]) -> $(unique_costs)"
+        @_warn "removing duplicate points from pwl cost on $(type_name) $(id), $(comp["cost"]) -> $(unique_costs)"
         comp["cost"] = unique_costs
         comp["ncost"] = div(length(unique_costs), 2)
         return true
@@ -1557,7 +1557,7 @@ function _simplify_pwl_cost!(id, comp, type_name; tolerance=1e-2)
     push!(smpl_cost, y2)
 
     if length(smpl_cost) < length(comp["cost"])
-        @warn "simplifying pwl cost on $(type_name) $(id), $(comp["cost"]) -> $(smpl_cost)"
+        @_warn "simplifying pwl cost on $(type_name) $(id), $(comp["cost"]) -> $(smpl_cost)"
         comp["cost"] = smpl_cost
         comp["ncost"] = div(length(smpl_cost), 2)
         return true
@@ -1592,7 +1592,7 @@ function _simplify_cost_terms!(pm_data::Dict{String,<:Any})
                 end
                 if length(gen["cost"]) != ncost
                     gen["ncost"] = length(gen["cost"])
-                    @info "removing $(ncost - gen["ncost"]) cost terms from generator $(i): $(gen["cost"])"
+                    @_info "removing $(ncost - gen["ncost"]) cost terms from generator $(i): $(gen["cost"])"
                 end
             end
         end
@@ -1640,7 +1640,7 @@ function standardize_cost_terms!(data::Dict{String,<:Any}; order=-1)
         comp_max_order = order+1
     else
         if order != -1 # if not the default
-            @warn "a standard cost order of $(order) was requested but the given data requires an order of at least $(comp_max_order-1)"
+            @_warn "a standard cost order of $(order) was requested but the given data requires an order of at least $(comp_max_order-1)"
         end
     end
 
@@ -1669,7 +1669,7 @@ function _standardize_cost_terms!(components::Dict{String,<:Any}, comp_order::In
             #println("std gen cost: $(comp["cost"])")
 
             subnet = !isempty(nw) ? " on subnetwork $nw" : ""
-            @info "updated $(cost_comp_name) $(comp["index"])$(subnet) cost function with order $(length(current_cost)) to a function of order $(comp_order): $(comp["cost"])"
+            @_info "updated $(cost_comp_name) $(comp["index"])$(subnet) cost function with order $(length(current_cost)) to a function of order $(comp_order): $(comp["cost"])"
             push!(modified, comp["index"])
         end
     end

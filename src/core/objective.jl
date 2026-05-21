@@ -587,7 +587,7 @@ function _calc_max_cost_index(data::Dict{String,<:Any})
                     max_index = max(max_index, length(gen["cost"]))
                 end
             else
-                @warn "skipping cost generator $(i) cost model in calc_cost_order, only model 2 is supported."
+                @_warn "skipping cost generator $(i) cost model in calc_cost_order, only model 2 is supported."
             end
         end
     end

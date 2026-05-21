@@ -18,7 +18,6 @@ module PowerModelsDistribution
 
     # Logging Utilities
     import Logging
-    import LoggingExtras
 
     # Stdlib Imports
     import Dates
@@ -45,10 +44,8 @@ module PowerModelsDistribution
     # Setup Logging
     include("core/logging.jl")
     function __init__()
-        global _DEFAULT_LOGGER = Logging.current_logger()
-        global _LOGGER = Logging.ConsoleLogger(; meta_formatter=PowerModelsDistribution._pmd_metafmt)
-
-        Logging.global_logger(_LOGGER)
+        reset_logging_level!()
+        return
     end
     
     const _PKG_ROOT = dirname(dirname(pathof(PowerModelsDistribution)))

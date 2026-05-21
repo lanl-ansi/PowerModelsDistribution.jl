@@ -42,7 +42,7 @@ function _solve_mc_model(
         multinetwork=multinetwork,
         kwargs...
     )
-    @debug "pm model build time: $(time() - start_time)"
+    @_debug "pm model build time: $(time() - start_time)"
 
     start_time = time()
     result = optimize_model!(
@@ -51,7 +51,7 @@ function _solve_mc_model(
         optimizer=optimizer,
         solution_processors=solution_processors
     )
-    @debug "pm model solve and solution time: $(time() - start_time)"
+    @_debug "pm model solve and solution time: $(time() - start_time)"
 
     return result
 end
@@ -105,7 +105,7 @@ function instantiate_mc_model(
     )
 
     if iseng(data)
-        @info "Converting ENGINEERING data model to MATHEMATICAL first to build JuMP model"
+        @_info "Converting ENGINEERING data model to MATHEMATICAL first to build JuMP model"
         data = transform_data_model(
             data;
             multinetwork=multinetwork,

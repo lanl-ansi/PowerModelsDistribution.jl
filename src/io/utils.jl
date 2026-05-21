@@ -140,7 +140,7 @@ function _parse_rpn(::Type{T}, expr::AbstractString)::Union{T,AbstractString} wh
     clean_expr = strip(expr, _array_delimiters)
 
     if occursin("rollup", clean_expr) || occursin("rolldn", clean_expr) || occursin("swap", clean_expr)
-        @warn "_parse_rpn does not support 'rollup', 'rolldn', or 'swap', leaving as String"
+        @_warn "_parse_rpn does not support 'rollup', 'rolldn', or 'swap', leaving as String"
         return expr
     end
 
@@ -164,7 +164,7 @@ function _parse_rpn(::Type{T}, expr::AbstractString)::Union{T,AbstractString} wh
             end
         catch error
             if isa(error, ArgumentError)
-                @warn "'$expr' is not valid Reverse Polish Notation, leaving as String"
+                @_warn "'$expr' is not valid Reverse Polish Notation, leaving as String"
                 return expr
             else
                 throw(error)
@@ -172,7 +172,7 @@ function _parse_rpn(::Type{T}, expr::AbstractString)::Union{T,AbstractString} wh
         end
     end
     if length(stack) > 1
-        @warn "'$expr' is not valid Reverse Polish Notation, leaving as String"
+        @_warn "'$expr' is not valid Reverse Polish Notation, leaving as String"
         return expr
     else
         return stack[1]
@@ -203,20 +203,20 @@ function _bank_transformers!(data_eng::Dict{String,<:Any})
             props = ["bus", "noloadloss", "xsc", "rw", "cmag", "vm_nom", "sm_nom", "polarity", "configuration", "sm_ub"]
             btrans = Dict{String, Any}(prop=>trs[1][prop] for prop in props)
             if !all(tr[prop]==btrans[prop] for tr in trs, prop in props)
-                @warn "Not all across-phase properties match among transfomers identified by bank='$bank', aborting attempt to bank"
+                @_warn "Not all across-phase properties match among transfomers identified by bank='$bank', aborting attempt to bank"
                 continue
             end
             nrw = length(btrans["bus"])
 
             # only attempt to bank wye-connected transformers
             if !all(all(conf==WYE for conf in tr["configuration"]) for tr in trs)
-                @warn "Not all configurations 'wye' on transformers identified by bank='$bank', aborting attempt to bank"
+                @_warn "Not all configurations 'wye' on transformers identified by bank='$bank', aborting attempt to bank"
                 continue
             end
             neutrals = [conns[end] for conns in trs[1]["connections"]]
             # ensure all windings have the same neutral
             if !all(all(conns[end]==neutrals[w] for (w, conns) in enumerate(tr["connections"])) for tr in trs)
-                @warn "Not all neutral phases match on transfomers identified by bank='$bank', aborting attempt to bank"
+                @_warn "Not all neutral phases match on transfomers identified by bank='$bank', aborting attempt to bank"
                 continue
             end
 
@@ -346,7 +346,7 @@ function _get_conductors_ordered(busname::AbstractString; default::Vector{Int}=I
     end
 
     if check_length && length(default)!=length(ret)
-        @info "An inconsistent number of nodes was specified on $(parts[1]); |$(parts[2])|!=$(length(default))."
+        @_info "An inconsistent number of nodes was specified on $(parts[1]); |$(parts[2])|!=$(length(default))."
     end
 
     return ret
@@ -472,7 +472,7 @@ function _add_eng_obj!(data_eng::Dict{String,<:Any}, eng_obj_type::String, eng_o
     end
 
     if haskey(data_eng[eng_obj_type], eng_obj_id)
-        @warn "id '$eng_obj_id' already exists in $eng_obj_type, renaming to '$(eng_obj["source_id"])'"
+        @_warn "id '$eng_obj_id' already exists in $eng_obj_type, renaming to '$(eng_obj["source_id"])'"
         eng_obj_id = eng_obj["source_id"]
     end
 

@@ -14,7 +14,7 @@ function transform_data_model(::Type{DssModel}, raw_dss::OpenDssRawDataModel)::O
         elseif pn == "buscoordinates"
             setproperty!(dss, Symbol(pn), Dict{String,DssBuscoords}(buscoords.bus => buscoords for buscoords in property))
         elseif !isempty(property) && pn ∉ ["current_state", "filename", "options"]
-            @info "missing parser for '$pn'"
+            @_info "missing parser for '$pn'"
         end
     end
 
@@ -42,7 +42,7 @@ function _apply_property_pairs(dss_obj::T, property_pairs::Vector{Pair{String,St
     for (pn, v) in filter(x->x.first != "__path__", property_pairs)
         pn = _infer_partial_property_name(pn, dss_obj)
         if Symbol(pn) ∉ propertynames(dss_obj) && pn != "__path__"
-            @warn "$(T) has no field `$(pn)`, skipping..."
+            @_warn "$(T) has no field `$(pn)`, skipping..."
             continue
         end
 
@@ -64,7 +64,7 @@ function _apply_property_pairs(dss_obj::T, property_pairs::Vector{Pair{String,St
     for (pn, v) in filter(x->x.first != "__path__", property_pairs)
         pn = _infer_partial_property_name(pn, dss_obj)
         if Symbol(pn) ∉ propertynames(dss_obj) && pn != "__path__"
-            @warn "$(T) has no field `$(pn)`, skipping..."
+            @_warn "$(T) has no field `$(pn)`, skipping..."
             continue
         end
         if pn == "like"
@@ -73,7 +73,7 @@ function _apply_property_pairs(dss_obj::T, property_pairs::Vector{Pair{String,St
             elseif v in keys(getproperty(dss_raw, obj_type))
                 like_dss_obj = create_dss_object(T, getproperty(dss_raw, obj_type)[v], dss, dss_raw)
             else
-                @warn "$(obj_type).$(v) does not exist, can't apply 'like' on $(obj_type).$(getproperty(dss_obj, :name))"
+                @_warn "$(obj_type).$(v) does not exist, can't apply 'like' on $(obj_type).$(getproperty(dss_obj, :name))"
                 continue
             end
             merge!(dss_obj, like_dss_obj)
@@ -98,7 +98,7 @@ function _apply_property_pairs(dss_obj::T, property_pairs::Vector{Pair{String,St
     for (pn, v) in filter(x->x.first != "__path__", property_pairs)
         pn = _infer_partial_property_name(pn, dss_obj)
         if Symbol(pn) ∉ propertynames(dss_obj) && pn != "__path__"
-            @warn "$(T) has no field `$(pn)`, skipping..."
+            @_warn "$(T) has no field `$(pn)`, skipping..."
             continue
         end
         if pn == "like"
@@ -107,7 +107,7 @@ function _apply_property_pairs(dss_obj::T, property_pairs::Vector{Pair{String,St
             elseif v in keys(getproperty(dss_raw, obj_type))
                 like_dss_obj = create_dss_object(T, getproperty(dss_raw, obj_type)[v], dss, dss_raw)
             else
-                @warn "$(obj_type).$(v) does not exist, can't apply 'like' on $(obj_type).$(getproperty(dss_obj, :name))"
+                @_warn "$(obj_type).$(v) does not exist, can't apply 'like' on $(obj_type).$(getproperty(dss_obj, :name))"
                 continue
             end
             merge!(dss_obj, like_dss_obj)
@@ -138,7 +138,7 @@ function _apply_property_pairs(dss_obj::T, property_pairs::Vector{Pair{String,St
     for (pn, v) in property_pairs
         pn = _infer_partial_property_name(pn, dss_obj)
         if Symbol(pn) ∉ propertynames(dss_obj) && pn != "__path__"
-            @warn "$(T) has no field `$(pn)`, skipping..."
+            @_warn "$(T) has no field `$(pn)`, skipping..."
             continue
         end
 
@@ -152,7 +152,7 @@ function _apply_property_pairs(dss_obj::T, property_pairs::Vector{Pair{String,St
             elseif v in keys(getproperty(dss_raw, obj_type))
                 like_dss_obj = create_dss_object(T, getproperty(dss_raw, obj_type)[v], dss, dss_raw)
             else
-                @warn "$(obj_type).$(v) does not exist, can't apply 'like' on $(obj_type).$(getproperty(dss_obj, :name))"
+                @_warn "$(obj_type).$(v) does not exist, can't apply 'like' on $(obj_type).$(getproperty(dss_obj, :name))"
                 continue
             end
             merge!(dss_obj, like_dss_obj)
@@ -212,7 +212,7 @@ function _apply_property_pairs(dss_obj::T, property_pairs::Vector{Pair{String,St
     for (pn, v) in property_pairs
         pn = _infer_partial_property_name(pn, dss_obj)
         if Symbol(pn) ∉ propertynames(dss_obj) && pn != "__path__"
-            @warn "$(T) has no field `$(pn)`, skipping..."
+            @_warn "$(T) has no field `$(pn)`, skipping..."
             continue
         end
 
@@ -226,7 +226,7 @@ function _apply_property_pairs(dss_obj::T, property_pairs::Vector{Pair{String,St
             elseif v in keys(getproperty(dss_raw, obj_type))
                 like_dss_obj = create_dss_object(T, getproperty(dss_raw, obj_type)[v], dss, dss_raw)
             else
-                @warn "$(obj_type).$(v) does not exist, can't apply 'like' on $(obj_type).$(getproperty(dss_obj, :name))"
+                @_warn "$(obj_type).$(v) does not exist, can't apply 'like' on $(obj_type).$(getproperty(dss_obj, :name))"
                 continue
             end
             merge!(dss_obj, like_dss_obj)
@@ -265,7 +265,7 @@ function _apply_property_pairs(dss_obj::T, property_pairs::Vector{Pair{String,St
     _wdg = windings
     for (pn, v) in filter(x->x.first != "__path__", property_pairs)
         if Symbol(pn) ∉ propertynames(dss_obj) && pn != "__path__"
-            @warn "$(T) has no field `$(pn)`, skipping..."
+            @_warn "$(T) has no field `$(pn)`, skipping..."
             continue
         end
 
@@ -275,7 +275,7 @@ function _apply_property_pairs(dss_obj::T, property_pairs::Vector{Pair{String,St
             elseif v in keys(getproperty(dss_raw, obj_type))
                 like_dss_obj = create_dss_object(T, getproperty(dss_raw, obj_type)[v], dss, dss_raw)
             else
-                @warn "$(obj_type).$(v) does not exist, can't apply 'like' on $(obj_type).$(getproperty(dss_obj, :name))"
+                @_warn "$(obj_type).$(v) does not exist, can't apply 'like' on $(obj_type).$(getproperty(dss_obj, :name))"
                 continue
             end
             merge!(dss_obj, like_dss_obj)
@@ -311,7 +311,7 @@ function _apply_property_pairs(dss_obj::T, property_pairs::Vector{Pair{String,St
     _cond = 1
     for (pn, v) in filter(x->x.first != "__path__", property_pairs)
         if Symbol(pn) ∉ propertynames(dss_obj) && pn != "__path__"
-            @warn "$(T) has no field `$(pn)`, skipping..."
+            @_warn "$(T) has no field `$(pn)`, skipping..."
             continue
         end
 
@@ -321,7 +321,7 @@ function _apply_property_pairs(dss_obj::T, property_pairs::Vector{Pair{String,St
             elseif v in keys(getproperty(dss_raw, obj_type))
                 like_dss_obj = create_dss_object(T, getproperty(dss_raw, obj_type)[v], dss, dss_raw)
             else
-                @warn "$(obj_type).$(v) does not exist, can't apply 'like' on $(obj_type).$(getproperty(dss_obj, :name))"
+                @_warn "$(obj_type).$(v) does not exist, can't apply 'like' on $(obj_type).$(getproperty(dss_obj, :name))"
                 continue
             end
             merge!(dss_obj, like_dss_obj)

@@ -29,7 +29,7 @@ function Base.parse(::Type{T}, conn::String)::T where T <: ConnConfig
         return DELTA
     end
 
-    @warn "Unsupported connection $conn, defaulting to WYE"
+    @_warn "Unsupported connection $conn, defaulting to WYE"
     return WYE
 end
 
@@ -37,10 +37,10 @@ end
 function Base.parse(::Type{T}, model::String)::T where T <: LoadModel
     model = parse(Int, model)
     if model ∈ [3, 4, 7]
-        @warn "dss load model $model not supported; treating as constant POWER model"
+        @_warn "dss load model $model not supported; treating as constant POWER model"
         model = 1
     elseif model == 6
-        @warn "dss load model $model identical to model 1 in current feature set; treating as constant POWER model"
+        @_warn "dss load model $model identical to model 1 in current feature set; treating as constant POWER model"
         model = 1
     end
 
@@ -60,7 +60,7 @@ function Base.parse(::Type{T}, model::String)::T where T <: CapControlType
     elseif model == "time"
         return CAP_TIME
     else
-        @warn "cap control type '$(model)' unrecognized, returning CAP_DISABLED"
+        @_warn "cap control type '$(model)' unrecognized, returning CAP_DISABLED"
 
         return CAP_DISABLED
     end
@@ -74,6 +74,6 @@ function Base.parse(::Type{T}, status::String)::T where T <: Status
         return DISABLED
     end
 
-    @warn "enabled code '$status' not recognized, defaulting to ENABLED"
+    @_warn "enabled code '$status' not recognized, defaulting to ENABLED"
     return ENABLED
 end

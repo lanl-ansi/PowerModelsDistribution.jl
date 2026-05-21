@@ -54,7 +54,7 @@ end
 
 
 "cannot calculate line constants without dss model"
-calculate_line_constants(::Missing, ::DssLine)::Nothing = @info "Dss model missing"
+calculate_line_constants(::Missing, ::DssLine)::Nothing = @_info "Dss model missing"
 
 
 """

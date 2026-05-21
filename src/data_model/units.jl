@@ -102,7 +102,7 @@ function make_per_unit!(
             end
         end
     else
-        @warn "Data model '$data_model_type' is not recognized, no per-unit transformation performed"
+        @_warn "Data model '$data_model_type' is not recognized, no per-unit transformation performed"
     end
 end
 
@@ -215,7 +215,7 @@ function _calc_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict
     zone_vbase = Dict{Int, Union{Missing,Real}}([(zone,missing) for zone in keys(zones)])
     for (bus,vbase) in vbase_sources
         if !ismissing(zone_vbase[bus_to_zone[bus]])
-            @warn "You supplied multiple voltage bases for the same zone; ignoring all but the last one."
+            @_warn "You supplied multiple voltage bases for the same zone; ignoring all but the last one."
         end
         zone_vbase[bus_to_zone[bus]] = vbase
     end
