@@ -474,7 +474,7 @@ function constraint_mc_ohms_yt_from(pm::AbstractUnbalancedPowerModel, i::Int; nw
     t_idx = (i, t_bus, f_bus)
 
     if all(all(isapprox.(branch[k], 0.0)) for k in ["br_r", "br_x", "g_fr", "g_to", "b_fr", "b_to"])
-        @debug "branch $(branch["source_id"]) being treated as superconducting (effective zero impedance)"
+        @_debug "branch $(branch["source_id"]) being treated as superconducting (effective zero impedance)"
         if !haskey(con(pm, nw), :branch_flow)
             con(pm, nw)[:branch_flow] = Dict{Int,Vector{Vector{<:JuMP.ConstraintRef}}}()
         end
@@ -502,7 +502,7 @@ function constraint_mc_ohms_yt_to(pm::AbstractUnbalancedPowerModel, i::Int; nw::
     t_idx = (i, t_bus, f_bus)
 
     if all(all(isapprox.(branch[k], 0.0)) for k in ["br_r", "br_x", "g_fr", "g_to", "b_fr", "b_to"])
-        @debug "branch $(branch["source_id"]) being treated as superconducting (effective zero impedance)"
+        @_debug "branch $(branch["source_id"]) being treated as superconducting (effective zero impedance)"
         if !haskey(con(pm, nw), :branch_flow)
             con(pm, nw)[:branch_flow] = Dict{Int,Vector{Vector{<:JuMP.ConstraintRef}}}()
         end
@@ -1008,7 +1008,7 @@ function constraint_storage_state(pm::AbstractUnbalancedPowerModel, i::Int; nw::
     if haskey(ref(pm, nw), :time_elapsed)
         time_elapsed = ref(pm, nw, :time_elapsed)
     else
-        @warn "network data should specify time_elapsed in hours, using 1.0 as a default"
+        @_warn "network data should specify time_elapsed in hours, using 1.0 as a default"
         time_elapsed = 1.0
     end
 
@@ -1028,7 +1028,7 @@ function constraint_storage_state(pm::AbstractUnbalancedPowerModel, i::Int, nw_1
     if haskey(ref(pm, nw_2), :time_elapsed)
         time_elapsed = ref(pm, nw_2, :time_elapsed)
     else
-        @warn "network $(nw_2) should specify time_elapsed in hours, using 1.0 as a default"
+        @_warn "network $(nw_2) should specify time_elapsed in hours, using 1.0 as a default"
         time_elapsed = 1.0
     end
 
@@ -1036,7 +1036,7 @@ function constraint_storage_state(pm::AbstractUnbalancedPowerModel, i::Int, nw_1
         constraint_storage_state(pm, nw_1, nw_2, i, storage["charge_efficiency"], storage["discharge_efficiency"], time_elapsed)
     else
         # if the storage device has status=0 in nw_1, then the stored energy variable will not exist. Initialize storage from data model instead.
-        @warn "storage component $(i) was not found in network $(nw_1) while building constraint_storage_state between networks $(nw_1) and $(nw_2). Using the energy value from the storage component in network $(nw_2) instead"
+        @_warn "storage component $(i) was not found in network $(nw_1) while building constraint_storage_state between networks $(nw_1) and $(nw_2). Using the energy value from the storage component in network $(nw_2) instead"
         constraint_storage_state_initial(pm, nw_2, i, storage["energy"], storage["charge_efficiency"], storage["discharge_efficiency"], time_elapsed)
     end
     nothing

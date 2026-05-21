@@ -55,7 +55,7 @@ function calc_start_voltage(
     end
 
     progress = round(sum(ismissing.(values(v_start))) / length(v_start) * 100, digits=2)
-    @debug "it. 0:\t$(100-progress)% specified at start"
+    @_debug "it. 0:\t$(100-progress)% specified at start"
 
     # propogate within zones and then between them across transformers as long as progress is made
     # a 'zone' in this context is a collection of buses which are galvanically connected
@@ -182,7 +182,7 @@ function calc_start_voltage(
             end
         end
         progress = round(sum(ismissing.(values(v_start))) / length(v_start) * 100, digits=2)
-        @debug "it. $count:\t$progress% left to initialize at end"
+        @_debug "it. $count:\t$progress% left to initialize at end"
     end
 
     # increment non-grounded zero values with epsilon

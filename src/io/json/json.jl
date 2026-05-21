@@ -83,7 +83,7 @@ function _fix_nulls!(obj, prop, val)
     end
 
     if isa(val, Matrix) && any(val .=== nothing)
-        @debug "a 'null' was encountered in the json import, making an assumption that null values in $prop = $fill_val"
+        @_debug "a 'null' was encountered in the json import, making an assumption that null values in $prop = $fill_val"
         valdtype = valtype(val)
         if isa(valdtype, Union)
             dtype = [getproperty(valdtype, n) for n in propertynames(valdtype) if getproperty(valdtype, n) != Nothing][end]
@@ -93,10 +93,10 @@ function _fix_nulls!(obj, prop, val)
         val[val .=== nothing] .= fill_val
         obj[prop] = Matrix{valtype(val) == Nothing ? typeof(fill_val) : valtype(val)}(val)
     elseif isa(val, Vector) && any(v === nothing for v in val)
-        @debug "a 'null' was encountered in the json import, making an assumption that null values in $prop = $fill_val"
+        @_debug "a 'null' was encountered in the json import, making an assumption that null values in $prop = $fill_val"
         obj[prop] = Vector{valtype(val) == Nothing ? typeof(fill_val) : valtype(val)}([v === nothing ? fill_val : v for v in val])
     elseif val === nothing
-        @debug "a 'null' was encountered in the json import, making an assumption that null values in $prop = $fill_val"
+        @_debug "a 'null' was encountered in the json import, making an assumption that null values in $prop = $fill_val"
         obj[prop] = fill_val
     end
 end

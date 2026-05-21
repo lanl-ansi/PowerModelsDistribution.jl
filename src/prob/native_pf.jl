@@ -212,9 +212,9 @@ Takes data in either the ENGINEERING or MATHEMATICAL model, a model type (_e.g._
 and model builder function (_e.g._, [`build_mc_opf`](@ref build_mc_opf)), and returns a solution in the original data model
 defined by `data`.
 
-Technical description of the native power flow can be found at https://arxiv.org/abs/2305.04405 where implementation fo the 
-fixed-point current injection algorithm, inspired by the existing open-source implementation in OpenDSS. 
-The current injection method is commonly conceived as a system of nonlinear equalities solved by Newton’s method. 
+Technical description of the native power flow can be found at https://arxiv.org/abs/2305.04405 where implementation fo the
+fixed-point current injection algorithm, inspired by the existing open-source implementation in OpenDSS.
+The current injection method is commonly conceived as a system of nonlinear equalities solved by Newton’s method.
 However, the fixed point iteration variant commonly outperforms most methods, while supporting meshed topologies from the ground up
 
 If `make_si` is false, data will remain in per-unit.
@@ -324,14 +324,14 @@ function _compute_mc_pf(
         end
     else
         nw_dm = data_math["nw"]
-        @warn("The native power flow solver may not be accurate to the tolerance of 1E-6")
+        @_warn("The native power flow solver may not be accurate to the tolerance of 1E-6")
         for (b, branch) in data_math["nw"]["1"]["branch"]
             append!(br_sizes, size(branch["br_r"], 1))
         end
     end
 
     if maximum(br_sizes) > 4
-        @warn("Line impedance matrices should be up to 4x4, but go up to $(maximum(br_sizes))x$(maximum(br_sizes))")
+        @_warn("Line impedance matrices should be up to 4x4, but go up to $(maximum(br_sizes))x$(maximum(br_sizes))")
     end
 
     sol = Dict{String,Any}()

@@ -83,7 +83,7 @@ function Model(model_type::DataModel=ENGINEERING; kwargs...)::Dict{String,Any}
 
         _add_unused_kwargs!(data_model["settings"], kwargs)
     elseif model_type == MATHEMATICAL
-        @warn "There are not currently any helper functions to help build a mathematical model, this will only instantiate required fields."
+        @_warn "There are not currently any helper functions to help build a mathematical model, this will only instantiate required fields."
         data_model = Dict{String,Any}(
             "bus" => Dict{String,Any}(),
             "load" => Dict{String,Any}(),

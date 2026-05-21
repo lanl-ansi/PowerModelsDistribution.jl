@@ -688,7 +688,7 @@ function build_mn_mc_opf(pm::AbstractExplicitNeutralIVRModel)
         end
 
         if !isempty(ids(pm, n, :storage))
-            @warn "This formulation lacks support for storage components."
+            @_warn "This formulation lacks support for storage components."
         end
 
         for i in ids(pm, n, :bus)

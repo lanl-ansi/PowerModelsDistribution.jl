@@ -161,10 +161,10 @@ function transform_data_model(
 
         return data_math
     elseif ismath(data)
-        @info "A MATHEMATICAL data model cannot be converted back to an ENGINEERING data model, irreversible transformations have already been made"
+        @_info "A MATHEMATICAL data model cannot be converted back to an ENGINEERING data model, irreversible transformations have already been made"
         return data
     else
-        @info "Data model '$current_data_model' is not recognized, no model type transformation performed"
+        @_info "Data model '$current_data_model' is not recognized, no model type transformation performed"
         return data
     end
 end

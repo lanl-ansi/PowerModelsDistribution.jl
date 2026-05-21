@@ -136,7 +136,7 @@ function _parse_dss_cmd_edit!(data_dss::DssRawModel, line::String, line_number::
     if haskey(data_dss[dss_obj_type], dss_obj_name)
         _parse_dss_cmd_new!(data_dss, line, line_number)
     else
-        @warn "Cannot find $(dss_obj_type) object $(dss_obj_name)."
+        @_warn "Cannot find $(dss_obj_type) object $(dss_obj_name)."
     end
 end
 
@@ -149,7 +149,7 @@ function _parse_dss_cmd_redirect!(data_dss::DssRawModel, line::String, line_numb
 
     if !(joinpath(file_path...) in data_dss.filename)
         full_path = joinpath(data_dss.current_state.base_path, file_path)
-        @info "Redirecting to '$(joinpath(file_path...))' on line $line_number in '$(basename(current_file))'"
+        @_info "Redirecting to '$(joinpath(file_path...))' on line $line_number in '$(basename(current_file))'"
         data_dss = parse_raw_dss(full_path, data_dss)
     end
 end
@@ -183,7 +183,7 @@ end
 
 ""
 function _parse_dss_cmd_clear!(data_dss::DssRawModel, line::String, line_number::Int)::DssRawModel
-    @info "Circuit has been reset with the 'clear' on line $(line_number) in '$(basename(data_dss.current_state.current_file))'"
+    @_info "Circuit has been reset with the 'clear' on line $(line_number) in '$(basename(data_dss.current_state.current_file))'"
     data_dss = _init_dss_data(; current_file=data_dss.current_state.current_file)
 end
 
@@ -210,7 +210,7 @@ function _parse_dss_cmd_buscoords!(data_dss::DssRawModel, file::String, line_num
     file_path = split(strip(file, ['(',')']), r"[\\|\/]")
     full_path = joinpath(data_dss.current_state.base_path, file_path...)
 
-    @info "Reading Buscoords in '$(basename(full_path))' on line $(line_number) in '$(basename(data_dss.current_state.current_file))'"
+    @_info "Reading Buscoords in '$(basename(full_path))' on line $(line_number) in '$(basename(data_dss.current_state.current_file))'"
     open(first(Glob.glob([Glob.FilenameMatch(basename(full_path), "i")], string(dirname(full_path)))), "r") do io
         buscoords = _parse_dss_cmd_buscoords(io)
         for bc in buscoords
@@ -306,10 +306,10 @@ function parse_raw_dss(io::IO, data::DssRawModel)::DssRawModel
     end
 
     for (line_number, (cmd, elements)) in enumerate(_parse_command_from_line.(_strip_lines!(_sanatize_line.(readlines(io)))))
-        # @warn line_number cmd elements
+        # @_warn line_number cmd elements
         if !isempty(cmd)
             if cmd ∉ _dss_supported_commands
-                @info "Command '$cmd' on line $line_number in '$(basename(file))' is not supported, skipping."
+                @_info "Command '$cmd' on line $line_number in '$(basename(file))' is not supported, skipping."
                 continue
             else
                 data.current_state.last_command = data.current_state.current_command

@@ -28,13 +28,28 @@
         @test PMD._isa_rpn("2 pi * 60 * .001 *")
         @test !PMD._isa_rpn("[ 2 10 ]")
 
-        @test_logs (:warn, "_parse_rpn does not support 'rollup', 'rolldn', or 'swap', leaving as String") match_mode=:any PowerModelsDistribution._parse_rpn("1 2 swap atan2")
-        @test_logs (:warn, "' 1 2 + - ' is not valid Reverse Polish Notation, leaving as String") match_mode=:any PowerModelsDistribution._parse_rpn(" 1 2 + - ")
-        @test_logs (:warn, "'1 2 3 +' is not valid Reverse Polish Notation, leaving as String") match_mode=:any PowerModelsDistribution._parse_rpn("1 2 3 +")
+        _test_logs(
+            () -> PowerModelsDistribution._parse_rpn("1 2 swap atan2"),
+            (:warn, "_parse_rpn does not support 'rollup', 'rolldn', or 'swap', leaving as String"),
+        )
+        _test_logs(
+            () -> PowerModelsDistribution._parse_rpn(" 1 2 + - "),
+            (:warn, "' 1 2 + - ' is not valid Reverse Polish Notation, leaving as String"),
+        )
+        _test_logs(
+            () -> PowerModelsDistribution._parse_rpn("1 2 3 +"),
+            (:warn, "'1 2 3 +' is not valid Reverse Polish Notation, leaving as String"),
+        )
     end
 
     @testset "opendss parse load model warnings" begin
-        @test_logs (:warn, "dss load model 3 not supported; treating as constant POWER model") (:warn, "dss load model 6 identical to model 1 in current feature set; treating as constant POWER model") (:warn, "dss load model 7 not supported; treating as constant POWER model") (:warn, "dss load model 4 not supported; treating as constant POWER model") match_mode=:any parse_file("../test/data/opendss/loadparser_warn_model.dss")
+        _test_logs(
+            () -> parse_file("../test/data/opendss/loadparser_warn_model.dss"),
+            (:warn, "dss load model 3 not supported; treating as constant POWER model"),
+            (:warn, "dss load model 6 identical to model 1 in current feature set; treating as constant POWER model"),
+            (:warn, "dss load model 7 not supported; treating as constant POWER model"),
+            (:warn, "dss load model 4 not supported; treating as constant POWER model"),
+        )
     end
 
     @testset "opendss parse spectrum objects" begin
@@ -49,7 +64,16 @@
 
     @testset "opendss parse generic warnings and errors" begin
         @test_throws ErrorException parse_file("../test/data/opendss/test_simple2.dss"; data_model=MATHEMATICAL)
-        @test_logs (:info, "Command 'solve' on line 70 in 'test2_master.dss' is not supported, skipping.") (:info, "Command 'show' on line 72 in 'test2_master.dss' is not supported, skipping.") (:warn, "reactors as constant impedance elements is not yet supported, treating reactor.reactor1 like line") (:warn, "line.something does not exist, can't apply 'like' on line.l1") (:info, "Circuit has been reset with the 'clear' on line 2 in 'test2_master.dss'") (:info, "Redirecting to 'test2_linecodes.dss' on line 10 in 'test2_Linecodes.dss'") (:info, "Redirecting to 'test2_loadshape.dss' on line 11 in 'test2_Linecodes.dss'") match_mode=:any parse_file("../test/data/opendss/test2_master.dss")
+        _test_logs(
+            () -> parse_file("../test/data/opendss/test2_master.dss"),
+            (:info, "Command 'solve' on line 70 in 'test2_master.dss' is not supported, skipping."),
+            (:info, "Command 'show' on line 72 in 'test2_master.dss' is not supported, skipping."),
+            (:warn, "reactors as constant impedance elements is not yet supported, treating reactor.reactor1 like line"),
+            (:warn, "line.something does not exist, can't apply 'like' on line.l1"),
+            (:info, "Circuit has been reset with the 'clear' on line 2 in 'test2_master.dss'"),
+            (:info, "Redirecting to 'test2_linecodes.dss' on line 10 in 'test2_Linecodes.dss'"),
+            (:info, "Redirecting to 'test2_loadshape.dss' on line 11 in 'test2_Linecodes.dss'"),
+        )
     end
 
     raw_dss = parse_raw_dss("../test/data/opendss/test2_master.dss")

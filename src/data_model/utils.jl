@@ -27,7 +27,7 @@ ismath(data::InfrastructureModel) = false
 **Hacky** helper function to transform single-conductor network data, from, e.g., matpower/psse, into multi-conductor data.
 """
 function make_multiconductor!(data::Dict{String,<:Any}, conductors::Int)
-    @info "This function is not meant to be an officially supported method for creating reasonable multiconductor data sets"
+    @_info "This function is not meant to be an officially supported method for creating reasonable multiconductor data sets"
     if ismultinetwork(data)
         for (i,nw_data) in data["nw"]
             _make_multiconductor!(nw_data, conductors)
@@ -41,7 +41,7 @@ end
 "Hacky helper function to transform single-conductor network data, from, e.g., matpower/psse, into multi-conductor data"
 function _make_multiconductor!(data::Dict{String,<:Any}, conductors::Real)
     if haskey(data, "conductor_ids")
-        @warn "skipping network that is already multiconductor"
+        @_warn "skipping network that is already multiconductor"
         return
     end
 

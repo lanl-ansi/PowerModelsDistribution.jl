@@ -41,7 +41,7 @@ function _dss2eng_loadshape!(data_eng::Dict{String,<:Any}, data_dss::OpenDssData
         end
 
         if _is_loadshape_split(dss_obj)
-            @info "Loadshape '$id' contains mismatched pmult and qmult, splitting into `time_series` ids '$(id)_p' and '$(id)_q'"
+            @_info "Loadshape '$id' contains mismatched pmult and qmult, splitting into `time_series` ids '$(id)_p' and '$(id)_q'"
             _add_eng_obj!(data_eng, "time_series", "$(id)_p", eng_obj)
 
             eng_obj_qmult = deepcopy(eng_obj)
@@ -188,7 +188,7 @@ function _dss2eng_capacitor!(data_eng::Dict{String,<:Any}, data_dss::OpenDssData
 
             _add_eng_obj!(data_eng, "shunt", id, eng_obj)
         else
-            @warn "capacitors as constant impedance elements is not yet supported, treating reactor.$id like line"
+            @_warn "capacitors as constant impedance elements is not yet supported, treating reactor.$id like line"
             _eng_obj = Dict{String,Any}(
                 "f_bus" => _parse_bus_id(dss_obj["bus1"])[1],
                 "t_bus" => _parse_bus_id(dss_obj["bus2"])[1],
@@ -260,7 +260,7 @@ function _dss2eng_reactor!(data_eng::Dict{String,<:Any}, data_dss::OpenDssDataMo
 
             _add_eng_obj!(data_eng, "shunt", id, eng_obj)
         else
-            @warn "reactors as constant impedance elements is not yet supported, treating reactor.$id like line"
+            @_warn "reactors as constant impedance elements is not yet supported, treating reactor.$id like line"
 
             nphases = dss_obj["phases"]
 
@@ -419,7 +419,7 @@ end
 function _dss2eng_line!(data_eng::Dict{String,<:Any}, data_dss::OpenDssDataModel, import_all::Bool)
     for (id, dss_obj) in get(data_dss, "line", Dict())
         if haskey(dss_obj, "basefreq") && dss_obj["basefreq"] != data_eng["settings"]["base_frequency"]
-            @warn "basefreq=$(dss_obj["basefreq"]) on line.$id does not match circuit basefreq=$(data_eng["settings"]["base_frequency"])"
+            @_warn "basefreq=$(dss_obj["basefreq"]) on line.$id does not match circuit basefreq=$(data_eng["settings"]["base_frequency"])"
         end
 
         nphases = dss_obj["phases"]
@@ -1028,7 +1028,7 @@ function parse_opendss(
         data_eng["settings"]["voltage_scale_factor"] = 1e3
         data_eng["settings"]["power_scale_factor"] = 1e3
         data_eng["settings"]["vbases_default"] = Dict{String,Real}()
-        dss_obj["basemva"] == 100.0 && @info "basemva=100 is the default value, you may want to adjust sbase_default for better convergence"
+        dss_obj["basemva"] == 100.0 && @_info "basemva=100 is the default value, you may want to adjust sbase_default for better convergence"
         data_eng["settings"]["sbase_default"] = dss_obj["basemva"] * 1e3
         data_eng["settings"]["base_frequency"] = data_dss.options.defaultbasefrequency
 
