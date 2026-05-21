@@ -40,14 +40,14 @@
 
             result = solve_mc_opf(data, LPUBFDiagPowerModel, ipopt_solver; solution_processors=[sol_data_model!])
 
-            @test result["termination_status"] == LOCALLY_SOLVED
+            @test result["primal_status"] == FEASIBLE_POINT
 
             @test isapprox(sum(result["solution"]["voltage_source"]["source"]["pg"]), 40.26874; atol=1)
-            @test isapprox(sum(result["solution"]["voltage_source"]["source"]["qg"]),  17.1721; atol=1)
+            @test isapprox(sum(result["solution"]["voltage_source"]["source"]["qg"]), 17.1721; atol=1)
 
             vbase = case3_unbalanced_delta_loads["settings"]["vbases_default"]["sourcebus"]
-            @test all(isapprox.(result["solution"]["bus"]["primary"]["vm"] ./ vbase, [0.98514,0.98945,0.98929]; atol=5e-2))
-            @test all(isapprox.(result["solution"]["bus"]["loadbus"]["vm"] ./ vbase, [0.97007,0.97949,0.97916]; atol=5e-2))
+            @test all(isapprox.(result["solution"]["bus"]["primary"]["vm"] ./ vbase, [0.98514, 0.98945, 0.98929]; atol=5e-2))
+            @test all(isapprox.(result["solution"]["bus"]["loadbus"]["vm"] ./ vbase, [0.97007, 0.97949, 0.97916]; atol=5e-2))
         end
 
         @testset "3-bus unbalanced fbs opf_bf with switch" begin
@@ -169,7 +169,7 @@
             @testset "3-bus SOCConicUBF opf_bf" begin
                 result = solve_mc_opf(data, SOCConicUBFPowerModel, scs_solver)
 
-                @test_skip result["termination_status"] == OPTIMAL || result["termination_status"] == ALMOST_OPTIMAL
+                @test result["termination_status"] == OPTIMAL || result["termination_status"] == ALMOST_OPTIMAL
 
                 @test isapprox(result["objective"], 21.17; atol = 5e-2)
             end

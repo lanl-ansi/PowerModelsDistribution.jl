@@ -1,4 +1,5 @@
 module PowerModelsDistribution
+    # test change
     # File path utilities
     import Glob
     import FilePaths
@@ -50,6 +51,23 @@ module PowerModelsDistribution
 
         Logging.global_logger(_LOGGER)
     end
+    
+    const _PKG_ROOT = dirname(dirname(pathof(PowerModelsDistribution)))
+    const CASE3B = joinpath(
+        _PKG_ROOT,
+        "test",
+        "data",
+        "opendss",
+        "case3_balanced.dss",
+    )
+
+    const CASE3U = joinpath(
+        _PKG_ROOT,
+        "test",
+        "data",
+        "opendss",
+        "case3_unbalanced.dss",
+    )
 
     include("core/base.jl")
     include("core/types.jl")

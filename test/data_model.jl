@@ -114,4 +114,16 @@
             @test all(isapprox.(rn["solution"]["bus"][bus_id]["vm"], r["solution"]["bus"][bus_id]["vm"]; atol=1e-4))
         end
     end
+
+    @testset "test initilization add start voltage polar and rectangular" begin
+        data_eng = deepcopy(ut_trans_2w_yy)
+        data_math = transform_data_model(data_eng)
+        data_math_rect = deepcopy(data_math)
+        add_start_vrvi!(data_math_rect; explicit_neutral=false)
+        add_start_vmva!(data_math; explicit_neutral=false)
+        @test haskey(data_math_rect["bus"]["1"], "vr_start")
+        @test haskey(data_math_rect["bus"]["1"], "vi_start")
+        @test haskey(data_math["bus"]["1"], "vm_start")
+        @test haskey(data_math["bus"]["1"], "va_start")
+    end
 end
