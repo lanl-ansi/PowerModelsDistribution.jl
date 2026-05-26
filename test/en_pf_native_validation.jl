@@ -1,7 +1,7 @@
 @info "running explicit neutral power flow tests with native julia power flow solver"
 
 
-function conductor_correction!(data_eng::EngineeringModel)
+function conductor_correction!(data_eng::PowerModelsDistribution.EngineeringModel)
     nw = data_eng
     if neutral_idx ∈ nw["conductor_ids"]
         filter!(e -> e ≠ neutral_idx, nw["conductor_ids"])

@@ -16,7 +16,7 @@ end
 parses json files that were dumped via JSON.print (or PMD.print_file)
 """
 function parse_json(io::IO)
-    data = JSON.parse(io)
+    data = Dict{String, Any}(JSON.parse(io))
     correct_json_import!(data)
 
     return data
