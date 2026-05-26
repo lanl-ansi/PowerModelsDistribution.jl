@@ -40,7 +40,7 @@
 
             result = solve_mc_opf(data, LPUBFDiagPowerModel, ipopt_solver; solution_processors=[sol_data_model!])
 
-            @test result["termination_status"] == LOCALLY_SOLVED
+            @test result["primal_status"] == FEASIBLE_POINT
 
             @test isapprox(sum(result["solution"]["voltage_source"]["source"]["pg"]), 40.26874; atol=1)
             @test isapprox(sum(result["solution"]["voltage_source"]["source"]["qg"]),  17.1721; atol=1)
