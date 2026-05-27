@@ -44,6 +44,97 @@ function conductor_correction!(data_eng::AbstractDict)
 end
 
 
+function conductor_correction!(data_eng::EngineeringModel)
+    nw = data_eng.data
+    if neutral_idx ∈ nw["conductor_ids"]
+        filter!(e -> e ≠ neutral_idx, nw["conductor_ids"])
+    end
+    
+    nw["voltage_source"]["source"]["rs"] = nw["voltage_source"]["source"]["rs"][1:3, 1:3]
+    nw["voltage_source"]["source"]["xs"] = nw["voltage_source"]["source"]["xs"][1:3, 1:3]
+    nw["voltage_source"]["source"]["connections"] = nw["voltage_source"]["source"]["connections"][1:3]
+    nw["voltage_source"]["source"]["va"] = nw["voltage_source"]["source"]["va"][1:3]
+    nw["voltage_source"]["source"]["vm"] = nw["voltage_source"]["source"]["vm"][1:3]
+
+    for (l, load) in nw["load"]
+        if neutral_idx ∈ load["connections"]
+            filter!(e -> e ≠ neutral_idx, load["connections"])
+        end
+    end
+
+    for (b, bus) in nw["bus"]
+        if neutral_idx ∈ bus["terminals"]
+            filter!(e -> e ≠ neutral_idx, bus["terminals"])
+        end
+        if neutral_idx ∈ bus["grounded"]
+            filter!(e -> e ≠ neutral_idx, bus["grounded"])
+        end
+    end
+
+    if haskey(nw, "transformer")
+        for (tx, transformer) in nw["transformer"]
+            for winding in transformer["connections"]
+                filter!(e -> e ≠ neutral_idx, winding)
+            end
+        end
+    end
+
+    if haskey(nw, "solar")
+        for (s, solar) in nw["solar"]
+            filter!(e -> e ≠ neutral_idx, solar["connections"])
+        end
+    end
+end
+
+function sourcebus_voltage_vector_correction!(data_math_model::MathematicalModel; explicit_neutral=true)
+    data_math = data_math_model.data
+    if haskey(data_math, "multinetwork")
+        for (n, nw) in data_math["nw"]
+            for (i, bus) in data_math["nw"]["bus"]
+                if bus["bus_type"] == 3
+                    if explicit_neutral
+                        bus["vm"] = bus["vm"][1:length(bus["terminals"])]
+                        bus["va"] = bus["va"][1:length(bus["terminals"])]
+                        bus["vmin"] = bus["vmin"][1:length(bus["terminals"])]
+                        bus["vmax"] = bus["vmax"][1:length(bus["terminals"])]
+                        bus["grounded"] = bus["grounded"][1:length(bus["terminals"])]
+                    else
+                        if neutral_idx ∈ bus["terminals"]
+                            bus["terminals"] = bus["terminals"][1:end-1]
+                        end
+                        bus["vm"] = bus["vm"][1:length(bus["terminals"])]
+                        bus["va"] = bus["va"][1:length(bus["terminals"])]
+                        bus["vmin"] = bus["vmin"][1:length(bus["terminals"])]
+                        bus["vmax"] = bus["vmax"][1:length(bus["terminals"])]
+                        bus["grounded"] = bus["grounded"][1:length(bus["terminals"])]
+                    end
+                end
+            end
+        end
+    else
+        for (i, bus) in data_math["bus"]
+            if bus["bus_type"] == 3
+                if explicit_neutral
+                    bus["vm"] = bus["vm"][1:length(bus["terminals"])]
+                    bus["va"] = bus["va"][1:length(bus["terminals"])]
+                    bus["vmin"] = bus["vmin"][1:length(bus["terminals"])]
+                    bus["vmax"] = bus["vmax"][1:length(bus["terminals"])]
+                    bus["grounded"] = bus["grounded"][1:length(bus["terminals"])]
+                else
+                    if neutral_idx ∈ bus["terminals"]
+                        bus["terminals"] = bus["terminals"][1:end-1]
+                    end
+                    bus["vm"] = bus["vm"][1:length(bus["terminals"])]
+                    bus["va"] = bus["va"][1:length(bus["terminals"])]
+                    bus["vmin"] = bus["vmin"][1:length(bus["terminals"])]
+                    bus["vmax"] = bus["vmax"][1:length(bus["terminals"])]
+                    bus["grounded"] = bus["grounded"][1:length(bus["terminals"])]
+                end
+            end
+        end
+    end
+    return nothing
+end
 
 function sourcebus_voltage_vector_correction!(data_math::AbstractDict; explicit_neutral=true)
     if haskey(data_math, "multinetwork")
@@ -210,6 +301,18 @@ function update_math_model_3wire!(math)
     return nothing
 end
 
+
+function multinetwork_data_math_correction!(data_math_model::MathematicalModel)
+    data_math = data_math_model.data
+    @assert data_math["multinetwork"]
+    @assert data_math["data_model"] == MATHEMATICAL
+    for (nw, dm) in data_math["nw"]
+        dm["data_model"] = MATHEMATICAL
+        dm["map"] = data_math["map"]
+        dm["bus_lookup"] = data_math["bus_lookup"][nw]
+    end
+    return nothing
+end
 
 function multinetwork_data_math_correction!(data_math::Dict{String,Any})
     @assert data_math["multinetwork"]
