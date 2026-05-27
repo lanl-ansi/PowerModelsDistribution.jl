@@ -40,7 +40,7 @@ case_transformations = Dict(
 
             # obtain solution from dss
             sol_dss = open("$solution_dir/$case.json", "r") do f
-                JSON.parse(f)
+                Dict{String, Any}(JSON.parse(f))
             end
 
             # add lb on neutrals to prevent issues with ACR formulations

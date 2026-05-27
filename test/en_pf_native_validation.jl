@@ -1,7 +1,7 @@
 @info "running explicit neutral power flow tests with native julia power flow solver"
 
 
-function conductor_correction!(data_eng)
+function conductor_correction!(data_eng::AbstractDict)
     nw = data_eng
     if neutral_idx ∈ nw["conductor_ids"]
         filter!(e -> e ≠ neutral_idx, nw["conductor_ids"])
@@ -45,7 +45,7 @@ end
 
 
 
-function sourcebus_voltage_vector_correction!(data_math::Dict{String,Any}; explicit_neutral=true)
+function sourcebus_voltage_vector_correction!(data_math::AbstractDict; explicit_neutral=true)
     if haskey(data_math, "multinetwork")
         for (n, nw) in data_math["nw"]
             for (i, bus) in data_math["nw"]["bus"]
@@ -255,7 +255,7 @@ filter!(e -> e ≠ "case3_balanced_battery_3ph", cases)
 
             # obtain solution from dss
             sol_dss = open("$solution_dir/$case.json", "r") do f
-                JSON.parse(f)
+                Dict{String, Any}(JSON.parse(f))
             end
 
             sol_pmd = transform_solution(res["solution"], data_math, make_si=true)
@@ -285,7 +285,7 @@ filter!(e -> e ≠ "case3_balanced_battery_3ph", cases)
         res = compute_mc_pf(pfd)
 
         sol_dss = open("$solution_dir/$case.json", "r") do f
-            JSON.parse(f)
+            Dict{String, Any}(JSON.parse(f))
         end
 
         sol_pmd = transform_solution(res["solution"], data_math, make_si=true)
@@ -323,7 +323,7 @@ cases = ["test_trans_dy_3w", "test_trans_yy_3w", "ut_trans_3w_dyy_1", "ut_trans_
 
             # obtain solution from dss
             sol_dss = open("$solution_dir/$case.json", "r") do f
-                JSON.parse(f)
+                Dict{String, Any}(JSON.parse(f))
             end
 
             sol_pmd = transform_solution(res["solution"], data_math, make_si=true)
@@ -388,11 +388,10 @@ solution_dir = "data/opendss_solutions"
     @test res["termination_status"]["10"] == PF_CONVERGED
 
     sol_dss = open("$solution_dir/$case.json", "r") do f
-        JSON.parse(f)
+        Dict{String, Any}(JSON.parse(f))
     end
 
     sol_pmd = transform_solution(res["solution"], data_math, make_si=true)
-
     v_maxerr_pu = compare_sol_dss_pmd(sol_dss, sol_pmd["nw"]["10"], eng_ts["nw"]["10"], data_math["nw"]["10"], verbose=false, compare_math=true)
     @test v_maxerr_pu <= 1E-1   # This tolerance is selected for the multinetwork to pass, must be tightened later. The problem may be with OpenDSS json result.
 
@@ -419,7 +418,7 @@ filter!(e -> e ≠ "case3_unbalanced_delta_loads", cases)
 
             # obtain solution from dss
             sol_dss = open("$solution_dir/$case.json", "r") do f
-                JSON.parse(f)
+                Dict{String, Any}(JSON.parse(f))
             end
 
             sol_pmd = transform_solution(res["solution"], data_math, make_si=true)
