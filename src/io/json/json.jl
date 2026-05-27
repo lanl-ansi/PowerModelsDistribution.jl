@@ -16,7 +16,7 @@ end
 parses json files that were dumped via JSON.print (or PMD.print_file)
 """
 function parse_json(io::IO)
-    data = JSON.parse(io)
+    data = JSON.parse(io; dicttype=Dict{String, Any})
     correct_json_import!(data)
 
     return data
@@ -40,21 +40,23 @@ end
 
 helper function to correct data imported from json
 """
-function correct_json_import!(data::Dict{String,<:Any})
+function correct_json_import!(data::AbstractDict{String,<:Any})
     _fix_dtypes!(data)
 end
 
-
-"recursive function to fix data types from data imported from json"
-function _fix_dtypes!(data::Dict)
+function _fix_dtypes!(data::AbstractDict)
     for (k, v) in data
-        if isa(v, Dict)
+        if v isa AbstractDict
             _fix_dtypes!(v)
-        else
-            _fix_enums!(data, k, data[k])
-            _fix_arrays!(data, k, data[k])
-            _fix_nulls!(data, k, data[k])
+        elseif v isa Vector
+            for item in v
+                item isa AbstractDict && _fix_dtypes!(item)
+            end
         end
+
+        _fix_enums!(data, k, data[k])
+        _fix_arrays!(data, k, data[k])
+        _fix_nulls!(data, k, data[k])
     end
 end
 
