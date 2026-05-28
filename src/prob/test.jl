@@ -40,3 +40,25 @@ function _ref_add_connected_components!(ref::Dict{Symbol,<:Any}, data::Mathemati
     component_sets = calc_connected_components(data)
     ref[:components] = Dict(i => c for (i,c) in enumerate(sort(collect(component_sets); by = length)))
 end
+
+"""
+    ref_add_connected_components!(ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any})
+
+Ref-extension for opb problem type to add connected components ref.
+This method is used when InfrastructureModels passes the raw mathematical data dict
+to ref extensions.
+"""
+function ref_add_connected_components!(ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any})
+    _ref_add_connected_components!(ref, data)
+end
+
+"adds connected components for opb problem type from raw mathematical data"
+function _ref_add_connected_components!(ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any})
+    component_sets = _calc_connected_components_math(data)
+
+    ref[:components] = Dict(
+        i => c for (i, c) in enumerate(sort(collect(component_sets); by = length))
+    )
+
+    return nothing
+end

@@ -448,6 +448,7 @@ function check_gen_cost_models(pm::AbstractUnbalancedPowerModel)
                 if model === nothing
                     model = gen["model"]
                 else
+                    @info "cost models are consistent, but model is nothing"
                     if gen["model"] != model
                         error("cost models are inconsistent, the typical model is $(model) however model $(gen["model"]) is given on generator $(i)")
                     end

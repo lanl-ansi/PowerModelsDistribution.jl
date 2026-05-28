@@ -1115,7 +1115,71 @@ end
 computes the connected components of the network graph
 returns a set of sets of bus ids, each set is a connected component
 """
-function _calc_connected_components_math(data::MathematicalModel{NetworkModel}; edges::Vector{<:String}=_math_edge_elements, type::Union{Missing,String}=missing, check_enabled::Bool=true)::Set{Set{Int}}
+function _calc_connected_components_math(
+    data::Dict{String,<:Any};
+    edges::Vector{<:String}=_math_edge_elements,
+    type::Union{Missing,String}=missing,
+    check_enabled::Bool=true,
+)::Set{Set{Int}}
+
+    active_bus = Dict{String,Dict{String,Any}}(x for x in data["bus"] if x.second[pmd_math_component_status["bus"]] != pmd_math_component_status_inactive["bus"] || !check_enabled)
+    active_bus_ids = Set{Int}([parse(Int,i) for (i,bus) in active_bus])
+
+    neighbors = Dict{Int,Vector{Int}}(i => [] for i in active_bus_ids)
+    for edge_type in edges
+        for (id, edge_obj) in get(data, edge_type, Dict{Any,Dict{String,Any}}())
+            if edge_obj[pmd_math_component_status[edge_type]] != pmd_math_component_status_inactive[edge_type] || !check_enabled
+
+                f = edge_obj["f_bus"]
+                t = edge_obj["t_bus"]
+                if !(haskey(neighbors, f) && haskey(neighbors, t))
+                    continue
+                end
+
+                if edge_type == "switch" && !ismissing(type)
+                    if type == "load_blocks"
+                        if edge_obj["dispatchable"] != 1 && edge_obj["state"] == 1
+                            push!(neighbors[f], t)
+                            push!(neighbors[t], f)
+                        end
+                    elseif type == "blocks"
+                        if edge_obj["state"] != 0
+                            push!(neighbors[f], t)
+                            push!(neighbors[t], f)
+                        end
+                    end
+                else
+                    push!(neighbors[f], t)
+                    push!(neighbors[t], f)
+                end
+            end
+        end
+    end
+
+    component_lookup = Dict(i => Set{Int}([i]) for i in active_bus_ids)
+    touched = Set{Int}()
+
+    for i in active_bus_ids
+        if !(i in touched)
+            _cc_dfs(i, neighbors, component_lookup, touched)
+        end
+    end
+
+    return Set{Set{Int}}(values(component_lookup))
+end
+
+"""
+computes the connected components of the network graph
+returns a set of sets of bus ids, each set is a connected component
+"""
+function _calc_connected_components_math(
+    data_model::MathematicalModel;
+    edges::Vector{<:String}=_math_edge_elements,
+    type::Union{Missing,String}=missing,
+    check_enabled::Bool=true,
+)::Set{Set{Int}}
+
+    data = data_model.data
     active_bus = Dict{String,Dict{String,Any}}(x for x in data["bus"] if x.second[pmd_math_component_status["bus"]] != pmd_math_component_status_inactive["bus"] || !check_enabled)
     active_bus_ids = Set{Int}([parse(Int,i) for (i,bus) in active_bus])
 
@@ -1767,4 +1831,44 @@ end
 "infer the internal dimension for a transformer (only in the MATHEMATICAL data model format)"
 function _infer_int_dim_transformer(trans::Dict{String,<:Any}, kron_reduced)
     return _infer_int_dim(trans["f_connections"], trans["configuration"], kron_reduced)
+end
+
+"""
+    _ensure_ravens_gen_cost_models!(data::MathematicalModel)
+
+Ensures generators produced by the RAVENS conversion have valid cost model metadata.
+RAVENS cases may provide generator cost data without a PowerModels-style `"model"`
+field. In that case, default to polynomial cost model 2.
+"""
+function _ensure_ravens_gen_cost_models!(data::MathematicalModel{NetworkModel})
+    for (i, gen) in get(data, "gen", Dict{String,Any}())
+        if haskey(gen, "cost")
+            if !haskey(gen, "model") || isnothing(gen["model"])
+                gen["model"] = 2
+            end
+        else
+            # For source/slack generators with no explicit cost, use zero polynomial cost.
+            gen["model"] = 2
+            gen["cost"] = [0.0]
+        end
+    end
+
+    return data
+end
+
+function _ensure_ravens_gen_cost_models!(data::MathematicalModel{MultinetworkModel})
+    for (nw, data_nw) in get(data, "nw", Dict{String,Any}())
+        for (i, gen) in get(data_nw, "gen", Dict{String,Any}())
+            if haskey(gen, "cost")
+                if !haskey(gen, "model") || isnothing(gen["model"])
+                    gen["model"] = 2
+                end
+            else
+                gen["model"] = 2
+                gen["cost"] = [0.0]
+            end
+        end
+    end
+
+    return data
 end

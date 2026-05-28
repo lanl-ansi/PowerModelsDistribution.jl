@@ -152,6 +152,8 @@ function instantiate_mc_model_ravens(
                 make_pu_extensions=make_pu_extensions,
         )
     end
+    
+    _ensure_ravens_gen_cost_models!(data)
 
     return _IM.instantiate_model(
         data.data,
