@@ -442,26 +442,34 @@ Checks that all generator cost models are of the same type
 """
 function check_gen_cost_models(pm::AbstractUnbalancedPowerModel)
     model = nothing
+    gen_count = 0
+
     for (n, nw_ref) in nws(pm)
-        for (i,gen) in nw_ref[:gen]
-            if haskey(gen, "cost")
-                if model === nothing
-                    model = gen["model"]
-                else
-                    @info "cost models are consistent, but model is nothing"
-                    if gen["model"] != model
-                        error("cost models are inconsistent, the typical model is $(model) however model $(gen["model"]) is given on generator $(i)")
-                    end
-                end
-            else
+        for (i, gen) in get(nw_ref, :gen, Dict())
+            gen_count += 1
+
+            if !haskey(gen, "cost")
                 error("no cost given for generator $(i)")
+            end
+
+            if !haskey(gen, "model") || isnothing(gen["model"])
+                error("invalid or missing cost model for generator $(i); cost=$(gen["cost"])")
+            end
+
+            if model === nothing
+                model = gen["model"]
+            elseif gen["model"] != model
+                error("cost models are inconsistent, the typical model is $(model) however model $(gen["model"]) is given on generator $(i)")
             end
         end
     end
 
+    if gen_count == 0
+        error("no generators found while building fuel-cost objective")
+    end
+
     return model
 end
-
 
 """
     calc_pwl_points(ncost::Int, cost::Vector{<:Real}, pmin::Real, pmax::Real; tolerance=1e-2)
