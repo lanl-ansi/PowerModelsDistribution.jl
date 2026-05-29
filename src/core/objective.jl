@@ -456,7 +456,7 @@ function check_gen_cost_models(pm::AbstractUnbalancedPowerModel)
                 error("invalid or missing cost model for generator $(i); cost=$(gen["cost"])")
             end
 
-            if model === nothing
+            if isnothing(model)
                 model = gen["model"]
             elseif gen["model"] != model
                 error("cost models are inconsistent, the typical model is $(model) however model $(gen["model"]) is given on generator $(i)")

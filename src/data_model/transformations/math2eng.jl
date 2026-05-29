@@ -279,7 +279,7 @@ function _map_math2eng_switch!(data_eng::EngineeringModel{NetworkModel}, data_ma
         merge!(eng_obj, math_obj)
     else
         switch_idx = findfirst([startswith(x, "switch") for x in map["to"]])
-        if !(switch_idx === nothing) # isnothing not allowed in Julia 1.0
+        if !isnothing(switch_idx)
             to_id = map["to"][switch_idx]
             math_obj = _get_math_obj(data_math, to_id)
             # skip to-side power and current; these come from branch
@@ -289,7 +289,7 @@ function _map_math2eng_switch!(data_eng::EngineeringModel{NetworkModel}, data_ma
         end
 
         branch_idx = findfirst([startswith(x, "branch") for x in map["to"]])
-        if !(switch_idx === nothing) # isnothing not allowed in Julia 1.0
+        if !isnothing(switch_idx)
             to_id = map["to"][branch_idx]
             math_obj = _get_math_obj(data_math, to_id)
             # add to-side power and current here
