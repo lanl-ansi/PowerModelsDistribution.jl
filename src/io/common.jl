@@ -65,9 +65,9 @@ function parse_file(
 
     data = nothing
     if ismissing(filetype) || filetype == "json"
-        raw_data = JSON.parse(io)
-        if haskey(raw_data, "Version")
-            data = RavensModel(raw_data)
+        raw_data = JSON.parse(io; dicttype=Dict{String, Any})
+        if haskey(raw_data, "Versions")
+            data = RavensModel(Dict(raw_data))
         elseif haskey(raw_data, "data_model")
             data = parse_json(raw_data)
         else
@@ -102,7 +102,6 @@ function parse_file(
             transform!(data)
         end
     end
-
     data = transform_data_model(
         data_model,
         data;

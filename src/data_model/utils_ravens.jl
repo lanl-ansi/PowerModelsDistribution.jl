@@ -212,9 +212,15 @@ function find_voltages(data::Dict{String,<:Any})::Dict{String,Any}
         trinfos = _recursive_dict_get(data, ["AssetInfo", "PowerTransformerInfo", info_name, "PowerTransformerInfo.TransformerTankInfos", info_name, "TransformerTankInfo.TransformerEndInfos"], [])
 
         # Corrects voltage ratios for TransformerTanks with Single-phase Tanks datasheets
-        voltage_ratios = ones(length(tr["ConductingEquipment.Terminals"]))
-        for wdg_id in 1:1:length(tr["ConductingEquipment.Terminals"])
-            conns = length(_phasecode_map[tr["ConductingEquipment.Terminals"][wdg_id]["Terminal.phases"]])
+        if "PowerTransformer.TransformerTank" ∈ keys(tr) 
+            tr_end = tr["PowerTransformer.TransformerTank"][1]["TransformerTank.TransformerTankEnd"][1] 
+        else
+            tr_end = tr["PowerTransformer.PowerTransformerEnd"][1]
+        end 
+
+        voltage_ratios = ones(length(tr_end["ConductingEquipment.Terminals"]))
+        for wdg_id in 1:1:length(tr_end["ConductingEquipment.Terminals"])
+            conns = length(_phasecode_map[tr_end["ConductingEquipment.Terminals"][wdg_id]["Terminal.phases"]])
             voltage_ratios[wdg_id] = conns >= 3 ? sqrt(3) : 1.0
         end
 
@@ -227,7 +233,6 @@ function find_voltages(data::Dict{String,<:Any})::Dict{String,Any}
             voltages[match(Regex("ConnectivityNode::'(.+)'"), term["Terminal.ConnectivityNode"]).captures[1]] = get(rated_u, n, missing)
         end
     end
-
     return voltages
 end
 
@@ -245,10 +250,17 @@ function find_voltages(data::RavensModel)::Dict{String,Any}
         info_name = match(Regex("TransformerTankInfo::'(.*)'"), get(get(tr, "PowerTransformer.TransformerTank", [Dict()])[1], "PowerSystemResource.AssetDatasheet", "TransformerTankInfo::''")).captures[1]
         trinfos = _recursive_dict_get(data, ["AssetInfo", "PowerTransformerInfo", info_name, "PowerTransformerInfo.TransformerTankInfos", info_name, "TransformerTankInfo.TransformerEndInfos"], [])
 
+
         # Corrects voltage ratios for TransformerTanks with Single-phase Tanks datasheets
-        voltage_ratios = ones(length(tr["ConductingEquipment.Terminals"]))
-        for wdg_id in 1:1:length(tr["ConductingEquipment.Terminals"])
-            conns = length(_phasecode_map[tr["ConductingEquipment.Terminals"][wdg_id]["Terminal.phases"]])
+        if "PowerTransformer.TransformerTank" ∈ keys(tr) 
+            tr_end = tr["PowerTransformer.TransformerTank"][1]["TransformerTank.TransformerTankEnd"][1] 
+        else
+            tr_end = tr["PowerTransformer.PowerTransformerEnd"][1]
+        end 
+        
+        voltage_ratios = ones(length(tr_end["ConductingEquipment.Terminals"]))
+        for wdg_id in 1:1:length(tr_end["ConductingEquipment.Terminals"])
+            conns = length(_phasecode_map[tr_end["ConductingEquipment.Terminals"][wdg_id]["Terminal.phases"]])
             voltage_ratios[wdg_id] = conns >= 3 ? sqrt(3) : 1.0
         end
 
@@ -306,6 +318,7 @@ end
 
 
 
+
 function _recursive_dict_set!(dict::Dict, path::Vector{<:Any}, value::Any)
     if length(path) > 1
         _recursive_dict_set!(dict[path[1]], path[2:end], value)
@@ -354,6 +367,7 @@ function add_base_voltages!(data::RavensModel; overwrite::Bool=false)::Nothing
     end
 
     base_voltages = find_base_voltages(data)
+
 
     unique_bv = unique(values(base_voltages))
 

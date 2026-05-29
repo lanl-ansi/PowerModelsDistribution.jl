@@ -40,7 +40,6 @@ function transform_data_model(
     make_pu_extensions::Vector{<:Function}=Function[],
     correct_network_data::Bool=true,
 )::MathematicalModel
-
     data_math = _map_ravens2math(
         data;
         multinetwork=multinetwork,
@@ -50,7 +49,6 @@ function transform_data_model(
         ravens2math_passthrough=ravens2math_passthrough,
         global_keys=global_keys,
     )
-
     correct_network_data && correct_network_data!(data_math; make_pu=make_pu, make_pu_extensions=make_pu_extensions)
 
     return data_math
@@ -924,7 +922,8 @@ function _map_ravens2math_power_transformer!(data_math::MathematicalModel{Networ
             for wdg_id in 1:nrw
 
                 # wdg phasecode & terminals
-                wdg_terminals = ravens_obj["ConductingEquipment.Terminals"][wdg_id]
+                t_end = ravens_obj["PowerTransformer.PowerTransformerEnd"][wdg_id]
+                wdg_terminals = t_end["ConductingEquipment.Terminals"][1]
                 wdg_phasecode = wdg_terminals["Terminal.phases"]
 
                 # wdg endNumber
@@ -1108,7 +1107,8 @@ function _map_ravens2math_power_transformer!(data_math::MathematicalModel{Networ
                 tm_nom = wdgs_confs[wdg_id] == DELTA ? wdgs[wdg_id]["PowerTransformerEnd.ratedU"] * sqrt(3) / voltage_scale_factor : wdgs[wdg_id]["PowerTransformerEnd.ratedU"] / voltage_scale_factor
 
                 # Get correct f_node for winding
-                wdg_term = ravens_obj["ConductingEquipment.Terminals"][wdg_id]
+                t_end = ravens_obj["PowerTransformer.PowerTransformerEnd"][wdg_id]
+                wdg_term = t_end["ConductingEquipment.Terminals"][1]
                 f_node_wdgterm = _extract_name(wdg_term["Terminal.ConnectivityNode"])
 
                 # Transformer Object
@@ -1731,8 +1731,8 @@ Converts ravens voltage sources into mathematical generators and (if needed) imp
 function _map_ravens2math_energy_source!(data_math::MathematicalModel{NetworkModel}, data_ravens::RavensModel; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
     voltage_scale_factor = data_math["settings"]["voltage_scale_factor"]
     voltage_scale_factor_sqrt3 = voltage_scale_factor * sqrt(3)
-
-    for (name, ravens_obj) in get(data_ravens, "EnergySource", Dict{Any,Dict{String,Any}}())
+    energy_connections = data_ravens.data["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"]
+    for (name, ravens_obj) in get(energy_connections, "EnergySource", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj_ravens(ravens_obj["Ravens.cimObjectType"], name, ravens_obj, length(data_math["gen"]) + 1; pass_props=pass_props)
         math_obj["name"] = "_virtual_gen.energy_source.$name"
 
@@ -1886,6 +1886,7 @@ function _map_ravens2math_energy_source!(data_math::MathematicalModel{NetworkMod
         end
 
         data_math["gen"]["$(math_obj["index"])"] = math_obj
+
         push!(data_math["map"], Dict{String,Any}(
             "from" => name,
             "to" => map_to,
@@ -1899,7 +1900,6 @@ end
 function _map_ravens2math_rotating_machine!(data_math::MathematicalModel{NetworkModel}, data_ravens::RavensModel; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
     power_scale_factor = data_math["settings"]["power_scale_factor"]
     voltage_scale_factor = data_math["settings"]["voltage_scale_factor"]
-
     for (name, ravens_obj) in get(data_ravens, "RotatingMachine", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj_ravens(ravens_obj["Ravens.cimObjectType"], name, ravens_obj, length(data_math["gen"]) + 1; pass_props=pass_props)
 
