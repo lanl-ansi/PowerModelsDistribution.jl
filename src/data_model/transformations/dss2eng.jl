@@ -538,7 +538,7 @@ end
 "Adds transformers to `data_eng` from `data_dss`"
 function _dss2eng_xfmrcode!(data_eng::EngineeringModel{NetworkModel}, data_dss::OpenDssDataModel, import_all::Bool, sm_ub::String="emergency")
     @assert sm_ub in ["emergency", "normal"] "Unrecognized sm_ub '$sm_ub'. Must be either 'emergency' or 'normal'"
-    sm_ub = sm_ub == "emergency" ? "emerghkva" : "normhkva"
+    sm_ub = sm_ub == "emergency" ? "emerghkva" : "normhkva"         #???
 
     for (id, dss_obj) in get(data_dss, "xfmrcode", Dict{String,Any}())
         nphases = dss_obj["phases"]

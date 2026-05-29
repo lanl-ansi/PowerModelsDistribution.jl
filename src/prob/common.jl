@@ -104,7 +104,7 @@ function instantiate_mc_model(
     kwargs...
     )
 
-    if typeof(data) === EngineeringModel || typeof(data) === RavensModel
+    if data isa EngineeringModel || data isa RavensModel
         @info "Converting data model to MATHEMATICAL first to build JuMP model"
         data = transform_data_model(
             data;
@@ -116,6 +116,7 @@ function instantiate_mc_model(
         )
     end
 
+    @assert data isa MathematicalModel "instantiate_mc_model expected MathematicalModel before calling InfrastructureModels, got $(typeof(data))"
     return _IM.instantiate_model(
         data.data,
         model_type,
