@@ -217,7 +217,7 @@ and pass the result as 'uniform_v_start' to use the same values for all networks
 The argument 'epsilon' controls the offset added to ungrounded terminals which would otherwise be set to zero.
 """
 function add_start_voltage!(
-    data_math::MathematicalModel;
+    data_math::T;
     coordinates=:rectangular,
     uniform_v_start=missing,
     vr_default=0.0,
@@ -226,7 +226,7 @@ function add_start_voltage!(
     va_default=0.0,
     epsilon::Number=1E-3,
     explicit_neutral=true
-    )::MathematicalModel
+    )::T where {T <: MathematicalModel}
     @assert coordinates in [:polar, :rectangular] "Legal values for the 'coordinates' argument are [:polar,:rectangular], not :$coordinates."
 
     is_mn = haskey(data_math, "multinetwork")
@@ -258,7 +258,8 @@ add_start_vrvi!(data_math::MathematicalModel; kwargs...)
 
 Short-hand for [`add_start_voltage`](@ref add_start_voltage) with rectangular coordinates (coordinates=:rectangular).
 """
-add_start_vrvi!(data_math::MathematicalModel; kwargs...) = add_start_voltage!(data_math, coordinates=:rectangular, kwargs...)
+add_start_vrvi!(data_math::MathematicalModel; kwargs...) =
+    add_start_voltage!(data_math; coordinates=:rectangular, kwargs...)
 add_start_vrvi!(data_math::Dict{String,Any}; kwargs...) = add_start_voltage!(data_math; coordinates=:rectangular, kwargs...)
 
 
@@ -267,5 +268,6 @@ add_start_vmva!(data_math::MathematicalModel; kwargs...)
 
 Short-hand for [`add_start_voltage`](@ref add_start_voltage) with polar coordinates (coordinates=:polar).
 """
-add_start_vmva!(data_math::MathematicalModel; kwargs...) = add_start_voltage!(data_math, coordinates=:polar, kwargs...)
+add_start_vmva!(data_math::MathematicalModel; kwargs...) =
+    add_start_voltage!(data_math; coordinates=:polar, kwargs...)
 add_start_vmva!(data_math::Dict{String,Any}; kwargs...) = add_start_voltage!(data_math; coordinates=:polar, kwargs...)
