@@ -904,6 +904,7 @@ end
 
 # Data objects
 add_bus!(data_eng::Dict{String,<:Any}, id::String; kwargs...) = add_object!(data_eng, "bus", id, create_bus(; kwargs...))
+add_bus!(data_eng::EngineeringModel{NetworkModel}, id::String; kwargs...) = add_object!(data_eng.data, "bus", id, create_bus(; kwargs...))
 add_linecode!(data_eng::Dict{String,<:Any}, id::String, rs::Matrix{<:Real}, xs::Matrix{<:Real}; kwargs...) = add_object!(data_eng, "linecode", id, create_linecode(rs, xs; kwargs...))
 add_xfmrcode!(data_eng::Dict{String,<:Any}, id::String; kwargs...) = add_object!(data_eng, "xfmrcode", id, create_xfmrcode(; kwargs...))
 # add_time_series!(data_eng::Dict{String,<:Any}, id::String; kwargs...) = add_object!(data_eng, "time_series", id, create_timeseries(; kwargs...))
