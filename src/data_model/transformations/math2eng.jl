@@ -333,13 +333,13 @@ end
 
 ""
 function _map_math2eng_root!(data_eng::EngineeringModel, data_math::MathematicalModel{NetworkModel}, map::Dict{String,<:Any})
-    if !ismultinetwork(data_math)
-        data_eng["settings"] = Dict{String,Any}("sbase" => get(get(data_math, "settings", Dict{String,Any}()), "sbase", NaN))  # in case of no solution
-        data_eng["per_unit"] = get(data_math, "per_unit", true)
-    else
-        for (n, nw) in get(data_eng, "nw", Dict{String,Any}())
-            nw["settings"] = Dict{String,Any}("sbase" => data_math["nw"][n]["settings"]["sbase"])
-            nw["per_unit"] = data_math["nw"][n]["per_unit"]
-        end
+    data_eng["settings"] = Dict{String,Any}("sbase" => get(get(data_math, "settings", Dict{String,Any}()), "sbase", NaN))  # in case of no solution
+    data_eng["per_unit"] = get(data_math, "per_unit", true)
+end
+
+function _map_math2eng_root!(data_eng::EngineeringModel, data_math::MathematicalModel{MultinetworkModel}, map::Dict{String,<:Any})
+    for (n, nw) in get(data_eng, "nw", Dict{String,Any}())
+        nw["settings"] = Dict{String,Any}("sbase" => data_math["nw"][n]["settings"]["sbase"])
+        nw["per_unit"] = data_math["nw"][n]["per_unit"]
     end
 end
