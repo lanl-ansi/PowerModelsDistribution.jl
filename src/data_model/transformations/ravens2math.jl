@@ -1731,7 +1731,7 @@ Converts ravens voltage sources into mathematical generators and (if needed) imp
 function _map_ravens2math_energy_source!(data_math::MathematicalModel{NetworkModel}, data_ravens::RavensModel; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
     voltage_scale_factor = data_math["settings"]["voltage_scale_factor"]
     voltage_scale_factor_sqrt3 = voltage_scale_factor * sqrt(3)
-    energy_connections = data_ravens.data["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"]
+    energy_connections = safe_get_container(data_ravens,["PowerSystemResource","Equipment","ConductingEquipment","EnergyConnection"])
     for (name, ravens_obj) in get(energy_connections, "EnergySource", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj_ravens(ravens_obj["Ravens.cimObjectType"], name, ravens_obj, length(data_math["gen"]) + 1; pass_props=pass_props)
         math_obj["name"] = "_virtual_gen.energy_source.$name"
