@@ -237,13 +237,21 @@ end
 """
 """
 function _collect_nw_maps!(data_math::MathematicalModel{MultinetworkModel})
-    data_math["map"] = Dict{String,Vector{Dict{String,Any}}}()
-    for (n,nw) in data_math["nw"]
-        data_math["map"][n] = pop!(nw, "map")
+    maps = Dict{String,Vector{Dict{String,Any}}}()
+
+    for (n, nw) in data_math["nw"]
+        if haskey(nw, "map")
+            maps[n] = pop!(nw, "map")
+        else
+            @warn "network has no map; using empty map" n=n keys=collect(keys(nw))
+            maps[n] = Dict{String,Any}[]
+        end
     end
+
+    data_math["map"] = maps
+
+    return data_math
 end
-
-
 """
 """
 function _collect_nw_bus_lookups!(data_math::MathematicalModel{MultinetworkModel})
