@@ -255,12 +255,21 @@ end
 """
 """
 function _collect_nw_bus_lookups!(data_math::MathematicalModel{MultinetworkModel})
-    data_math["bus_lookup"] = Dict{String,Dict{String,Any}}()
-    for (n,nw) in data_math["nw"]
-        data_math["bus_lookup"][n] = pop!(nw, "bus_lookup")
-    end
-end
+    bus_lookups = Dict{String,Dict{String,Any}}()
 
+    for (n, nw) in data_math["nw"]
+        if haskey(nw, "bus_lookup")
+            bus_lookups[n] = pop!(nw, "bus_lookup")
+        else
+            @warn "network has no bus_lookup; using empty lookup" n=n keys=collect(keys(nw))
+            bus_lookups[n] = Dict{String,Any}()
+        end
+    end
+
+    data_math["bus_lookup"] = bus_lookups
+
+    return data_math
+end
 
 """
 """

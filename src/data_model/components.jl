@@ -901,11 +901,25 @@ function add_vbase_default!(data_eng::Dict{String,<:Any}, bus::String, vbase::Re
     data_eng["settings"]["vbases_default"][bus] = vbase
 end
 
+function add_vbase_default!(data_eng_mdl::EngineeringModel{NetworkModel}, bus::String, vbase::Real)
+    data_eng = data_eng_mdl.data
+    if !haskey(data_eng, "settings")
+        data_eng["settings"] = Dict{String,Any}()
+    end
+
+    if !haskey(data_eng["settings"], "vbases_default")
+        data_eng["settings"]["vbases_default"] = Dict{Any,Real}()
+    end
+
+    data_eng["settings"]["vbases_default"][bus] = vbase
+end
+
 
 # Data objects
 add_bus!(data_eng::Dict{String,<:Any}, id::String; kwargs...) = add_object!(data_eng, "bus", id, create_bus(; kwargs...))
 add_bus!(data_eng::EngineeringModel{NetworkModel}, id::String; kwargs...) = add_object!(data_eng.data, "bus", id, create_bus(; kwargs...))
 add_linecode!(data_eng::Dict{String,<:Any}, id::String, rs::Matrix{<:Real}, xs::Matrix{<:Real}; kwargs...) = add_object!(data_eng, "linecode", id, create_linecode(rs, xs; kwargs...))
+add_linecode!(data_eng::EngineeringModel{NetworkModel}, id::String, rs::Matrix{<:Real}, xs::Matrix{<:Real}; kwargs...) = add_object!(data_eng.data, "linecode", id, create_linecode(rs, xs; kwargs...))
 add_xfmrcode!(data_eng::Dict{String,<:Any}, id::String; kwargs...) = add_object!(data_eng, "xfmrcode", id, create_xfmrcode(; kwargs...))
 # add_time_series!(data_eng::Dict{String,<:Any}, id::String; kwargs...) = add_object!(data_eng, "time_series", id, create_timeseries(; kwargs...))
 
@@ -916,9 +930,12 @@ add_xfmrcode!(data_eng::Dict{String,<:Any}, id::String; kwargs...) = add_object!
 
 # Edge objects
 add_line!(data_eng::Dict{String,<:Any}, id::String, f_bus::String, t_bus::String, f_connections::Vector{Int}, t_connections::Vector{Int}; kwargs...) = add_object!(data_eng, "line", id, create_line(f_bus, t_bus, f_connections, t_connections; kwargs...))
+add_line!(data_eng::EngineeringModel{NetworkModel}, id::String, f_bus::String, t_bus::String, f_connections::Vector{Int}, t_connections::Vector{Int}; kwargs...) = add_object!(data_eng.data, "line", id, create_line(f_bus, t_bus, f_connections, t_connections; kwargs...))
 add_transformer!(data_eng::Dict{String,<:Any}, id::String, buses::Vector{<:String}, connections::Vector{Vector{Int}}; kwargs...) = add_object!(data_eng, "transformer", id, create_transformer(buses, connections; kwargs...))
 add_transformer!(data_eng::Dict{String,<:Any}, id::String, f_bus::String, t_bus::String, f_connections::Vector{Int}, t_connections::Vector{Int}; kwargs...) = add_object!(data_eng, "transformer", id, create_al2w_transformer(f_bus, t_bus, f_connections, t_connections; kwargs...))
+add_transformer!(data_eng::EngineeringModel{NetworkModel}, id::String, f_bus::String, t_bus::String, f_connections::Vector{Int}, t_connections::Vector{Int}; kwargs...) = add_object!(data_eng.data, "transformer", id, create_al2w_transformer(f_bus, t_bus, f_connections, t_connections; kwargs...))
 add_switch!(data_eng::Dict{String,<:Any}, id::String, f_bus::String, t_bus::String, f_connections::Vector{Int}, t_connections::Vector{Int}; kwargs...) = add_object!(data_eng, "switch", id, create_switch(f_bus, t_bus, f_connections, t_connections; kwargs...))
+add_switch!(data_eng::EngineeringModel{NetworkModel}, id::String, f_bus::String, t_bus::String, f_connections::Vector{Int}, t_connections::Vector{Int}; kwargs...) = add_object!(data_eng.data, "switch", id, create_switch(f_bus, t_bus, f_connections, t_connections; kwargs...))
 
 @doc "adds a line to provided ENGINEERING model, see [`create_line`](@ref create_line)" add_line!
 @doc "adds a transformer to provided ENGINEERING model, see [`create_transformer`](@ref create_transformer) and [`create_al2w_transformer`](@ref create_al2w_transformer)" add_transformer!
@@ -926,11 +943,17 @@ add_switch!(data_eng::Dict{String,<:Any}, id::String, f_bus::String, t_bus::Stri
 
 # Node objects
 add_load!(data_eng::Dict{String,<:Any}, id::String, bus::String, connections::Vector{Int}; kwargs...) = add_object!(data_eng, "load", id, create_load(bus, connections; kwargs...))
+add_load!(data_eng::EngineeringModel{NetworkModel}, id::String, bus::String, connections::Vector{Int}; kwargs...) = add_object!(data_eng.data, "load", id, create_load(bus, connections; kwargs...))
 add_shunt!(data_eng::Dict{String,<:Any}, id::String, bus::String, connections::Vector{Int}; kwargs...) = add_object!(data_eng, "shunt", id, create_shunt(bus, connections; kwargs...))
+add_shunt!(data_eng::EngineeringModel{NetworkModel}, id::String, bus::String, connections::Vector{Int}; kwargs...) = add_object!(data_eng.data, "shunt", id, create_shunt(bus, connections; kwargs...))
 add_voltage_source!(data_eng::Dict{String,<:Any}, id::String, bus::String, connections::Vector{Int}; kwargs...) = add_object!(data_eng, "voltage_source", id, create_voltage_source(bus, connections; kwargs...))
+add_voltage_source!(data_eng::EngineeringModel{NetworkModel}, id::String, bus::String, connections::Vector{Int}; kwargs...) = add_object!(data_eng.data, "voltage_source", id, create_voltage_source(bus, connections; kwargs...))
 add_generator!(data_eng::Dict{String,<:Any}, id::String, bus::String, connections::Vector{Int}; kwargs...) = add_object!(data_eng, "generator", id, create_generator(bus, connections; kwargs...))
+add_generator!(data_eng::EngineeringModel{NetworkModel}, id::String, bus::String, connections::Vector{Int}; kwargs...) = add_object!(data_eng.data, "generator", id, create_generator(bus, connections; kwargs...))
 add_storage!(data_eng::Dict{String,<:Any}, id::String, bus::String, connections::Vector{Int}; kwargs...) = add_object!(data_eng, "storage", id, create_storage(bus, connections; kwargs...))
+add_storage!(data_eng::EngineeringModel{NetworkModel}, id::String, bus::String, connections::Vector{Int}; kwargs...) = add_object!(data_eng.data, "storage", id, create_storage(bus, connections; kwargs...))
 add_solar!(data_eng::Dict{String,<:Any}, id::String, bus::String, connections::Vector{Int}; kwargs...) = add_object!(data_eng, "solar", id, create_solar(bus, connections; kwargs...))
+add_solar!(data_eng::EngineeringModel{NetworkModel}, id::String, bus::String, connections::Vector{Int}; kwargs...) = add_object!(data_eng.data, "solar", id, create_solar(bus, connections; kwargs...))
 
 @doc "adds a load to provided ENGINEERING model, see [`create_load`](@ref create_load)" add_load!
 @doc "adds a shunt to provided ENGINEERING model, see [`create_shunt`](@ref create_shunt)" add_shunt!
