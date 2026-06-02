@@ -161,7 +161,7 @@ Version of `apply_pmd!` that supports args and kwargs
 """
 function apply_pmd!(func!::Function, data::DistributionModel{MultinetworkModel}, args...; apply_to_subnetworks::Bool=true, kwargs...)
     if apply_to_subnetworks
-        for (nw, nw_data) in data.nw
+        for (nw, nw_data) in data["nw"]
             func!(nw_data, args...; kwargs...)
         end
     else

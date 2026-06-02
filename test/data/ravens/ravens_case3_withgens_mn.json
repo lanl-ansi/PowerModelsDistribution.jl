@@ -216,7 +216,7 @@
               "ConductingEquipment.BaseVoltage": "BaseVoltage::'BaseV_0.4'",
               "EnergyConsumer.phaseConnection": "PhaseShuntConnectionKind.Y",
               "EnergyConsumer.LoadResponse": "LoadResponseCharacteristic::'Constant kVA'",
-              "EnergyConsumer.Profile": "EnergyConsumerSchedule::'load_shape'",
+              "EnergyConsumer.LoadProfile": "EnergyConsumerSchedule::'load_shape'",
               "ConductingEquipment.Terminals": [
                 {
                   "Ravens.cimObjectType": "Terminal",
@@ -250,7 +250,7 @@
               "ConductingEquipment.BaseVoltage": "BaseVoltage::'BaseV_0.4'",
               "EnergyConsumer.phaseConnection": "PhaseShuntConnectionKind.Y",
               "EnergyConsumer.LoadResponse": "LoadResponseCharacteristic::'Constant kVA'",
-              "EnergyConsumer.Profile": "EnergyConsumerSchedule::'load_shape'",
+              "EnergyConsumer.LoadProfile": "EnergyConsumerSchedule::'load_shape'",
               "ConductingEquipment.Terminals": [
                 {
                   "Ravens.cimObjectType": "Terminal",
@@ -284,7 +284,7 @@
               "ConductingEquipment.BaseVoltage": "BaseVoltage::'BaseV_0.4'",
               "EnergyConsumer.phaseConnection": "PhaseShuntConnectionKind.Y",
               "EnergyConsumer.LoadResponse": "LoadResponseCharacteristic::'Constant kVA'",
-              "EnergyConsumer.Profile": "EnergyConsumerSchedule::'load_shape'",
+              "EnergyConsumer.LoadProfile": "EnergyConsumerSchedule::'load_shape'",
               "ConductingEquipment.Terminals": [
                 {
                   "Ravens.cimObjectType": "Terminal",
@@ -603,11 +603,11 @@
   "BasicIntervalSchedule": {
     "load_shape": {
       "EnergyConsumerSchedule.startDay": "Monday",
-      "BasicIntervalSchedule.value2Multiplier": "k",
-      "BasicIntervalSchedule.value1Multiplier": "k",
+      "BasicIntervalSchedule.value2Multiplier": "UnitMultiplier.k",
+      "BasicIntervalSchedule.value1Multiplier": "UnitMultiplier.k",
       "Ravens.cimObjectType": "EnergyConsumerSchedule",
-      "BasicIntervalSchedule.value2Unit": "VAr",
-      "BasicIntervalSchedule.value1Unit": "W",
+      "BasicIntervalSchedule.value2Unit": "UnitSymbol.VAr",
+      "BasicIntervalSchedule.value1Unit": "UnitSymbol.W",
       "EnergyConsumerSchedule.RegularTimePoints": [
         {
             "RegularTimePoint.sequenceNumber": 1,

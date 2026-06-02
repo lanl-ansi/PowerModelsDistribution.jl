@@ -124,10 +124,9 @@ function _map_ravens2math(
             nws_vect = Vector{MathematicalModel{MultinetworkModel}}(undef, min_length)
 
             # Multithreaded loop to create each nw dictionary. Store them in vector (to allow multithreading)
-            Threads.@threads for n = 1:1:min_length
-                nw_dict = MathematicalModel{MultinetworkModel}(
-                    Dict{String,Any}(
-                        string(n) => MathematicalModel{NetworkModel}(
+            for n in 1:1:min_length
+                key = string(n)
+                data_math["nw"][key] = MathematicalModel{NetworkModel}(
                             Dict{String,Any}(
                                 "per_unit" => get(_data_ravens, "per_unit", false),
                                 "is_projected" => get(_data_ravens, "is_projected", false),
@@ -137,21 +136,17 @@ function _map_ravens2math(
                                 "switch_close_actions_ub" => switch_close_actions_ub,
                             )
                         )
-                    )
-                )
-
-                # Store nw dict in vector
-                nws_vect[n] = nw_dict
-
-                @warn typeof(nws_vect[n]) typeof(_data_ravens)
-                # Perform conversion ravens2math
-                apply_pmd!(_map_ravens2math_nw!, nws_vect[n], _data_ravens; ravens2math_passthrough=ravens2math_passthrough, ravens2math_extensions=ravens2math_extensions, nw=n)
             end
+
+
+            # Perform conversion MM
+            apply_pmd!(_map_ravens2math_nw!, data_math, _data_ravens; apply_to_subnetworks=true, ravens2math_passthrough=ravens2math_passthrough, ravens2math_extensions=ravens2math_extensions)
+
 
             # Merge dict in vector into data_math dictionary (other for loop to allow multithreading)
-            for nw_dict in nws_vect
-                merge!(data_math["nw"], nw_dict.data)
-            end
+            # for nw_dict in nws_vect
+            #     merge!(data_math["nw"], nw_dict.data)
+            # end
 
         else
             @error("No timeseries and/or multinetwork information detected.")
@@ -170,6 +165,7 @@ function _map_ravens2math(
                 "switch_close_actions_ub" => switch_close_actions_ub,
             )
         )
+        #TODO: how come apply_pmd does not get to `_map_ravens2math_nw!` much less the outermost else inside?
         apply_pmd!(_map_ravens2math_nw!, data_math, _data_ravens; ravens2math_passthrough=ravens2math_passthrough, ravens2math_extensions=ravens2math_extensions)
     end
 
@@ -177,15 +173,17 @@ function _map_ravens2math(
     if multinetwork
         _collect_nw_maps!(data_math)
         _collect_nw_bus_lookups!(data_math)
+        return data_math
     end
 
-    return MathematicalModel(data_math)
+    return MathematicalModel(data_math) #TODO: is this horrible?
 end
 
 
 """
 """
 function _map_ravens2math_nw!(data_math::MathematicalModel, data_ravens::RavensModel; ravens2math_passthrough::Dict{String,Vector{String}}=Dict{String,Vector{String}}(), ravens2math_extensions::Vector{<:Function}=Function[], nw::Int=nw_id_default)
+
     if nw == 0
         data_math["map"] = Vector{Dict{String,Any}}([
             Dict{String,Any}("unmap_function" => "_map_math2eng_root!")
@@ -213,7 +211,6 @@ function _map_ravens2math_nw!(data_math::MathematicalModel, data_ravens::RavensM
         _map_settings_vbases_default!(data_math)
 
     else
-
         data_math[string(nw)]["map"] = Vector{Dict{String,Any}}([
             Dict{String,Any}("unmap_function" => "_map_math2eng_root!")
         ])
