@@ -1045,9 +1045,9 @@ returns a set of sets of bus ids, each set is a connected component
 function calc_connected_components(data::DistributionModel{NetworkModel}; edges::Union{Missing, Vector{String}}=missing, type::Union{Missing,String}=missing, check_enabled::Bool=true)::Set{Set}
     pmd_data = get_pmd_data(data)
 
-    if typeof(data) === EngineeringModel{NetworkModel}
+    if data isa EngineeringModel
         return _calc_connected_components_eng(pmd_data; edges=ismissing(edges) ? _eng_edge_elements : edges, type=type, check_enabled=check_enabled)
-    elseif typeof(data) === MathematicalModel{NetworkModel}
+    elseif data isa MathematicalModel
         return _calc_connected_components_math(pmd_data; edges=ismissing(edges) ? _math_edge_elements : edges, type=type, check_enabled=check_enabled)
     else
         error("data_model `$(get(pmd_data, "data_model", MATHEMATICAL))` is unrecongized")
@@ -1270,13 +1270,14 @@ end
 
 checks that all parallel branches have the same orientation
 """
-function correct_branch_directions!(data::MathematicalModel)
+function correct_branch_directions!(data::Union{EngineeringModel, MathematicalModel})
     apply_pmd!(_correct_branch_directions!, data)
 end
 
 
 "checks that all parallel branches have the same orientation"
-function _correct_branch_directions!(data_math::MathematicalModel{NetworkModel})
+function _correct_branch_directions!(data_math_mdl::MathematicalModel{NetworkModel})
+    data_math = data_math_mdl.data
     orientations = Set()
     for (i, branch) in data_math["branch"]
         orientation = (branch["f_bus"], branch["t_bus"])
@@ -1306,6 +1307,40 @@ function _correct_branch_directions!(data_math::MathematicalModel{NetworkModel})
 
 end
 
+"checks that all parallel engineering lines have the same orientation"
+function _correct_branch_directions!(data_eng_mdl::EngineeringModel{NetworkModel})
+    data_eng = data_eng_mdl.data
+    orientations = Set{Tuple{String,String}}()
+
+    for (i, line) in get(data_eng, "line", Dict{String,Any}())
+        if !(haskey(line, "f_bus") && haskey(line, "t_bus"))
+            @warn "skipping line $(i) because it does not have f_bus/t_bus fields"
+            continue
+        end
+
+        orientation = (line["f_bus"], line["t_bus"])
+        orientation_rev = (line["t_bus"], line["f_bus"])
+
+        if orientation_rev in orientations
+            @warn "reversing the orientation of line $(i) $(orientation) to be consistent with other parallel lines"
+
+            line_original = copy(line)
+
+            line["f_bus"] = line_original["t_bus"]
+            line["t_bus"] = line_original["f_bus"]
+
+            if haskey(line_original, "f_connections") && haskey(line_original, "t_connections")
+                line["f_connections"] = line_original["t_connections"]
+                line["t_connections"] = line_original["f_connections"]
+            end
+        else
+            push!(orientations, orientation)
+        end
+    end
+
+    return data_eng
+end
+
 
 """
     check_branch_loops(data::Dict{String,<:Any})
@@ -1332,13 +1367,14 @@ end
 
 checks that all buses are unique and other components link to valid buses
 """
-function check_connectivity(data::MathematicalModel)
+function check_connectivity(data)
     apply_pmd!(_check_connectivity, data)
 end
 
 
 "checks that all buses are unique and other components link to valid buses"
-function _check_connectivity(data::MathematicalModel{NetworkModel})
+function _check_connectivity(data_mdl::EngineeringModel{NetworkModel})
+    data = data_mdl.data
     bus_ids = Set(bus["index"] for (i,bus) in data["bus"])
     @assert(length(bus_ids) == length(data["bus"])) # if this is not true something very bad is going on
 
@@ -1385,6 +1421,80 @@ function _check_connectivity(data::MathematicalModel{NetworkModel})
             error("to bus $(branch["t_bus"]) in branch $(i) is not defined")
         end
     end
+end
+
+const _math_connectivity_component_bus_fields = Dict{String,Vector{String}}(
+    "load" => ["load_bus"],
+    "shunt" => ["shunt_bus"],
+    "gen" => ["gen_bus"],
+    "storage" => ["storage_bus"],
+    "switch" => ["f_bus", "t_bus"],
+    "branch" => ["f_bus", "t_bus"],
+)
+
+function _has_math_connectivity_components(data::Dict{String,<:Any})::Bool
+    return any(
+        haskey(data, key) &&
+        data[key] isa AbstractDict &&
+        !isempty(data[key])
+        for key in keys(_math_connectivity_component_bus_fields)
+    )
+end
+
+"""
+    _check_connectivity(data_mdl::MathematicalModel{NetworkModel})
+
+Checks that mathematical-model bus indices are unique and that all mathematical
+components that reference buses point to valid bus indices.
+
+Missing component tables are treated as empty. A metadata-only network with no
+`"bus"` table is skipped, but a network with connectivity components and no
+`"bus"` table errors.
+"""
+function _check_connectivity(data_mdl::MathematicalModel{NetworkModel})
+    data = data_mdl.data
+
+    if !haskey(data, "bus")
+        if _has_math_connectivity_components(data)
+            error("mathematical network has connectivity components but no bus table; keys=$(collect(keys(data)))")
+        end
+
+        return nothing
+    end
+
+    bus_ids = Set{Int}()
+
+    for (i, bus) in data["bus"]
+        if !haskey(bus, "index")
+            error("bus $(i) is missing required mathematical field \"index\"")
+        end
+
+        bus_index = bus["index"]
+
+        if bus_index in bus_ids
+            error("duplicate bus index $(bus_index) found at bus $(i)")
+        end
+
+        push!(bus_ids, bus_index)
+    end
+
+    for (component_type, bus_fields) in _math_connectivity_component_bus_fields
+        for (i, component) in get(data, component_type, Dict{String,Any}())
+            for bus_field in bus_fields
+                if !haskey(component, bus_field)
+                    error("$(component_type) $(i) is missing required mathematical field \"$(bus_field)\"")
+                end
+
+                bus_index = component[bus_field]
+
+                if !(bus_index in bus_ids)
+                    error("bus $(bus_index) in $(component_type) $(i) field \"$(bus_field)\" is not defined")
+                end
+            end
+        end
+    end
+
+    return nothing
 end
 
 
