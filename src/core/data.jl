@@ -1059,7 +1059,8 @@ end
 computes the connected components of the network graph
 returns a set of sets of bus ids, each set is a connected component
 """
-function _calc_connected_components_eng(data::EngineeringModel{NetworkModel}; edges::Vector{<:String}=_eng_edge_elements, type::Union{Missing,String}=missing, check_enabled::Bool=true)::Set{Set{String}}
+function _calc_connected_components_eng(data_mdl::EngineeringModel{NetworkModel}; edges::Vector{<:String}=_eng_edge_elements, type::Union{Missing,String}=missing, check_enabled::Bool=true)::Set{Set{String}}
+    data = data_mdl.data
     active_bus = Dict{String,Dict{String,Any}}(x for x in data["bus"] if x.second["status"] == ENABLED || !check_enabled)
     active_bus_ids = Set{String}([i for (i,bus) in active_bus])
 
@@ -1122,6 +1123,7 @@ function _calc_connected_components_math(
     check_enabled::Bool=true,
 )::Set{Set{Int}}
 
+    println(collect(keys(data)))
     active_bus = Dict{String,Dict{String,Any}}(x for x in data["bus"] if x.second[pmd_math_component_status["bus"]] != pmd_math_component_status_inactive["bus"] || !check_enabled)
     active_bus_ids = Set{Int}([parse(Int,i) for (i,bus) in active_bus])
 

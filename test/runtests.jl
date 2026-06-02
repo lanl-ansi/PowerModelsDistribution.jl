@@ -26,6 +26,8 @@ include("test_cases.jl")
 @testset "PowerModelsDistribution" begin
     include("opf_ravens.jl")
 
+    include("multinetwork.jl")
+
     include("opendss.jl")
 
     include("data.jl")
@@ -43,8 +45,6 @@ include("test_cases.jl")
     include("storage.jl")
 
     include("debug.jl")
-
-    include("multinetwork.jl")
 
     include("transformer.jl")
 
