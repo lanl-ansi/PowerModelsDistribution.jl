@@ -124,10 +124,9 @@ function _map_ravens2math(
             nws_vect = Vector{MathematicalModel{MultinetworkModel}}(undef, min_length)
 
             # Multithreaded loop to create each nw dictionary. Store them in vector (to allow multithreading)
-            Threads.@threads for n = 1:1:min_length
-                nw_dict = MathematicalModel{MultinetworkModel}(
-                    Dict{String,Any}(
-                        string(n) => MathematicalModel{NetworkModel}(
+            for n in 1:1:min_length
+                key = string(n)
+                data_math["nw"][key] = MathematicalModel{NetworkModel}(
                             Dict{String,Any}(
                                 "per_unit" => get(_data_ravens, "per_unit", false),
                                 "is_projected" => get(_data_ravens, "is_projected", false),
@@ -137,21 +136,17 @@ function _map_ravens2math(
                                 "switch_close_actions_ub" => switch_close_actions_ub,
                             )
                         )
-                    )
-                )
-
-                # Store nw dict in vector
-                nws_vect[n] = nw_dict
-
-                @warn typeof(nws_vect[n]) typeof(_data_ravens)
-                # Perform conversion ravens2math
-                apply_pmd!(_map_ravens2math_nw!, nws_vect[n], _data_ravens; ravens2math_passthrough=ravens2math_passthrough, ravens2math_extensions=ravens2math_extensions, nw=n)
             end
+
+
+            # Perform conversion MM
+            apply_pmd!(_map_ravens2math_nw!, data_math, _data_ravens; apply_to_subnetworks=true, ravens2math_passthrough=ravens2math_passthrough, ravens2math_extensions=ravens2math_extensions)
+
 
             # Merge dict in vector into data_math dictionary (other for loop to allow multithreading)
-            for nw_dict in nws_vect
-                merge!(data_math["nw"], nw_dict.data)
-            end
+            # for nw_dict in nws_vect
+            #     merge!(data_math["nw"], nw_dict.data)
+            # end
 
         else
             @error("No timeseries and/or multinetwork information detected.")
@@ -170,6 +165,7 @@ function _map_ravens2math(
                 "switch_close_actions_ub" => switch_close_actions_ub,
             )
         )
+        #TODO: how come apply_pmd does not get to `_map_ravens2math_nw!` much less the outermost else inside?
         apply_pmd!(_map_ravens2math_nw!, data_math, _data_ravens; ravens2math_passthrough=ravens2math_passthrough, ravens2math_extensions=ravens2math_extensions)
     end
 
@@ -177,15 +173,17 @@ function _map_ravens2math(
     if multinetwork
         _collect_nw_maps!(data_math)
         _collect_nw_bus_lookups!(data_math)
+        return data_math
     end
 
-    return MathematicalModel(data_math)
+    return MathematicalModel(data_math) #TODO: is this horrible?
 end
 
 
 """
 """
 function _map_ravens2math_nw!(data_math::MathematicalModel, data_ravens::RavensModel; ravens2math_passthrough::Dict{String,Vector{String}}=Dict{String,Vector{String}}(), ravens2math_extensions::Vector{<:Function}=Function[], nw::Int=nw_id_default)
+
     if nw == 0
         data_math["map"] = Vector{Dict{String,Any}}([
             Dict{String,Any}("unmap_function" => "_map_math2eng_root!")
@@ -213,7 +211,6 @@ function _map_ravens2math_nw!(data_math::MathematicalModel, data_ravens::RavensM
         _map_settings_vbases_default!(data_math)
 
     else
-
         data_math[string(nw)]["map"] = Vector{Dict{String,Any}}([
             Dict{String,Any}("unmap_function" => "_map_math2eng_root!")
         ])
@@ -241,7 +238,6 @@ function _map_ravens2math_nw!(data_math::MathematicalModel, data_ravens::RavensM
     end
 end
 
-
 """
 Converts ravens connectivity_node components into mathematical bus components.
 """
@@ -258,49 +254,6 @@ function _map_ravens2math_connectivity_node!(data_math::MathematicalModel{Networ
         math_obj["bus_type"] = 4  # Default bus_type, - DISABLED
         math_obj["vm_pair_lb"] = Tuple{Any,Any,Real}[]
         math_obj["vm_pair_ub"] = Tuple{Any,Any,Real}[]
-
-        # Set voltage magnitude and angle
-        if haskey(ravens_obj, "SvVoltage.v")
-            math_obj["vm"] = (ravens_obj["SvVoltage.v"] / voltage_scale_factor_sqrt3)
-        end
-
-        if haskey(ravens_obj, "SvVoltage.angle")
-            math_obj["va"] = ravens_obj["SvVoltage.angle"]
-        end
-
-        # Store the mathematical bus object
-        data_math["bus"]["$(index)"] = math_obj
-
-        # Update bus lookup if necessary
-        data_math["bus_lookup"] = get(data_math, "bus_lookup", Dict{Any,Int}())
-        data_math["bus_lookup"][name] = index
-
-        # Map the ravens object to the math object
-        push!(data_math["map"], Dict(
-            "from" => name,
-            "to" => "bus.$index",
-            "unmap_function" => "_map_math2eng_bus!"
-        ))
-    end
-end
-
-"""
-Converts ravens connectivity_node components into mathematical bus components.
-"""
-function _map_ravens2math_connectivity_node!(data_math::MathematicalModel{NetworkModel}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
-    voltage_scale_factor_sqrt3 = data_math["settings"]["voltage_scale_factor"] * sqrt(3)
-    connectivity_nodes = get(data_ravens, "ConnectivityNode", Dict{String,Any}())
-
-    for (name, ravens_obj) in connectivity_nodes
-        index = length(data_math["bus"]) + 1
-        math_obj = _init_math_obj_ravens(ravens_obj["Ravens.cimObjectType"], name, ravens_obj, index; pass_props=pass_props)
-
-        # Set basic bus properties
-        math_obj["bus_i"] = index
-        math_obj["source_id"] = "ConnectivityNode.$name"
-        math_obj["bus_type"] = 4  # Default bus_type, - DISABLED
-        math_obj["vm_pair_lb"] = Tuple{Any, Any, Real}[]
-        math_obj["vm_pair_ub"] = Tuple{Any, Any, Real}[]
 
         # Set voltage magnitude and angle
         if haskey(ravens_obj, "SvVoltage.v")
@@ -592,280 +545,6 @@ function _map_ravens2math_conductor!(data_math::MathematicalModel{NetworkModel},
             "to" => "branch.$(math_obj["index"])",
             "unmap_function" => "_map_math2eng_line!",
         ))
-
-    end
-end
-
-"""
-Converts ravens conductors (e.g., ACLineSegments) into mathematical branches.
-"""
-function _map_ravens2math_conductor!(data_math::MathematicalModel{NetworkModel}, data_ravens::Dict{String,<:Any}; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
-    if haskey(data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"], "Conductor")
-        conductors = data_ravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["Conductor"]
-
-        for (name, ravens_obj) in get(conductors, "ACLineSegment", Dict{Any,Dict{String,Any}}())
-            math_obj = _init_math_obj_ravens(ravens_obj["Ravens.cimObjectType"], name, ravens_obj, length(data_math["branch"]) + 1; pass_props=pass_props)
-            nconds = length(ravens_obj["ACLineSegment.ACLineSegmentPhase"]) # number of conductors/wires
-            nphases = 0 # init number of phases
-            terminals = ravens_obj["ConductingEquipment.Terminals"]
-
-            f_node = _extract_name(terminals[1]["Terminal.ConnectivityNode"])
-            t_node = _extract_name(terminals[2]["Terminal.ConnectivityNode"])
-
-            math_obj["f_bus"] = data_math["bus_lookup"][f_node]
-            math_obj["t_bus"] = data_math["bus_lookup"][t_node]
-
-            bus_terminals = nconds >= 4 ? collect(1:nconds) : [_phase_map[phase["ACLineSegmentPhase.phase"]] for phase in ravens_obj["ACLineSegment.ACLineSegmentPhase"]]
-
-            # TODO: Kron reduce bus terminals by removing conn 4
-            reduce = false # flag for Kron reduction
-            if 4 in bus_terminals
-                reduce = true
-                bus_terminals = filter!(x -> x != 4, bus_terminals)
-                nphases = nconds - 1
-            else
-                nphases = nconds
-            end
-
-            # Add vmin/vmax/terminals info to fbus and tbus if missing
-            for bus in [math_obj["f_bus"], math_obj["t_bus"]]
-                bus_data = data_math["bus"][string(bus)]
-                if !(haskey(bus_data, "terminals")) || (length(bus_data["terminals"]) < length(bus_terminals))
-                    bus_data["terminals"] = bus_terminals
-                    bus_data["vmin"] = fill(0.0, nphases)
-                    bus_data["vmax"] = fill(Inf, nphases)
-                    bus_data["grounded"] = zeros(Bool, nphases)
-                end
-            end
-
-            math_obj["f_connections"] = bus_terminals
-            math_obj["t_connections"] = bus_terminals
-
-            # System frequency
-            base_freq = data_math["settings"]["base_frequency"]
-
-            if (haskey(ravens_obj, "ACLineSegment.PerLengthImpedance"))
-
-                impedance_name = _extract_name(ravens_obj["ACLineSegment.PerLengthImpedance"])
-                impedance_data = data_ravens["PerLengthLineParameter"]["PerLengthImpedance"]["PerLengthPhaseImpedance"][impedance_name]
-
-                math_obj["br_r"] = _impedance_conversion_ravens(impedance_data, ravens_obj, "PhaseImpedanceData.r")
-                math_obj["br_x"] = _impedance_conversion_ravens(impedance_data, ravens_obj, "PhaseImpedanceData.x")
-
-                for (key, param) in [("b_fr", "PhaseImpedanceData.b"), ("b_to", "PhaseImpedanceData.b"), ("g_fr", "PhaseImpedanceData.g"), ("g_to", "PhaseImpedanceData.g")]
-                    math_obj[key] = _admittance_conversion_ravens(impedance_data, ravens_obj, param)
-                end
-
-            elseif (haskey(ravens_obj, "ACLineSegment.WireSpacingInfo"))
-
-                # Get WireSpacingInfo
-                spacinginfo_name = _extract_name(ravens_obj["ACLineSegment.WireSpacingInfo"])
-                spacinginfo_data = data_ravens["AssetInfo"]["WireSpacingInfo"][spacinginfo_name]
-                wire_positions = spacinginfo_data["WireSpacingInfo.WirePositions"]
-                num_of_wires = length(wire_positions)
-
-                # TODO: Kron reduce bus terminals by removing conn 4 based on number of wires
-                if num_of_wires > nconds
-                    reduce = true
-                end
-
-                # Coordinates
-                x_coords = Vector{Float64}(undef, num_of_wires)
-                y_coords = Vector{Float64}(undef, num_of_wires)
-
-                for i in 1:1:num_of_wires
-                    seq_num = get(wire_positions[i], "WirePosition.sequenceNumber", i)
-                    x_coords[seq_num] = get(wire_positions[i], "WirePosition.xCoord", 0.0)
-                    y_coords[seq_num] = get(wire_positions[i], "WirePosition.yCoord", 0.0)
-                end
-
-                # angular frequency
-                ω = 2π * base_freq
-                ω₀ = 2π * base_freq
-
-                # Get data for each specific ACLineSegmentPhase
-                segmentphase_data = ravens_obj["ACLineSegment.ACLineSegmentPhase"]
-
-                # Wire Info.
-                gmr = Vector{Float64}(undef, nconds)   # gmr of Wire, default: radius of wire * 0.7788
-                radius = Vector{Float64}(undef, nconds)    # radius of Wire
-                rac = Vector{Float64}(undef, nconds)   # AC resistance
-                rdc = Vector{Float64}(undef, nconds)   # DC resistance, default: AC resistance / 1.02
-                dcable = Vector{Float64}(undef, nconds)   # diameter of Wire: radius of wire * 2
-
-                # Concentric Neutrals Info.
-                rstrand = Vector{Float64}(undef, nconds)  # resistance of CN cable
-                nstrand = Vector{Float64}(undef, nconds)  # number of CN conductors
-                dstrand = Vector{Float64}(undef, nconds)  # diameter of CN conductor
-                gmrstrand = Vector{Float64}(undef, nconds)    # gmr of CN conductor, default: radius of CN * 0.7788
-
-                # insulation info.
-                dins = Vector{Float64}(undef, nconds) # diameter over insulation (over jacket)
-                tins = Vector{Float64}(undef, nconds) # thickness of insulation
-
-                # tape shield info.
-                diashield = Vector{Float64}(undef, nconds)
-                tapelayer = Vector{Float64}(undef, nconds)
-                tapelap = Vector{Float64}(undef, nconds)
-
-                for i in 1:1:nconds
-
-                    wireinfo_name = _extract_name(segmentphase_data[i]["PowerSystemResource.AssetDatasheet"])
-                    wireinfo_data = data_ravens["AssetInfo"]["WireInfo"][wireinfo_name]
-
-                    radius[i] = get(wireinfo_data, "WireInfo.radius", NaN)
-                    @assert  radius[i] != NaN "WireInfo radius not found! using NaN. Revise data."
-
-                    # Note: gets rewritten as missing if not needed
-                    dcable[i] = get(wireinfo_data, "ConcentricNeutralCableInfo.diameterOverNeutral", radius[i] * 2.0)
-
-                    gmr[i] = get(wireinfo_data, "WireInfo.gmr", radius[i] * 0.778)
-
-                    if wireinfo_data["Ravens.cimObjectType"] == "OverheadWireInfo"
-                        rac[i] = get(wireinfo_data, "WireInfo.rAC25", NaN)
-                        @assert rac[i] != NaN "WireInfo AC25 resistance is not found! using NaN. Revise input data."
-                        rdc[i] = rac[i] / 1.02
-                    elseif wireinfo_data["Ravens.cimObjectType"] == "ConcentricNeutralCableInfo"
-                        rdc[i] = get(wireinfo_data, "WireInfo.rDC20", NaN)
-                        @assert rdc[i] != NaN "WireInfo rDC20 resistance is not found! using NaN. Revise input data."
-                        rac[i] = rdc[i] * 1.02
-                    elseif wireinfo_data["Ravens.cimObjectType"] == "TapeShieldCableInfo"
-                        rdc[i] = get(wireinfo_data, "WireInfo.rDC20", NaN)
-                        @assert rdc[i] != NaN "WireInfo rDC20 resistance is not found! using NaN. Revise input data."
-                        rac[i] = rdc[i] * 1.02
-                    else
-                        @error("Cable type not supported. Resistances (AC or DC) not found!")
-                    end
-
-                    # Concentric Neutrals Information.
-                    rstrand[i] = get(wireinfo_data, "ConcentricNeutralCableInfo.neutralStrandRDC20", NaN)
-                    nstrand[i] = get(wireinfo_data, "ConcentricNeutralCableInfo.neutralStrandCount", NaN)
-                    dstrand[i] = get(wireinfo_data, "ConcentricNeutralCableInfo.neutralStrandRadius", NaN) * 2.0
-                    gmrstrand[i] = get(wireinfo_data, "ConcentricNeutralCableInfo.neutralStrandGmr", (dstrand[i]/2.0) * 0.778)
-
-                    # insulation information
-                    dins[i] = get(wireinfo_data, "CableInfo.diameterOverJacket", NaN)
-                    tins[i] = get(wireinfo_data, "WireInfo.insulationThickness", NaN)
-
-                    # Tape shielded cables information
-                    diashield[i] = get(wireinfo_data, "CableInfo.diameterOverJacket", NaN) # diameter over tape shield
-                    tapelayer[i] = get(wireinfo_data, "TapeShieldCableInfo.tapeThickness", NaN)  # tape shield thickness
-                    tapelap[i] = get(wireinfo_data, "TapeShieldCableInfo.tapeLap", NaN)   #tape lap (default 20.0)
-
-                end
-
-                # Check for NaNs and replace with missing.
-                rstrand = findfirst(isnan, rstrand) !== nothing ? missing : rstrand
-                nstrand = findfirst(isnan, nstrand) !== nothing ? missing : nstrand
-                dcable = findfirst(isnan, dstrand) !== nothing ? missing : dcable   # use dstrand as signal for dcable to be missing
-                dstrand = findfirst(isnan, dstrand) !== nothing ? missing : dstrand
-                gmrstrand = findfirst(isnan, gmrstrand) !== nothing ? missing : gmrstrand
-                epsr = findfirst(isnan, dins) !== nothing ? missing : ones(nconds).*2.3 # use dins as signal for epsr to be missing
-                dins = findfirst(isnan, dins) !== nothing ? missing : dins
-                tins = findfirst(isnan, tins) !== nothing ? missing : tins
-                diashield = findfirst(isnan, tapelayer) !== nothing ? missing : diashield
-                tapelayer = findfirst(isnan, tapelayer) !== nothing ? missing : tapelayer # use tapelayer as signal for diashield to be missing
-                tapelap = findfirst(isnan, tapelap) !== nothing ? missing : tapelap
-
-                # TODO: earth model (using default)
-                earth_model = "deri"
-
-                # rho (default) - ρ = earth resistivity = 100 Ω-m
-                rho = 100
-
-                # Calculate line constants
-                z, y =  calculate_line_constants(
-                    x_coords,
-                    y_coords,
-                    ω,
-                    gmr,
-                    radius,
-                    nconds,
-                    earth_model,
-                    rac,
-                    ω₀,
-                    rdc,
-                    rho,
-                    nphases,
-                    rstrand,
-                    nstrand,
-                    dcable,
-                    dstrand,
-                    gmrstrand,
-                    epsr,
-                    dins,
-                    tins,
-                    diashield,
-                    tapelayer,
-                    tapelap
-                )
-
-                # Kron reduction
-                if reduce
-                    z, y = _kron(z, y, nphases)
-                end
-
-                rs, xs = real(z), imag(z)
-                g, b = real(y), imag(y)
-
-                b_fr = (b ./ 2.0) .* base_freq
-                b_to = (b ./ 2.0) .* base_freq
-                g_fr = (g ./ 2.0) .* base_freq
-                g_to = (g ./ 2.0) .* base_freq
-
-                math_obj["br_r"] = _impedance_conversion_ravens(ravens_obj, rs)
-                math_obj["br_x"] = _impedance_conversion_ravens(ravens_obj, xs)
-
-                math_obj["b_fr"] = _admittance_conversion_ravens(ravens_obj, b_fr)
-                math_obj["b_to"] = _admittance_conversion_ravens(ravens_obj, b_to)
-
-                math_obj["g_fr"] = _admittance_conversion_ravens(ravens_obj, g_fr)
-                math_obj["g_to"] = _admittance_conversion_ravens(ravens_obj, g_to)
-
-            end
-
-            math_obj["angmin"] = get(ravens_obj, "vad_lb", fill(-60.0, nphases))
-            math_obj["angmax"] = get(ravens_obj, "vad_ub", fill(60.0, nphases))
-
-            if (haskey(terminals[1], "ACDCTerminal.OperationalLimitSet"))
-                oplimitset_id = _extract_name(terminals[1]["ACDCTerminal.OperationalLimitSet"])
-                oplimitset_valslist = data_ravens["OperationalLimitSet"][oplimitset_id]["OperationalLimitSet.OperationalLimitValue"]
-                oplimitset = Vector{Dict}(undef, length(oplimitset_valslist))
-                for i in 1:length(oplimitset_valslist)
-                    oplimitset[i] = data_ravens["OperationalLimitSet"][oplimitset_id]["OperationalLimitSet.OperationalLimitValue"][i]
-                end
-            else
-                oplimitset =[Dict()]
-            end
-
-            limit_keys = [("CurrentLimit.value", "c_rating_a"), ("CurrentLimit.value", "c_rating_b"), ("CurrentLimit.value", "c_rating_c"),
-                        ("ApparentPowerLimit.value", "rate_a"), ("ApparentPowerLimit.value", "rate_b"), ("ApparentPowerLimit.value", "rate_c")]
-
-            for i in 1:length(oplimitset)
-                val = fill(0.0, nphases)
-                for (f_key, t_key) in limit_keys
-                    val = haskey(oplimitset[i], f_key) && val[1] <= oplimitset[i][f_key] ? fill(oplimitset[i][f_key], nphases) : fill(Inf, nphases)
-                    math_obj[t_key] = val
-                end
-            end
-
-            math_obj["br_status"] = get(ravens_obj, "Equipment.inService", true) == true ? 1 : 0
-            f_bus_data = data_math["bus"][string(math_obj["f_bus"])]
-            t_bus_data = data_math["bus"][string(math_obj["t_bus"])]
-            if(math_obj["br_status"] == 1)
-                f_bus_data["bus_type"] = 1
-                t_bus_data["bus_type"] = 1
-            end
-
-            data_math["branch"]["$(math_obj["index"])"] = math_obj
-
-            push!(data_math["map"], Dict{String,Any}(
-                "from" => name,
-                "to" => "branch.$(math_obj["index"])",
-                "unmap_function" => "_map_math2eng_line!",
-            ))
-
-        end
 
     end
 end
