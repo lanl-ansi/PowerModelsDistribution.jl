@@ -922,8 +922,7 @@ function _map_ravens2math_power_transformer!(data_math::MathematicalModel{Networ
             for wdg_id in 1:nrw
 
                 # wdg phasecode & terminals
-                t_end = ravens_obj["PowerTransformer.PowerTransformerEnd"][wdg_id]
-                wdg_terminals = t_end["ConductingEquipment.Terminals"][1]
+                wdg_terminals = ravens_obj["ConductingEquipment.Terminals"][wdg_id]
                 wdg_phasecode = wdg_terminals["Terminal.phases"]
 
                 # wdg endNumber
@@ -1107,8 +1106,7 @@ function _map_ravens2math_power_transformer!(data_math::MathematicalModel{Networ
                 tm_nom = wdgs_confs[wdg_id] == DELTA ? wdgs[wdg_id]["PowerTransformerEnd.ratedU"] * sqrt(3) / voltage_scale_factor : wdgs[wdg_id]["PowerTransformerEnd.ratedU"] / voltage_scale_factor
 
                 # Get correct f_node for winding
-                t_end = ravens_obj["PowerTransformer.PowerTransformerEnd"][wdg_id]
-                wdg_term = t_end["ConductingEquipment.Terminals"][1]
+                wdg_term = ravens_obj["ConductingEquipment.Terminals"][wdg_id]
                 f_node_wdgterm = _extract_name(wdg_term["Terminal.ConnectivityNode"])
 
                 # Transformer Object
