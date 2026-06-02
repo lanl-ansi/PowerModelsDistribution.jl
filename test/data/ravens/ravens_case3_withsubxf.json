@@ -431,6 +431,24 @@
             "IdentifiedObject.name": "subxf",
             "PowerTransformer.vectorGroup": "Yy",
             "PowerSystemResource.Location": "Location::'subxf_Loc'",
+            "ConductingEquipment.Terminals": [
+                  {
+                    "Ravens.cimObjectType": "Terminal",
+                    "IdentifiedObject.mRID": "_16ECD631-0E7C-4CF8-BFBE-47B70741FBB5",
+                    "IdentifiedObject.name": "subxf_T1",
+                    "ACDCTerminal.sequenceNumber": 1,
+                    "Terminal.phases": "PhaseCode.ABC",
+                    "Terminal.ConnectivityNode": "ConnectivityNode::'sourcebus'"
+                  },
+                  {
+                    "Ravens.cimObjectType": "Terminal",
+                    "IdentifiedObject.mRID": "_7D0ABC1E-3EA3-4532-8122-DA10A6B933FB",
+                    "IdentifiedObject.name": "subxf_T2",
+                    "ACDCTerminal.sequenceNumber": 2,
+                    "Terminal.phases": "PhaseCode.ABC",
+                    "Terminal.ConnectivityNode": "ConnectivityNode::'subxfbus'"
+                  }
+            ],
             "PowerTransformer.PowerTransformerEnd": [
               {
                 "Ravens.cimObjectType": "PowerTransformerEnd",
@@ -446,16 +464,6 @@
                 "TransformerEnd.rground": 0,
                 "TransformerEnd.xground": 0,
                 "ConductingEquipment.BaseVoltage": "BaseVoltage::'BaseV_7.2000'",
-                "ConductingEquipment.Terminals": [
-                  {
-                    "Ravens.cimObjectType": "Terminal",
-                    "IdentifiedObject.mRID": "_16ECD631-0E7C-4CF8-BFBE-47B70741FBB5",
-                    "IdentifiedObject.name": "subxf_T1",
-                    "ACDCTerminal.sequenceNumber": 1,
-                    "Terminal.phases": "PhaseCode.ABC",
-                    "Terminal.ConnectivityNode": "ConnectivityNode::'sourcebus'"
-                  }
-                ],
                 "TransformerEnd.CoreAdmittance": {
                   "Ravens.cimObjectType": "TransformerCoreAdmittance",
                   "IdentifiedObject.mRID": "_82EF01DC-693A-456D-80B7-88480B854940",
@@ -489,16 +497,6 @@
                 "TransformerEnd.rground": 0,
                 "TransformerEnd.xground": 0,
                 "ConductingEquipment.BaseVoltage": "BaseVoltage::'BaseV_0.4000'",
-                "ConductingEquipment.Terminals": [
-                  {
-                    "Ravens.cimObjectType": "Terminal",
-                    "IdentifiedObject.mRID": "_7D0ABC1E-3EA3-4532-8122-DA10A6B933FB",
-                    "IdentifiedObject.name": "subxf_T2",
-                    "ACDCTerminal.sequenceNumber": 2,
-                    "Terminal.phases": "PhaseCode.ABC",
-                    "Terminal.ConnectivityNode": "ConnectivityNode::'subxfbus'"
-                  }
-                ],
                 "TransformerEnd.MeshImpedance": {
                   "Ravens.cimObjectType": "TransformerMeshImpedance",
                   "IdentifiedObject.mRID": "_C7842810-3C4F-495F-AD46-C3B29FF7727F",

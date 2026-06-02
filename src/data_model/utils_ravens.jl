@@ -218,9 +218,9 @@ function find_voltages(data::Dict{String,<:Any})::Dict{String,Any}
             tr_end = tr["PowerTransformer.PowerTransformerEnd"][1]
         end 
 
-        voltage_ratios = ones(length(tr_end["ConductingEquipment.Terminals"]))
-        for wdg_id in 1:1:length(tr_end["ConductingEquipment.Terminals"])
-            conns = length(_phasecode_map[tr_end["ConductingEquipment.Terminals"][wdg_id]["Terminal.phases"]])
+        voltage_ratios = ones(length(tr["ConductingEquipment.Terminals"]))
+        for wdg_id in 1:1:length(tr["ConductingEquipment.Terminals"])
+            conns = length(_phasecode_map[tr["ConductingEquipment.Terminals"][wdg_id]["Terminal.phases"]])
             voltage_ratios[wdg_id] = conns >= 3 ? sqrt(3) : 1.0
         end
 
