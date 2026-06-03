@@ -65,7 +65,7 @@ function _make_multinetwork(
     time_elapsed::Union{Missing,Real,Vector{<:Real}}=missing,
     global_keys::Set{String}=Set{String}(),
     )::EngineeringModel{MultinetworkModel}
-
+    
     mn_data = Dict{String,Any}(
         k => data_eng.data[k] for k in union(_pmd_eng_global_keys, global_keys) if haskey(data_eng.data, k)
     )
@@ -175,9 +175,8 @@ function _make_multinetwork_math(
 
     @assert ismath(data_math) "wrong data model for _make_multinetwork_math"
     @info "Converting a MATHEMATICAL data model into multinetwork assumes the InfrastructureModels data structure ( see https://github.com/lanl-ansi/InfrastructureModels.jl/blob/master/src/core/data.jl#L135 )"
-
-    return _IM.make_multinetwork(data_math, pmd_it_name, union(_pmd_math_global_keys, global_keys))
-end
+    
+    return _IM.make_multinetwork(data_math, pmd_it_name, union(_pmd_math_global_keys, global_keys))end
 
 
 """
