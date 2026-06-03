@@ -49,51 +49,13 @@ This method is used when InfrastructureModels passes the raw mathematical data d
 to ref extensions.
 """
 function ref_add_connected_components!(ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any})
-    _ref_add_connected_components!(ref, data)
-end
-
-function _pmd_ref(ref::Dict{Symbol,<:Any})
-    if haskey(ref, :nw)
-        return ref
-    elseif haskey(ref, :it) && haskey(ref[:it], pmd_it_sym)
-        return ref[:it][pmd_it_sym]
-    elseif haskey(ref, :it) && haskey(ref[:it], :pmd)
-        return ref[:it][:pmd]
-    else
-        error("could not locate PMD ref; keys(ref)=$(collect(keys(ref)))")
-    end
-end
-
-"adds connected components for opb problem type from raw mathematical data"
-function _ref_add_connected_components!(ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any})
-    pmd_ref = _pmd_ref(ref)
-
-    if get(data, "multinetwork", false) == true || haskey(data, "nw")
-        @assert haskey(pmd_ref, :nw) "expected PMD ref to have :nw; keys(pmd_ref)=$(collect(keys(pmd_ref)))"
-
-        for (n, nw_data) in data["nw"]
-            nw_id = parse(Int, n)
-
-            if !haskey(nw_data, "bus")
-                @warn "skipping connected-components ref for network without bus table" n=n keys=collect(keys(nw_data))
-                continue
-            end
-
-            nw_ref = get!(pmd_ref[:nw], nw_id, Dict{Symbol,Any}())
-
-            component_sets = _calc_connected_components_math(nw_data)
-
-            nw_ref[:components] = Dict(
-                i => c for (i, c) in enumerate(sort(collect(component_sets); by=length))
-            )
-        end
-    else
-        component_sets = _calc_connected_components_math(data)
-
-        pmd_ref[:components] = Dict(
-            i => c for (i, c) in enumerate(sort(collect(component_sets); by=length))
-        )
-    end
+    mnw = ismultinetwork(data)
+    apply_pmd!(
+        _ref_add_connected_components!,
+        ref,
+        data;
+        apply_to_subnetworks=mnw,
+    )
 
     return nothing
 end
