@@ -1,0 +1,23 @@
+@info "ravens - running minimum load delta (mld) tests"
+
+@testset "test mld" begin
+    @testset "transformer nfa mld" begin
+        math = transform_data_model(ravens_ut_trans_2w_yy)
+        result = solve_mc_mld(math, NFAUPowerModel, ipopt_solver)
+
+        @test result["termination_status"] == LOCALLY_SOLVED
+
+        @test isapprox(result["objective"], 0, atol=1)
+        @test isapprox(result["solution"]["load"]["1"]["status"], 1.0, atol = 1e-3)
+    end
+
+    @testset "transformer lpubfdiag mld" begin
+        math = transform_data_model(ravens_ut_trans_2w_yy)
+        result = solve_mc_mld(math, LPUBFDiagPowerModel, ipopt_solver)
+
+        @test result["termination_status"] == NORM_LIMIT
+
+        @test isapprox(result["objective"], 36; atol=1)
+        @test isapprox(result["solution"]["load"]["1"]["status"], .75; atol=1e-3)
+    end
+end

@@ -77,3 +77,85 @@ ravens_case3_withcap = parse_file("../test/data/ravens/ravens_case3_withcap.json
 ravens_test_switch_3w = parse_file("../test/data/ravens/ravens_test_switch_3w.json")
 # ravens_test_switch_1w = parse_file("../test/data/ravens/ravens_test_switch_1w.json")
 ravens_case3_withgens_mn = parse_file("../test/data/ravens/ravens_case3_withgens_mn.json")
+
+
+
+
+# RAVENS-EXTRA
+ravens_case2_diag = parse_file("../test/data/ravens/ravens_case2_diag.json")
+ravens_case2_mxshunt = parse_file("../test/data/ravens/ravens_case_mxshunt.json")
+ravens_case2_mxshunt_2 = parse_file("../test/data/ravens/ravens_case_mxshunt_2.json")
+ravens_case2_mxshunt_2 = parse_file("../test/data/ravens/ravens_case_mxshunt_2.json")
+ravens_case2_virtual_sourcebus = parse_file("../test/data/ravens/ravens_virtual_sourcebus.json")
+
+# 3-bus balanced
+ravens_case3_balanced = parse_file("../test/data/ravens/ravens_case3_balanced.json")
+ravens_case3_balanced = parse_file("../test/data/ravens/ravens_case3_balanced.json")
+ravens_case3_balanced_cap = parse_file("../test/data/ravens/ravens_case3_balanced_cap.json")
+ravens_case3_balanced_isc = parse_file("../test/data/ravens/ravens_case3_balanced_isc.json")
+ravens_case3_balanced_pv = parse_file("../test/data/ravens/ravens_case3_balanced_pv.json")
+ravens_case3_unbalanced_1phase_pv = parse_file("../test/data/ravens/ravens_case3_unbalanced_1phase-pv.json")
+ravens_case3_balanced_basefreq = parse_file("../test/data/ravens/ravens_case3_balanced_basefreq.json")
+ravens_case3_balanced_battery = parse_file("../test/data/ravens/ravens_case3_balanced_battery.json")
+ravens_case3_balanced_switch = parse_file("../test/data/ravens/ravens_case3_balanced_switch.json")
+
+# 3-bus unbalanced
+ravens_case3_unbalanced = parse_file("../test/data/ravens/ravens_case3_unbalanced.json")
+ravens_case3_unbalanced_assym_swap = parse_file("../test/data/ravens/ravens_case3_unbalanced_assym_swap.json")
+
+ravens_case3_unbalanced_delta_loads = parse_file("../test/data/ravens/ravens_case3_unbalanced_delta_loads.json")
+ravens_case3_unbalanced_delta_loads = parse_file("../test/data/ravens/ravens_case3_unbalanced_delta_loads.json")
+
+ravens_case3_unbalanced_missingedge = parse_file("../test/data/ravens/ravens_case3_unbalanced_missingedge.json")
+ravens_case3_unbalanced_switch = parse_file("../test/data/ravens/ravens_case3_unbalanced_switch.json")
+
+# 3-bus load models
+ravens_case3_lm_1230 = parse_file("../test/data/ravens/ravens_case3_lm_1230.json")
+ravens_case3_lm_models = parse_file("../test/data/ravens/ravens_case3_lm_models.json")
+ravens_case3_unbalanced_ZIPloads = parse_file("../test/data/ravens/ravens_case3_unbalanced_ZIPloads.json")
+
+# 3-bus delta generators
+ravens_case3_delta_gens = parse_file("../test/data/ravens/ravens_case3_delta_gens.json")
+
+# 4-bus
+ravens_case4_phase_drop = parse_file("../test/data/ravens/ravens_case4_phase_drop.json")
+
+# 5-bus
+ravens_case5_phase_drop = parse_file("../test/data/ravens/ravens_case5_phase_drop.json")
+
+# 4-bus 2w transformer
+ravens_ut_trans_2w_yy = parse_file("../test/data/ravens/ravens_ut_trans_2w_yy.json")
+ravens_ut_trans_2w_yy = parse_file("../test/data/ravens/ravens_ut_trans_2w_yy.json")
+ravens_ut_trans_2w_dy_lead = parse_file("../test/data/ravens/ravens_ut_trans_2w_dy_lead.json")
+ravens_ut_trans_2w_dy_lag = parse_file("../test/data/ravens/ravens_ut_trans_2w_dy_lag.json")
+ravens_ut_trans_2w_dy_lead_small_series_impedance = parse_file("../test/data/ravens/ravens_ut_trans_2w_dy_lead_small_series_impedance.json")
+ravens_ut_trans_2w_yy_bank = parse_file("../test/data/ravens/ravens_ut_trans_2w_yy_bank.json")
+ravens_ut_trans_2w_yy_bank = parse_file("../test/data/ravens/ravens_ut_trans_2w_yy_bank.json")
+ravens_ut_trans_2w_yy_unbanked = parse_file("../test/data/ravens/ravens_ut_trans_2w_yy_bank.json"; bank_transformers=false)
+ravens_ut_trans_2w_yy_oltc = parse_file("../test/data/ravens/ravens_ut_trans_2w_yy_oltc.json")
+
+# 4-bus 3w transformer
+ravens_ut_trans_3w_dyy_1 = parse_file("../test/data/ravens/ravens_ut_trans_3w_dyy_1.json")
+ravens_ut_trans_3w_dyy_2 = parse_file("../test/data/ravens/ravens_ut_trans_3w_dyy_2.json")
+ravens_ut_trans_3w_dyy_3 = parse_file("../test/data/ravens/ravens_ut_trans_3w_dyy_3.json")
+ravens_ut_trans_3w_dyy_3_loadloss = parse_file("../test/data/ravens/ravens_ut_trans_3w_dyy_3_loadloss.json")
+ravens_trans_3w_center_tap = parse_file("../test/data/ravens/ravens_trans_3w_center_tap.json")
+
+# IEEE13
+ravens_IEEE13_Assets = parse_file("../test/data/ravens/ravens_IEEE13_Assets.json")
+
+ravens_IEEE13_RegControl = parse_file("../test/data/ravens/ravens_IEEE13_RegControl.json")
+ravens_IEEE13_CapControl = parse_file("../test/data/ravens/ravens_IEEE13_CapControl.json")
+
+# explicit neutral
+ravens_test_gen_3ph_wye = parse_file("../test/data/ravens_en_validation_case_data/ravens_test_gen_3ph_wye.json")
+ravens_test_switch = parse_file("../test/data/ravens_en_validation_case_data/ravens_test_switch.json")
+ravens_test_gen_1ph_wye = parse_file("../test/data/ravens_en_validation_case_data/ravens_test_gen_1ph_wye.json")
+ravens_test_trans_dy = parse_file("../test/data/ravens_en_validation_case_data/ravens_test_trans_dy.json")
+
+# distribution transformer equivalent cases
+ravens_dist_transformer = parse_file("../test/data/ravens/ravens_dist_transformer.json")
+
+# IEEE13 Feeder
+#DNC ravens_IEEE13_Feeder_engr = parse_file("../test/data/ravens/ravens_ieee13_feeder.json", multinetwork=true,time_series="daily", transformations=[remove_line_limits!, remove_transformer_limits!])
+

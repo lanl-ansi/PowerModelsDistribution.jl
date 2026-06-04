@@ -27,45 +27,77 @@ include("test_cases.jl")
 @testset "PowerModelsDistribution" begin
     include("opf_ravens.jl")
 
-    include("multinetwork.jl")
+    # include("multinetwork.jl")
 
-    include("opendss.jl")
+    # include("opendss.jl")
 
-    include("data.jl")
+    # include("data.jl")
 
-    include("pf.jl")
+    # include("pf.jl")
 
-    include("pf_bf.jl")
+    # include("pf_bf.jl")
 
-    include("opf.jl")
+    # include("opf.jl")
 
-    include("opf_bf.jl")
+    # include("opf_bf.jl")
 
-    include("opf_iv.jl")
+    # include("opf_iv.jl")
 
-    include("storage.jl")
+    # include("storage.jl")
 
-    include("debug.jl")
+    # include("debug.jl")
 
-    include("transformer.jl")
+    # include("transformer.jl")
 
-    include("capacitor.jl")
+    # include("capacitor.jl")
 
-    include("loadmodels.jl")
+    # include("loadmodels.jl")
 
-    include("delta_gens.jl")
+    # include("delta_gens.jl")
 
-    include("shunt.jl")
+    # include("shunt.jl")
 
-    include("mld.jl")
+    # include("mld.jl")
 
-    include("data_model.jl")
+    # include("data_model.jl")
 
-    include("en_opf_bounds.jl")
+    # include("en_opf_bounds.jl")
 
-    include("en_pf_validation.jl")
+    # include("en_pf_validation.jl")
 
-    include("en_pf_native_validation.jl")
+    # include("en_pf_native_validation.jl")
 
-    include("line_constants.jl")
+    # include("line_constants.jl")
+
+    #NEW TESTS
+
+    include("ravens/data.jl")
+
+    include("ravens/pf.jl")
+
+    include("ravens/pf_bf.jl")
+
+    include("ravens/opf.jl")
+
+    include("ravens/opf_bf.jl")
+
+    include("ravens/opf_iv.jl")
+
+    include("ravens/storage.jl")
+
+    include("ravens/debug.jl")
+
+    include("ravens/multinetwork.jl")
+
+    include("ravens/transformer.jl")
+
+    include("ravens/capacitor.jl")
+
+    include("ravens/loadmodels.jl")
+
+    include("ravens/shunt.jl")
+
+    include("ravens/mld.jl")
+
+    include("ravens/opf_ravens_extra.jl")
 end
