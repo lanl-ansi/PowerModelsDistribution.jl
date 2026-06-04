@@ -165,7 +165,6 @@ function _map_ravens2math(
                 "switch_close_actions_ub" => switch_close_actions_ub,
             )
         )
-        #TODO: how come apply_pmd does not get to `_map_ravens2math_nw!` much less the outermost else inside?
         apply_pmd!(_map_ravens2math_nw!, data_math, _data_ravens; ravens2math_passthrough=ravens2math_passthrough, ravens2math_extensions=ravens2math_extensions)
     end
 
@@ -341,7 +340,8 @@ function _map_ravens2math_conductor!(data_math::MathematicalModel{NetworkModel},
 
             # Get WireSpacingInfo
             spacinginfo_name = _extract_name(ravens_obj["ACLineSegment.WireSpacingInfo"])
-            spacinginfo_data = data_ravens["AssetInfo"]["WireSpacingInfo"][spacinginfo_name]
+            WSI = safe_get_container(data_ravens,["AssetInfo","WireSpacingInfo"])
+            spacinginfo_data = WSI[spacinginfo_name]
             wire_positions = spacinginfo_data["WireSpacingInfo.WirePositions"]
             num_of_wires = length(wire_positions)
 
@@ -392,7 +392,8 @@ function _map_ravens2math_conductor!(data_math::MathematicalModel{NetworkModel},
             for i in 1:1:nconds
 
                 wireinfo_name = _extract_name(segmentphase_data[i]["PowerSystemResource.AssetDatasheet"])
-                wireinfo_data = data_ravens["AssetInfo"]["WireInfo"][wireinfo_name]
+                WI = safe_get_container(data_ravens,["AssetInfo","WireInfo"])
+                wireinfo_data = WI[wireinfo_name]
 
                 radius[i] = get(wireinfo_data, "WireInfo.radius", NaN)
                 @assert radius[i] != NaN "WireInfo radius not found! using NaN. Revise data."
@@ -1255,10 +1256,12 @@ function _map_ravens2math_energy_consumer!(data_math::MathematicalModel{NetworkM
             connections = Vector{Int64}()
             for phase_info in ravens_obj["EnergyConsumer.EnergyConsumerPhase"]
                 phase = _phase_map[phase_info["EnergyConsumerPhase.phase"]]
-                phase_index = findfirst(==(phase), bus_conn["terminals"])
-                bus_conn["vmax"][phase_index] = op_limit_max
-                bus_conn["vmin"][phase_index] = op_limit_min
-                push!(connections, phase)
+                if phase != 4
+                    phase_index = findfirst(==(phase), bus_conn["terminals"])
+                    bus_conn["vmax"][phase_index] = op_limit_max
+                    bus_conn["vmin"][phase_index] = op_limit_min
+                    push!(connections, phase)
+                end
             end
             math_obj["connections"] = connections
             nphases = length(math_obj["connections"])

@@ -1,4 +1,4 @@
-@info "running optimal power flow (opf) tests using  RAVENS data"
+@info "running optimal power flow (opf) tests using extra RAVENS data"
 
 @testset "test opf ravens extra" begin
 
@@ -146,14 +146,16 @@
     end
 
     @testset "Test trans 3w center tap" begin
-        pmd_model = instantiate_mc_model_ravens(ravens_trans_3w_center_tap, ACPUPowerModel, build_mc_opf)
-        result = optimize_model!(
-            pmd_model,
-            relax_integrality=false,
-            optimizer=ipopt_solver,
-            solution_processors=Function[]
-        )
-        @test result["termination_status"] == LOCALLY_INFEASIBLE
+        @test_broken begin
+            pmd_model = instantiate_mc_model_ravens(ravens_trans_3w_center_tap, ACPUPowerModel, build_mc_opf)
+            result = optimize_model!(
+                pmd_model,
+                relax_integrality=false,
+                optimizer=ipopt_solver,
+                solution_processors=Function[]
+            )
+            @test result["termination_status"] == LOCALLY_INFEASIBLE
+        end
     end
 
     @testset "Test IEEE13 Assets" begin

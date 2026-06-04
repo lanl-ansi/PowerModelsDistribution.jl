@@ -2,24 +2,24 @@
 
 @testset "test multinetwork" begin
     @testset "3-bus balanced multinetwork nfa opb" begin
-        math = transform_data_model(ravens_case3_balanced)
-        math_ts = make_multinetwork(math)
-        result_mn = PowerModelsDistribution._solve_mn_mc_opb(math_ts, NFAUPowerModel, ipopt_solver)
-
+        math_ts = instantiate_mc_model_ravens(ravens_case3_balanced, NFAUPowerModel, build_mn_mc_opf; multinetwork=true)
+        result_mn = optimize_model!(
+            math_ts,
+            relax_integrality=false,
+            optimizer=ipopt_solver,
+            solution_processors=Function[]
+        )
         @test result_mn["termination_status"] == LOCALLY_SOLVED
     end
 
     @testset "3-bus balanced multinetwork instantiate_mc_model - autodetect multinetwork" begin
-        math = transform_data_model(ravens_case3_balanced)
-        math_ts = make_multinetwork(math)
-        pm_mn = instantiate_mc_model(math_ts, ACPUPowerModel, build_mn_mc_opf)
-
+        pm_mn = instantiate_mc_model_ravens(ravens_case3_balanced, NFAUPowerModel, build_mn_mc_opf; multinetwork=true)
         @test ismultinetwork(pm_mn)
     end
 
     @testset "apply_voltage_bounds! to multinetworks" begin
-        math = transform_data_model(ravens_case3_balanced)
-        mn_math = make_multinetwork(math)
+        # math = transform_data_model()
+        mn_math = instantiate_mc_model_ravens(ravens_case3_balanced, NFAUPowerModel, build_mn_mc_opf; multinetwork=true)
 
         apply_voltage_bounds_math!(mn_math)
         for (n,nw) in mn_math["nw"]
