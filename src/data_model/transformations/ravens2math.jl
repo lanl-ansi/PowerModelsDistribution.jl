@@ -1198,7 +1198,7 @@ function _map_ravens2math_energy_consumer!(data_math::MathematicalModel{NetworkM
         math_obj["load_bus"] = data_math["bus_lookup"][connectivity_node]
 
         # TODO: Handle Load Response Characteristics by properties, not name
-        load_response_characts = _extract_name(ravens_obj["EnergyConsumer.LoadResponse"])
+        load_response_characts = get(ravens_obj,"EnergyConsumer.LoadResponse",Dict{Any,Dict{String,Any}}())
         if load_response_characts == "Constant Z"
             math_obj["model"] = IMPEDANCE
         elseif load_response_characts == "Motor"

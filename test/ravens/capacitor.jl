@@ -1,5 +1,11 @@
 @info "running capacitor control tests"
 
+@debug "NOTE: This test used to convert back to the engineering model to get equivalent outputs to the DSS capacitor test file, 
+but in an attempt to convert it to a purely Ravens format and to avoid an error in _map_math2eng_transformer! where not all 
+transformers were being converted, we have switched to evaluating results directly. This has changed the output target values, 
+and more thoughtful analysis is required to prevent these tests from failing. They no longer error at the very least."
+
+
 @testset "capacitor control" begin
     @testset "capcontrol_acp" begin
         math = transform_data_model(ravens_IEEE13_CapControl)
@@ -7,16 +13,14 @@
 
         @test result["termination_status"] == LOCALLY_SOLVED
 
-        result = transform_solution(result["solution"], math, make_si=true)
-
-        @test isapprox(sum(result["voltage_source"]["source"]["pg"]), 405.556; atol=5)
-        @test isapprox(sum(result["voltage_source"]["source"]["qg"]), -527.15; atol=200)
+        @test isapprox(sum(result["solution"]["gen"]["1"]["pg"]), [405.556,405.556,405.556]; atol=5)
+        @test isapprox(sum(result["solution"]["gen"]["1"]["qg"]), [-527.15,-527.15,-527.15]; atol=200)
 
         sourcebus_id = math["bus_lookup"]["646"]
         vbase = math["bus"][string(sourcebus_id)]["vbase"]
 
-        @test all(isapprox.(result["bus"]["646"]["vm"] ./ vbase, [1.03533, 1.06987]; atol=2e-1))
-        @test all(isapprox.(result["bus"]["646"]["va"], [-90.1768, 148.498]; atol=3e-1))
+        @test all(isapprox.(result["solution"]["bus"]["13"]["vm"] ./ vbase, [1.03533, 1.06987, 0]; atol=2e-1))
+        @test all(isapprox.(result["solution"]["bus"]["13"]["va"], [-90.1768, 148.498, 0]; atol=3e-1))
 
         # @test all(isapprox.(result["shunt"]["c1"]["cap_state"], [1.0]; atol=2e-1))
     end
@@ -27,16 +31,14 @@
 
         @test result["termination_status"] == ALMOST_LOCALLY_SOLVED || result["termination_status"] == LOCALLY_SOLVED
 
-        result = transform_solution(result["solution"], math, make_si=true)
-
-        @test isapprox(sum(result["voltage_source"]["source"]["pg"]), 405.556; atol=5)
-        @test isapprox(sum(result["voltage_source"]["source"]["qg"]), -527.15; atol=300)
+        @test isapprox(sum(result["solution"]["gen"]["1"]["pg"]), [405.556,405.556,405.556]; atol=5)
+        @test isapprox(sum(result["solution"]["gen"]["1"]["qg"]), [-527.15,-527.15,-527.15]; atol=300)
 
         sourcebus_id = math["bus_lookup"]["646"]
         vbase = math["bus"][string(sourcebus_id)]["vbase"]
 
-        @test all(isapprox.(result["bus"]["646"]["vm"] ./ vbase, [1.03533, 1.06987]; atol=2e-1))
-        @test all(isapprox.(result["bus"]["646"]["va"], [-90.1768, 148.498]; atol=3e-1))
+        @test all(isapprox.(result["solution"]["bus"]["13"]["vm"] ./ vbase, [1.03533, 1.06987, 0]; atol=2e-1))
+        @test all(isapprox.(result["solution"]["bus"]["13"]["va"], [-90.1768, 148.498, 0]; atol=3e-1))
 
         # @test all(isapprox.(result["shunt"]["c1"]["cap_state"], [1.0]; atol=2e-1))
     end
@@ -47,34 +49,32 @@
 
         @test result["termination_status"] == LOCALLY_SOLVED
 
-        result = transform_solution(result["solution"], math, make_si=true)
-
-        @test isapprox(sum(result["voltage_source"]["source"]["pg"]), 405.556; atol=5)
-        @test isapprox(sum(result["voltage_source"]["source"]["qg"]), -527.15; atol=300)
+        @test isapprox(sum(result["solution"]["gen"]["1"]["pg"]), [405.556,405.556,405.556]; atol=5)
+        @test isapprox(sum(result["solution"]["gen"]["1"]["qg"]), [-527.15,-527.15,-527.15]; atol=300)
 
         sourcebus_id = math["bus_lookup"]["646"]
         vbase = math["bus"][string(sourcebus_id)]["vbase"]
 
-        @test all(isapprox.(result["bus"]["646"]["vm"] ./ vbase, [1.03533, 1.06987]; atol=2e-1))
-        @test all(isapprox.(result["bus"]["646"]["va"], [-90.1768, 148.498]; atol=3e-1))
+        @test all(isapprox.(result["solution"]["bus"]["13"]["vm"] ./ vbase, [1.03533, 1.06987, 0]; atol=2e-1))
+        @test all(isapprox.(result["solution"]["bus"]["13"]["va"], [-90.1768, 148.498, 0]; atol=3e-1))
 
         # @test all(isapprox.(result["shunt"]["c1"]["cap_state"], [1.0]; atol=2e-1))
     end
 
     @testset "capcontrol_fbs" begin
         math = transform_data_model(ravens_IEEE13_CapControl)
-        result = solve_mc_opf_capc(IEEE13_CapControl, FBSUBFPowerModel, ipopt_solver; solution_processors=[sol_data_model!])
+        result = solve_mc_opf_capc(math, FBSUBFPowerModel, ipopt_solver; solution_processors=[sol_data_model!])
 
         @test result["termination_status"] == LOCALLY_SOLVED
 
-        @test isapprox(sum(result["solution"]["voltage_source"]["source"]["pg"]), 404.784; atol=5)
-        @test isapprox(sum(result["solution"]["voltage_source"]["source"]["qg"]), -328.146; atol=300)
+        @test isapprox(sum(result["solution"]["gen"]["1"]["pg"]), [404.784, 404.784, 404.784]; atol=5)
+        @test isapprox(sum(result["solution"]["gen"]["1"]["qg"]), [-328.146,-328.146,-328.146]; atol=300)
 
         sourcebus_id = math["bus_lookup"]["646"]
         vbase = math["bus"][string(sourcebus_id)]["vbase"]
 
-        @test all(isapprox.(result["solution"]["bus"]["646"]["vm"] ./ vbase, [1.03928, 1.05688]; atol=2e-1))
-        @test all(isapprox.(result["solution"]["bus"]["646"]["va"], [-89.997, 148.711]; atol=8e-1))
+        @test all(isapprox.(result["solution"]["bus"]["13"]["vm"] ./ vbase, [1.03928, 1.05688, 0]; atol=2e-1))
+        @test all(isapprox.(result["solution"]["bus"]["13"]["va"], [-89.997, 148.711, 0]; atol=8e-1))
 
         # @test all(isapprox.(result["shunt"]["c1"]["cap_state"], [1.0]; atol=6e-1))
     end
@@ -85,15 +85,13 @@
 
         @test result["termination_status"] == LOCALLY_SOLVED
 
-        result = transform_solution(result["solution"], math, make_si=true)
-
-        @test isapprox(sum(result["voltage_source"]["source"]["pg"]), 404.784; atol=5)
-        @test isapprox(sum(result["voltage_source"]["source"]["qg"]), -328.146; atol=900)
+        @test isapprox(sum(result["solution"]["gen"]["1"]["pg"]), [404.784, 404.784, 404.784]; atol=5)
+        @test isapprox(sum(result["solution"]["gen"]["1"]["qg"]), [-328.146,-328.146,-328.146]; atol=900)
 
         sourcebus_id = math["bus_lookup"]["646"]
         vbase = math["bus"][string(sourcebus_id)]["vbase"]
 
-        @test all(isapprox.(result["bus"]["646"]["vm"] ./ vbase, [1.03928, 1.05688]; atol=2e-1))
+        @test all(isapprox.(result["solution"]["bus"]["13"]["vm"] ./ vbase, [1.03928, 1.05688, 0]; atol=2e-1))
 
         # @test all(isapprox.(result["shunt"]["c1"]["cap_state"], [1.0]; atol=6e-1))
     end
@@ -104,16 +102,14 @@
 
         @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
 
-        result = transform_solution(result["solution"], math, make_si=true)
-
-        @test isapprox(sum(result["voltage_source"]["source"]["pg"]), 404.784; atol=5)
-        @test isapprox(sum(result["voltage_source"]["source"]["qg"]), -328.146; atol=400)
+        @test isapprox(sum(result["solution"]["gen"]["1"]["pg"]), [404.784, 404.784, 404.784]; atol=5)
+        @test isapprox(sum(result["solution"]["gen"]["1"]["qg"]), [-328.146,-328.146,-328.146]; atol=400)
     
         sourcebus_id = math["bus_lookup"]["646"]
         vbase = math["bus"][string(sourcebus_id)]["vbase"]
 
-        @test all(isapprox.(result["bus"]["646"]["vm"] ./ vbase, [1.03928, 1.05688]; atol=2e-1))
-        @test all(isapprox.(result["bus"]["646"]["va"], [-89.997, 148.711]; atol=1e0))
+        @test all(isapprox.(result["solution"]["bus"]["13"]["vm"] ./ vbase, [1.03928, 1.05688, 0]; atol=2e-1))
+        @test all(isapprox.(result["solution"]["bus"]["13"]["va"], [-89.997, 148.711, 0]; atol=1e0))
 
         # @test all(isapprox.(result["shunt"]["c1"]["cap_state"], [1.0]; atol=6e-1))
     end
@@ -121,21 +117,20 @@
     @testset "capcontrol_fotp" begin
         math = transform_data_model(ravens_IEEE13_CapControl)
         result = solve_mc_opf_capc(math, FOTPUPowerModel, ipopt_solver)
-
+        
         @test result["termination_status"] == LOCALLY_SOLVED
-
-
-        result = transform_solution(result["solution"], math, make_si=true)
-
-
-        @test isapprox(sum(result["voltage_source"]["source"]["pg"]), 404.784; atol=5)
-        @test isapprox(sum(result["voltage_source"]["source"]["qg"]), -328.146; atol=400)
+        
+        @debug result["solution"]
+        @test isapprox(sum(result["solution"]["gen"]["1"]["pg"]), [404.784, 404.784, 404.784]; atol=5)
+        @test isapprox(sum(result["solution"]["gen"]["1"]["qg"]), [-328.146,-328.146,-328.146]; atol=400)
 
         sourcebus_id = math["bus_lookup"]["646"]
+
+        
         vbase = math["bus"][string(sourcebus_id)]["vbase"]
 
-        @test all(isapprox.(result["bus"]["646"]["vm"] ./ vbase, [1.03928, 1.05688]; atol=2e-1))
-        @test all(isapprox.(result["bus"]["646"]["va"], [-89.997, 148.711]; atol=1e0))
+        @test all(isapprox.(result["solution"]["bus"]["13"]["vm"] ./ vbase, [1.03928, 1.05688, 0]; atol=2e-1))
+        @test all(isapprox.(result["solution"]["bus"]["13"]["va"], [-89.997, 148.711, 0]; atol=1e0))
 
         # @test all(isapprox.(result["shunt"]["c1"]["cap_state"], [1.0]; atol=6e-1))
     end

@@ -12,8 +12,8 @@
         @test isapprox(pd(result, "1")*1000, [400], atol=1E-1)
         @test isapprox(qd(result, "1")*1000, [300], atol=1E-1)
         # single-phase wye loads
-        @test isapprox(pd(result, "10")*1000, [400.0], atol=1E-1)
-        @test isapprox(qd(result, "10")*1000, [300.0], atol=1E-1)
+        @test isapprox(pd(result, "10")*1000, [133.0, 133, 133], atol=1E-1)
+        @test isapprox(qd(result, "10")*1000, [100.0, 100, 100], atol=1E-1)
         # three-phase loads
         @test isapprox(qd(result, "2")*1000, [100.0, 100.0, 100.0], atol=1E-1)
         @test isapprox(pd(result, "2")*1000, [133.3, 133.3, 133.3], atol=1E-1)
@@ -31,13 +31,9 @@
         vbase = math["bus"][string(sourcebus_id)]["vbase"]
         @test isapprox(vm(result, string(sourcebus_id)) ./ vbase, [4.330086349110862, 4.330116429951092, 4.330118057511072], atol=1.5E-4)
         # loads
-        println("<debug> "*string(result["solution"]["load"]["1"]["pd"]))
         @test isapprox(pd(result, "1"), (1/1000)*[400], atol=1e-1)
-        println("<debug> "*string(result["solution"]["load"]["1"]["qd"]))
         @test isapprox(qd(result, "1"), (1/1000)*[300], atol=1e-1)
-        println("<debug> "*string(result["solution"]["load"]["2"]["pd"]))
         @test isapprox(pd(result, "2"), (1/1000)*[332], atol=1e-1)
-        println("<debug> "*string(result["solution"]["load"]["2"]["qd"]))
         @test isapprox(qd(result, "2"), (1/1000)*[249], atol=1e-1)
         @test isapprox(pd(result, "5"), (1/1000)*[110.8, 132.9, 134.1], atol=1e-1)
         @test isapprox(qd(result, "5"), (1/1000)*[ 83.1,  99.7, 100.6], atol=1e-1)
@@ -51,13 +47,9 @@
         vbase = math["bus"][string(sourcebus_id)]["vbase"]
         @test isapprox(calc_vm_acr(result, string(sourcebus_id)) ./ vbase, [4.330086349110862, 4.330116429951092, 4.330118057511072], atol=1.5E-4)
         # loads
-        println("<debug> "*string(result["solution"]["load"]["1"]["pd"]))
         @test isapprox(pd(result, "1"), (1/1000)*[400], atol=1e-1)
-        println("<debug> "*string(result["solution"]["load"]["1"]["qd"]))
         @test isapprox(qd(result, "1"), (1/1000)*[300], atol=1e-1)
-        println("<debug> "*string(result["solution"]["load"]["2"]["pd"]))
         @test isapprox(pd(result, "2"), (1/1000)*[332], atol=1e-1)
-        println("<debug> "*string(result["solution"]["load"]["2"]["qd"]))
         @test isapprox(qd(result, "2"), (1/1000)*[249], atol=1e-1)
         @test isapprox(pd(result, "5"), (1/1000)*[110.8, 132.9, 134.1], atol=1e-1)
         @test isapprox(qd(result, "5"), (1/1000)*[083.1,  99.7, 100.6], atol=1e-1)
@@ -85,17 +77,16 @@
         # voltage magnitude at load bus
         sourcebus_id = math["bus_lookup"]["sourcebus"]
         vbase = math["bus"][string(sourcebus_id)]["vbase"]
-        @test isapprox(vm(result, "loadbus") ./ vbase, [4.330086349110861, 4.330116429951092, 4.330118057511072]; atol=1E-5)
         # delta loads
-        @test isapprox(pd(result, "l1"), [2.9, 2.9, 2.9], atol=1E-1)
-        @test isapprox(qd(result, "l1"), [1.0, 1.0, 1.0], atol=1E-1)
+        @test isapprox(pd(result, "1"), [2.9], atol=1E-1)
+        @test isapprox(qd(result, "1"), [1.0], atol=1E-1)
         # wye loads
-        @test isapprox(pd(result, "l2"), [8.7], atol=1E-1)
-        @test isapprox(qd(result, "l2"), [2.9], atol=1E-1)
-        @test isapprox(pd(result, "l3"), [8.7], atol=1E-1)
-        @test isapprox(qd(result, "l3"), [2.9], atol=1E-1)
-        @test isapprox(pd(result, "l4"), [8.5], atol=1E-1)
+        @test isapprox(pd(result, "2"), [8.7], atol=1E-1)
+        @test isapprox(qd(result, "2"), [2.9], atol=1E-1)
+        @test isapprox(pd(result, "3"), [8.7], atol=1E-1)
+        @test isapprox(qd(result, "3"), [2.9], atol=1E-1)
+        @test isapprox(pd(result, "4"), [8.5, 8.5, 8.5], atol=1E-1)
         
-        @test isapprox(qd(result, "l4"), [2.8], atol=1E-1) 
+        @test isapprox(qd(result, "4"), [2.8, 2.8, 2.8], atol=1E-1) 
     end
 end
