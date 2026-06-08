@@ -1,5 +1,10 @@
 @info "running transformer tests"
 
+@debug "NOTE: This test used to convert back to the engineering model to get equivalent outputs to the DSS transformer test file, 
+but in an attempt to convert it to a purely Ravens format and to avoid an error in _map_math2eng_transformer! where not all 
+transformers were being converted, we have switched to evaluating results directly. This has changed the output target values, 
+and more thoughtful analysis is required to prevent these tests from failing. They no longer error at the very least."
+
 @testset "transformers" begin
     @testset "test transformer acp pf" begin
         @testset "2w transformer acp pf yy" begin

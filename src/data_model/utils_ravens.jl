@@ -165,6 +165,8 @@ end
 
 apply_voltage_bounds_math!(data::MathematicalModel; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1) = apply_voltage_bounds_math!(data.data; vm_lb=vm_lb, vm_ub=vm_ub)
 
+apply_voltage_bounds_math!(data::AbstractUnbalancedPowerModel; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1) = apply_voltage_bounds_math!(data.data; vm_lb=vm_lb, vm_ub=vm_ub)
+
 function build_base_voltage_graphs(data::Dict{String,<:Any})::Tuple{Dict{Int,String},Graphs.SimpleGraph}
     nodes = Dict(cn => n for (n, cn) in enumerate(keys(data["ConnectivityNode"])))
     G = Graphs.SimpleGraph(length(nodes))

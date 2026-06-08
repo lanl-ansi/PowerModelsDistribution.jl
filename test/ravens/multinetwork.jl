@@ -22,11 +22,12 @@
         mn_math = instantiate_mc_model_ravens(ravens_case3_balanced, NFAUPowerModel, build_mn_mc_opf; multinetwork=true)
         
         apply_voltage_bounds_math!(mn_math)
-        for (n,nw) in mn_math["nw"]
-            vbases, _ = calc_eng_voltage_bases(mn_math["nw"]["1"], mn_math["nw"]["1"]["settings"]["vbases_default"])
-
-            @test all(all(isapprox.(bus["vm_ub"][filter(x->x∉bus["grounded"],bus["terminals"])]/vbases[id], 1.1; atol=1e-6)) for (id,bus) in filter(x->x.first!="sourcebus",nw["bus"]))
-            @test all(all(isapprox.(bus["vm_lb"][filter(x->x∉bus["grounded"],bus["terminals"])]/vbases[id], 0.9; atol=1e-6)) for (id,bus) in filter(x->x.first!="sourcebus",nw["bus"]))
+        @debug keys(mn_math.data)
+        for (n,nw) in mn_math.data["nw"]
+            vbases, _ = calc_voltage_bases(mn_math.data["nw"]["1"], mn_math.data["nw"]["1"]["settings"]["vbases_default"])
+            
+            @test all(all(isapprox.(bus["vmax"][filter(x->bus["grounded"][x] == 0,bus["terminals"])]/vbases[id], 1.1; atol=1e-6)) for (id,bus) in filter(x->x.second["name"]!="sourcebus",nw["bus"])) #TODO: vm == 1.1 but vbases != 1 thus the test fails
+            @test all(all(isapprox.(bus["vmin"][filter(x->bus["grounded"][x] == 0,bus["terminals"])]/vbases[id], 0.9; atol=1e-6)) for (id,bus) in filter(x->x.second["name"]!="sourcebus",nw["bus"])) #TODO: vm ~= 0.9 but vbases != 1 thus the test fails  
         end
     end
     
