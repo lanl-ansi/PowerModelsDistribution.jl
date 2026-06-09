@@ -1870,6 +1870,10 @@ function _map_ravens2math_power_electronics!(data_math::MathematicalModel{Networ
             math_obj["qmin"] = (get(ravens_obj, "PowerElectronicsConnection.minQ", -math_obj["discharge_rating"] * power_scale_factor)) ./ (power_scale_factor)
             math_obj["qmax"] = (get(ravens_obj, "PowerElectronicsConnection.maxQ", math_obj["charge_rating"] * power_scale_factor)) ./ (power_scale_factor)
 
+            if haskey(ravens_obj,"PowerElectronicsConnection.maxIFault")
+                math_obj["imax_fault"] = get(ravens_obj,"PowerElectronicsConnection.maxIFault")
+            end
+
             # TODO: verify that these CIM terms are equivalent to the needed values.
             math_obj["r"] = get(ravens_obj, "PowerElectronicsConnection.r", 0)
             math_obj["x"] = get(ravens_obj, "PowerElectronicsConnection.x", 0)
