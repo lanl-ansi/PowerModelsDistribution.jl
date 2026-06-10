@@ -16,8 +16,11 @@
         result = solve_mc_mld(math, LPUBFDiagPowerModel, ipopt_solver)
 
         @test result["termination_status"] == NORM_LIMIT
+        #ACTUAL: @test result["termination_status"] == OTHER_ERROR
 
         @test isapprox(result["objective"], 36; atol=1)
+        #ACTUAL: @test isapprox(result["objective"], 46; atol=1)
         @test isapprox(result["solution"]["load"]["1"]["status"], .75; atol=1e-3)
+        #ACTUAL: @test isapprox(result["solution"]["load"]["1"]["status"], 0.623; atol=1e-3)
     end
 end

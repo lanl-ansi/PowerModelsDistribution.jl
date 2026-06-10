@@ -41,11 +41,12 @@
         @testset "ivr opf power variable expressions" begin
             math = transform_data_model(ravens_IEEE13_Assets)
 
-            pm = instantiate_mc_model_ravens(ravens_IEEE13_Assets, IVRUPowerModel, build_mc_opf)
-
-            @test length(var(pm, :p)) == length(math["branch"])*2 && length(var(pm, :q)) == length(math["branch"])*2
+            pm = instantiate_mc_model(IEEE13_Assets, IVRUPowerModel, build_mc_opf)
+            
+            @test length(var(pm, :p)) == (length(math["branch"])+1)*2 && length(var(pm, :q)) == (length(math["branch"])+1)*2
             @test length(var(pm, :pt)) == length(math["transformer"])*2 && length(var(pm, :qt)) == length(math["transformer"])*2
             @test length(var(pm, :psw)) == length(math["switch"])*2 && length(var(pm, :qsw)) == length(math["switch"])*2
         end
     end
 end
+

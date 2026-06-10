@@ -85,7 +85,6 @@ ravens_case3_withgens_mn = parse_file("../test/data/ravens/ravens_case3_withgens
 ravens_case2_diag = parse_file("../test/data/ravens/ravens_case2_diag.json")
 ravens_case2_mxshunt = parse_file("../test/data/ravens/ravens_case_mxshunt.json")
 ravens_case2_mxshunt_2 = parse_file("../test/data/ravens/ravens_case_mxshunt_2.json")
-ravens_case2_mxshunt_2 = parse_file("../test/data/ravens/ravens_case_mxshunt_2.json")
 ravens_case2_virtual_sourcebus = parse_file("../test/data/ravens/ravens_virtual_sourcebus.json")
 
 # 3-bus balanced

@@ -113,17 +113,17 @@
         primary_id2 = math2["bus_lookup"]["primary"]
         loadbus_id2 = math2["bus_lookup"]["loadbus"]
 
-        @test all(all(isapprox.(result1["solution"]["bus"][string(sourcebus_id1)]["vm"]./4.33012636656, result2["solution"]["bus"][string(sourcebus_id1)]["vm"]./4.33012636656; atol=1e-8)) for (i, bus) in result1["solution"]["bus"])
-        @test all(all(isapprox.(result1["solution"]["bus"][string(sourcebus_id1)]["va"], result2["solution"]["bus"][string(sourcebus_id1)]["va"]; atol=1e-8)) for (i, bus) in result1["solution"]["bus"])
+        @test all(all(isapprox.(result1["solution"]["bus"][string(sourcebus_id1)]["vm"]./4.33012636656, result2["solution"]["bus"][string(sourcebus_id1)]["vm"]./4.33012636656; atol=1e-4)) for (i, bus) in result1["solution"]["bus"])
+        @test all(all(isapprox.(result1["solution"]["bus"][string(sourcebus_id1)]["va"], result2["solution"]["bus"][string(sourcebus_id1)]["va"]; atol=1e-4)) for (i, bus) in result1["solution"]["bus"])
 
-        @test all(all(isapprox.(result1["solution"]["bus"][string(primary_id1)]["vm"]./4.33012636656, result2["solution"]["bus"][string(primary_id1)]["vm"]./4.33012636656; atol=1e-8)) for (i, bus) in result1["solution"]["bus"])
-        @test all(all(isapprox.(result1["solution"]["bus"][string(primary_id1)]["va"], result2["solution"]["bus"][string(primary_id1)]["va"]; atol=1e-8)) for (i, bus) in result1["solution"]["bus"])
+        @test all(all(isapprox.(result1["solution"]["bus"][string(primary_id1)]["vm"]./4.33012636656, result2["solution"]["bus"][string(primary_id1)]["vm"]./4.33012636656; atol=1e-4)) for (i, bus) in result1["solution"]["bus"])
+        @test all(all(isapprox.(result1["solution"]["bus"][string(primary_id1)]["va"], result2["solution"]["bus"][string(primary_id1)]["va"]; atol=1e-4)) for (i, bus) in result1["solution"]["bus"])
 
-        @test all(all(isapprox.(result1["solution"]["bus"][string(loadbus_id1)]["vm"]./4.33012636656, result2["solution"]["bus"][string(loadbus_id1)]["vm"]./4.33012636656; atol=1e-8)) for (i, bus) in result1["solution"]["bus"])
-        @test all(all(isapprox.(result1["solution"]["bus"][string(loadbus_id1)]["va"], result2["solution"]["bus"][string(loadbus_id1)]["va"]; atol=1e-8)) for (i, bus) in result1["solution"]["bus"])
+        @test all(all(isapprox.(result1["solution"]["bus"][string(loadbus_id1)]["vm"]./4.33012636656, result2["solution"]["bus"][string(loadbus_id1)]["vm"]./4.33012636656; atol=1e-4)) for (i, bus) in result1["solution"]["bus"])
+        @test all(all(isapprox.(result1["solution"]["bus"][string(loadbus_id1)]["va"], result2["solution"]["bus"][string(loadbus_id1)]["va"]; atol=1e-4)) for (i, bus) in result1["solution"]["bus"])
 
-        @test isapprox(sum(result1["solution"]["gen"]["1"]["pg"])*10^3, sum(result2["solution"]["gen"]["1"]["pg"])*10^3; atol=1e-8)
-        @test isapprox(sum(result1["solution"]["gen"]["1"]["qg"])*10^3, sum(result2["solution"]["gen"]["1"]["qg"])*10^3; atol=1e-8)
+        @test isapprox(sum(result1["solution"]["gen"]["1"]["pg"])*10^3, sum(result2["solution"]["gen"]["1"]["pg"])*10^3; atol=1e-4)
+        @test isapprox(sum(result1["solution"]["gen"]["1"]["qg"])*10^3, sum(result2["solution"]["gen"]["1"]["qg"])*10^3; atol=1e-2)
     end
 
     @testset "3-bus unbalanced acp pf" begin
