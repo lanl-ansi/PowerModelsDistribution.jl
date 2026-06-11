@@ -31,8 +31,13 @@ function fix_cyme!(
         - Adds defined meter objects for fault analysis to the RAVENS file
     """
     if load_file !== nothing && solar_file !== nothing && meter_json !== nothing
-        ravens_data = _generate_profiles!(ravens_data; load_file, solar_file, meter_json, split_data)
+        ravens_data = _generate_profiles!(ravens_data; load_file, solar_file, meter_json, split_data) #TODO what is the proper way to have a function output 1-3 objects
     end
+
+    #TODO: add in `Faults` and `Breakers` as ravens objects within the ravens_data
+    #   - what should faults and breakers actually be called and where should they be stored
+    #   - should just take a list as an input for both and add them to the file
+    #   - should offer similar ease of use and separability to the generate profiles function
 
     return ravens_data
 end
