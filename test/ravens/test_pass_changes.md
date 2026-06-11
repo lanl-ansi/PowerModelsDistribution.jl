@@ -105,7 +105,7 @@ This was just a typo fix.
 
 All errors are that the tests only hold up to an atol of 10^-4 rather than the 10^-8 threshold which is a sensible numerical error for an optimization problem.
 
-The last test only holds up to 10^-2 ie: 
+The last test only holds up to 10^-2 ie:
 `Evaluated: isapprox(9.194043674460072, 9.193042740509885)`
 
 ## opf bf
@@ -120,7 +120,6 @@ The last test only holds up to 10^-2 ie:
 ## opv iv
 
 ### ivr opf power variable expressions [FIXED_BUT_PENDING_VALDIATION]
-
 
 PENDING FIX: This fix makes some sense and resolves the error but needs someone more familiar with the intended behavior to valdiate these changes.
 
@@ -143,3 +142,17 @@ pm = instantiate_mc_model(IEEE13_Assets, IVRUPowerModel, build_mc_opf)
 This is because instantiate_mc_model_ravens does not produce an engineering model in the same way so the comparison does not make a ton of sense to be a 1-1 map from the non ravens test to the ravens test. The new version compares the number of objects in the ravens math model to the equivalent form in the dss based engineering model.
 
 And then we need to change `(length(math["branch"]))*2` to `(length(math["branch"])+1)*2` as the math model is missing a branch created by the dss math model.
+
+## Transformers
+
+### All Tests
+
+Voltage angles all needed a degree->radian conversion to run and also needed to be pegged to between -2pi and 2pi. 
+
+Voltage magnitude needed a 
+
+### 2 Winding voltage angle and magnitude tests
+
+
+
+

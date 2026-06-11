@@ -5,30 +5,41 @@ but in an attempt to convert it to a purely Ravens format and to avoid an error 
 transformers were being converted, we have switched to evaluating results directly. This has changed the output target values, 
 and more thoughtful analysis is required to prevent these tests from failing. They no longer error at the very least."
 
+function wrap_to_range(val; low = -π, high = π)
+    width = high - low
+    return mod(val - low, width) + low
+end
+
 @testset "transformers" begin
     @testset "test transformer acp pf" begin
         @testset "2w transformer acp pf yy" begin
             math = transform_data_model(ravens_ut_trans_2w_yy)
             result = solve_mc_pf(math, ACPUPowerModel, ipopt_solver; solution_processors=[sol_data_model!], make_si=false)
 
+            println(result["solution"]["bus"]["3"]["vm"])
+            println(wrap_to_range.(result["solution"]["bus"]["3"]["va"]))
             @test norm(result["solution"]["bus"]["3"]["vm"]-[2.26754, 2.268515, 2.263806], Inf) <= 1.5E-2
-            @test norm(result["solution"]["bus"]["3"]["va"]-[-43.774, -163.85, 76.2628], Inf) <= 0.1
+            @test norm(wrap_to_range.(result["solution"]["bus"]["3"]["va"])-deg2rad.([-43.774, -163.85, 76.2628]), Inf) <= 0.1
         end
 
         @testset "2w transformer acp pf dy_lead" begin
             math = transform_data_model(ravens_ut_trans_2w_dy_lead)
             result = solve_mc_pf(math, ACPUPowerModel, ipopt_solver; solution_processors=[sol_data_model!], make_si=false)
 
+            println(result["solution"]["bus"]["3"]["vm"])
+            println(wrap_to_range.(result["solution"]["bus"]["3"]["va"]))
             @test norm(result["solution"]["bus"]["3"]["vm"]-[2.26754, 2.268515, 2.263806], Inf) <= 1.5E-5
-            @test norm(result["solution"]["bus"]["3"]["va"]-[-73.7194, 166.1574, 46.1977], Inf) <= 0.1
+            @test norm(wrap_to_range.(result["solution"]["bus"]["3"]["va"])-deg2rad.([-73.7194, 166.1574, 46.1977]), Inf) <= 0.1
         end
 
         @testset "2w transformer acp pf dy_lag" begin
             math = transform_data_model(ravens_ut_trans_2w_dy_lag)
             result = solve_mc_pf(math, ACPUPowerModel, ipopt_solver; make_si=false)
 
+            println(result["solution"]["bus"]["3"]["vm"])
+            println(wrap_to_range.(result["solution"]["bus"]["3"]["va"]))
             @test norm(result["solution"]["bus"]["3"]["vm"]-[2.26754, 2.268515, 2.263806], Inf) <= 1.5E-5
-            @test norm(result["solution"]["bus"]["3"]["va"]-[-73.7194, 166.1574, 46.1977], Inf) <= 0.1
+            @test norm(wrap_to_range.(result["solution"]["bus"]["3"]["va"])-deg2rad.([-73.7194, 166.1574, 46.1977]), Inf) <= 0.1
         end
     end
 
@@ -37,24 +48,30 @@ and more thoughtful analysis is required to prevent these tests from failing. Th
             math = transform_data_model(ravens_ut_trans_2w_yy)
             result = solve_mc_pf(math, IVRUPowerModel, ipopt_solver; solution_processors=[sol_data_model!], make_si=false)
 
+            println(result["solution"]["bus"]["3"]["vm"])
+            println(wrap_to_range.(result["solution"]["bus"]["3"]["va"]))
             @test norm(result["solution"]["bus"]["3"]["vm"]-[5.1058, 5.5512, 5.98247], Inf) <= 1.5E-2
-            @test norm(result["solution"]["bus"]["3"]["va"]-[-108.8580, -145.64931, 117.8380], Inf) <= 0.1
+            @test norm(wrap_to_range.(result["solution"]["bus"]["3"]["va"])-deg2rad.([-108.8580, -145.64931, 117.8380]), Inf) <= 0.1
         end
 
         @testset "2w transformer ivr pf dy_lead" begin
             math = transform_data_model(ravens_ut_trans_2w_dy_lead)
             result = solve_mc_pf(math, IVRUPowerModel, ipopt_solver; solution_processors=[sol_data_model!], make_si=false)
 
+            println(result["solution"]["bus"]["3"]["vm"])
+            println(wrap_to_range.(result["solution"]["bus"]["3"]["va"]))
             @test norm(result["solution"]["bus"]["3"]["vm"]-[5.123, 5.5482, 5.962], Inf) <= 1.5E-2
-            @test norm(result["solution"]["bus"]["3"]["va"]-[-57.975, 147.7116, 46.999], Inf) <= 0.1
+            @test norm(wrap_to_range.(result["solution"]["bus"]["3"]["va"])-deg2rad.([-57.975, 147.7116, 46.999]), Inf) <= 0.1
         end
 
         @testset "2w transformer ivr pf dy_lag" begin
             math = transform_data_model(ravens_ut_trans_2w_dy_lag)
             result = solve_mc_pf(math, IVRUPowerModel, ipopt_solver; solution_processors=[sol_data_model!], make_si=false)
 
+            println(result["solution"]["bus"]["3"]["vm"])
+            println(wrap_to_range.(result["solution"]["bus"]["3"]["va"]))
             @test norm(result["solution"]["bus"]["3"]["vm"]-[5.123, 5.5482, 5.962], Inf) <= 1.5E-2
-            @test norm(result["solution"]["bus"]["3"]["va"]-[-57.9757, 147.7116, 46.9990], Inf) <= 0.1
+            @test norm(wrap_to_range.(result["solution"]["bus"]["3"]["va"])-deg2rad.([-57.9757, 147.7116, 46.9990]), Inf) <= 0.1
         end
     end
 
@@ -63,24 +80,30 @@ and more thoughtful analysis is required to prevent these tests from failing. Th
             math = transform_data_model(ravens_ut_trans_2w_yy)
             result = solve_mc_pf(math, ACRUPowerModel, ipopt_solver; solution_processors=[sol_data_model!], make_si=false)
 
+            println(result["solution"]["bus"]["3"]["vm"])
+            println(wrap_to_range.(result["solution"]["bus"]["3"]["va"]))
             @test norm(result["solution"]["bus"]["3"]["vm"]-[2.26754, 2.268515, 2.263806], Inf) <= 1.5E-2
-            @test norm(result["solution"]["bus"]["3"]["va"]-[-43.7745, -163.8520, 76.2629], Inf) <= 0.1
+            @test norm(wrap_to_range.(result["solution"]["bus"]["3"]["va"])-deg2rad.([-43.7745, -163.8520, 76.2629]), Inf) <= 0.1
         end
 
         @testset "2w transformer acr pf dy_lead" begin
             math = transform_data_model(ravens_ut_trans_2w_dy_lead)
             result = solve_mc_pf(math, ACRUPowerModel, ipopt_solver; solution_processors=[sol_data_model!], make_si=false)
 
+            println(result["solution"]["bus"]["3"]["vm"])
+            println(wrap_to_range.(result["solution"]["bus"]["3"]["va"]))
             @test norm(result["solution"]["bus"]["3"]["vm"]-[2.26754, 2.268515, 2.263806], Inf) <= 1.5E-5
-            @test norm(result["solution"]["bus"]["3"]["va"]-[-73.7194, 166.1574, 46.1977], Inf) <= 0.1
+            @test norm(wrap_to_range.(result["solution"]["bus"]["3"]["va"])-deg2rad.([-73.7194, 166.1574, 46.1977]), Inf) <= 0.1
         end
 
         @testset "2w transformer acr pf dy_lag" begin
             math = transform_data_model(ravens_ut_trans_2w_dy_lag)
             result = solve_mc_pf(math, ACRUPowerModel, ipopt_solver; solution_processors=[sol_data_model!], make_si=false)
 
+            println(result["solution"]["bus"]["3"]["vm"])
+            println(wrap_to_range.(result["solution"]["bus"]["3"]["va"]))
             @test norm(result["solution"]["bus"]["3"]["vm"]-[2.26754, 2.268515, 2.263806], Inf) <= 1.5E-5
-            @test norm(result["solution"]["bus"]["3"]["va"]-[-73.7194, 166.1574, 46.1977], Inf) <= 0.1
+            @test norm(wrap_to_range.(result["solution"]["bus"]["3"]["va"])-deg2rad.([-73.7194, 166.1574, 46.1977]), Inf) <= 0.1
         end
     end
 
@@ -97,13 +120,12 @@ and more thoughtful analysis is required to prevent these tests from failing. Th
         # @test result1["gen"] == result2["gen"] # TODO need a new test, transformer model changed, use voltages on real bus
     end
 
-    #THREE WINDINGS DO NOT WORK IN RAVENS YET
     @testset "three winding transformer pf" begin
         @testset "3w transformer ac pf dyy - all non-zero"  begin
             math = transform_data_model(ravens_ut_trans_3w_dyy_1)
             result = solve_mc_pf(math, ACPUPowerModel, ipopt_solver; make_si=false)
             @test norm(result["solution"]["bus"]["3"]["vm"]-[0.9318, 0.88828, 0.88581], Inf) <= 1.5E-5
-            @test norm(result["solution"]["bus"]["3"]["va"]-[30.1, -90.7, 151.2], Inf) <= 0.1
+            @test norm(wrap_to_range.(result["solution"]["bus"]["3"]["va"])-deg2rad.([30.1, -90.7, 151.2]), Inf) <= 0.1
         end
 
         @testset "3w transformer ac pf dyy - some non-zero" begin
@@ -111,21 +133,21 @@ and more thoughtful analysis is required to prevent these tests from failing. Th
             result = solve_mc_pf(math, ACPUPowerModel, ipopt_solver; make_si=false)
             #@test isapprox(vm(result, eng, "3"), [0.93876, 0.90227, 0.90454], atol=1E-4)
             @test norm(result["solution"]["bus"]["3"]["vm"]-[0.93876, 0.90227, 0.90454], Inf) <= 1.5E-5
-            @test norm(result["solution"]["bus"]["3"]["va"]-[31.6, -88.8, 153.3], Inf) <= 0.1
+            @test norm(wrap_to_range.(result["solution"]["bus"]["3"]["va"])-deg2rad.([31.6, -88.8, 153.3]), Inf) <= 0.1
         end
 
         @testset "3w transformer ac pf dyy - all zero" begin
             math = transform_data_model(ravens_ut_trans_3w_dyy_3)
             result = solve_mc_pf(math, ACPUPowerModel, ipopt_solver; make_si=false)
             @test norm(result["solution"]["bus"]["3"]["vm"]-[0.97047, 0.93949, 0.946], Inf) <= 1.5E-5
-            @test norm(result["solution"]["bus"]["3"]["va"]-[30.6, -90.0, 151.9], Inf) <= 0.1
+            @test norm(wrap_to_range.(result["solution"]["bus"]["3"]["va"])-deg2rad.([30.6, -90.0, 151.9]), Inf) <= 0.1
         end
 
         @testset "3w transformer ac pf dyy - %loadloss=0" begin
             math = transform_data_model(ravens_ut_trans_3w_dyy_3_loadloss)
             result = solve_mc_pf(math, ACPUPowerModel, ipopt_solver; make_si=false)
             @test norm(result["solution"]["bus"]["3"]["vm"]-[0.969531, 0.938369, 0.944748], Inf) <= 1.5E-5
-            @test norm(result["solution"]["bus"]["3"]["va"]-[30.7, -90.0, 152.0], Inf) <= 0.1
+            @test norm(wrap_to_range.(result["solution"]["bus"]["3"]["va"])-deg2rad.([30.7, -90.0, 152.0]), Inf) <= 0.1
         end
 
         @testset "3w transformer ac pf center-tap" begin
@@ -160,7 +182,7 @@ and more thoughtful analysis is required to prevent these tests from failing. Th
 
             # then check whether voltage is what OpenDSS expects for those values
             @test norm(result["solution"]["bus"]["3"]["vm"]-[0.8,0.8,0.8], Inf) <= 1E-4
-            @test norm(result["solution"]["bus"]["3"]["va"]-[-9.16, -129.24, 110.8], Inf) <= 0.1
+            @test norm(wrap_to_range.(result["solution"]["bus"]["3"]["va"])-deg2rad.([-9.16, -129.24, 110.8]), Inf) <= 0.1
         end
     end
 
@@ -212,7 +234,7 @@ and more thoughtful analysis is required to prevent these tests from failing. Th
             vbase = math["bus"][string(sourcebus_id)]["vbase"]
 
             @test all(isapprox.(result["solution"]["bus"]["12"]["vm"] ./ vbase, [0.0165, 0.01582, 0.0158]; atol=2e-2))
-            @test all(isapprox.(result["solution"]["bus"]["12"]["va"], [29.99, -90.00, 149.99]; atol=3e-1))
+            @test all(isapprox.(result["solution"]["bus"]["12"]["va"], deg2rad.([29.99, -90.00, 149.99]); atol=3e-1))
 
             @test all(isapprox.(result["solution"]["transformer"]["3"]["pf"], [1.22, 1.08, 1.10]; atol=3e-2))
             @test all(isapprox.(result["solution"]["transformer"]["3"]["qf"], [1.22, 1.08, 1.10]; atol=3e-2))
@@ -233,7 +255,7 @@ and more thoughtful analysis is required to prevent these tests from failing. Th
             vbase = math["bus"][string(sourcebus_id)]["vbase"]
 
             @test all(isapprox.(result["solution"]["bus"]["12"]["vm"] ./ vbase, [0.0165, 0.0158, 0.0158]; atol=2e-2))
-            @test all(isapprox.(result["solution"]["bus"]["12"]["va"], [30.00, -90.00, 150.00]; atol=3e-1))
+            @test all(isapprox.(result["solution"]["bus"]["12"]["va"], deg2rad.([30.00, -90.00, 150.00]); atol=3e-1))
 
             @test all(isapprox.(result["solution"]["transformer"]["3"]["pf"], [1.22, 1.08, 1.10]; atol=3e-2))
             @test all(isapprox.(result["solution"]["transformer"]["3"]["qf"], [1.22, 1.08, 1.10]; atol=3e-2))
@@ -274,7 +296,7 @@ and more thoughtful analysis is required to prevent these tests from failing. Th
             vbase = math["bus"][string(sourcebus_id)]["vbase"]
 
             @test all(isapprox.(result["solution"]["bus"]["12"]["vm"] ./ vbase, [0.019, 0.016, 0.016]; atol=3e-2))
-            @test all(isapprox.(result["solution"]["bus"]["12"]["va"], [30.00, -94.04, 149.99]; atol=5e-1))
+            @test all(isapprox.(result["solution"]["bus"]["12"]["va"], deg2rad.([30.00, -94.04, 149.99]); atol=5e-1))
 
             @test all(isapprox.(result["solution"]["transformer"]["3"]["pf"], [1.22, 1.08, 1.10]; atol=3e-2))
             @test all(isapprox.(result["solution"]["transformer"]["3"]["qf"], [1.22, 1.08, 1.10]; atol=3e-2))
@@ -295,7 +317,7 @@ and more thoughtful analysis is required to prevent these tests from failing. Th
             vbase = math["bus"][string(sourcebus_id)]["vbase"]
 
             @test all(isapprox.(result["solution"]["bus"]["12"]["vm"] ./ vbase, [0.046, 0.038, 0.039]; atol=3e-2))
-            @test all(isapprox.(result["solution"]["bus"]["12"]["va"], [30.00, -90.05, 149.93]; atol=5e-1))
+            @test all(isapprox.(result["solution"]["bus"]["12"]["va"], deg2rad.([30.00, -90.05, 149.93]); atol=5e-1))
 
             @test all(isapprox.(result["solution"]["transformer"]["3"]["pf"], [1.22, 1.08, 1.10]; atol=3e-2))
             @test all(isapprox.(result["solution"]["transformer"]["3"]["qf"], [1.22, 1.08, 1.10]; atol=3e-2))
@@ -316,7 +338,7 @@ and more thoughtful analysis is required to prevent these tests from failing. Th
             vbase = math["bus"][string(sourcebus_id)]["vbase"]
 
             @test all(isapprox.(result["solution"]["bus"]["12"]["vm"] ./ vbase, [0.046, 0.038, 0.039]; atol=3e-2))
-            @test all(isapprox.(result["solution"]["bus"]["12"]["va"], [30.00, -94.37, 148.76]; atol=5e-1))
+            @test all(isapprox.(result["solution"]["bus"]["12"]["va"], deg2rad.([30.00, -94.37, 148.76]); atol=5e-1))
 
             @test all(isapprox.(result["solution"]["transformer"]["3"]["pf"], [1.22, 1.08, 1.10]; atol=3e-2))
             @test all(isapprox.(result["solution"]["transformer"]["3"]["qf"], [1.22, 1.08, 1.10]; atol=3e-2))
@@ -336,8 +358,8 @@ and more thoughtful analysis is required to prevent these tests from failing. Th
             @test all(isapprox.(result["solution"]["generator"]["g1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
             @test all(isapprox.(result["solution"]["solar"]["pv1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
             @test all(isapprox.(result["solution"]["bus"]["tn_1"]["vm"], [1.045, 1.05]; atol=1E-3))
-            @test all(isapprox.(result["solution"]["bus"]["tm_2"]["va"], [-120.1, 59.9]; atol=0.1))
-            @test all(isapprox.(result["solution"]["bus"]["tn_6"]["va"], [119.9, -60.1]; atol=0.1))
+            @test all(isapprox.(wrap_to_range.(result["solution"]["bus"]["tm_2"]["va"]), deg2rad.([-120.1, 59.9]); atol=0.1))
+            @test all(isapprox.(wrap_to_range.(result["solution"]["bus"]["tn_6"]["va"]), deg2rad.([119.9, -60.1]); atol=0.1))
         end
 
         @testset "3w transformer acr opf center-tap" begin
@@ -351,8 +373,8 @@ and more thoughtful analysis is required to prevent these tests from failing. Th
             @test all(isapprox.(result["solution"]["generator"]["g1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
             @test all(isapprox.(result["solution"]["solar"]["pv1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
             @test all(isapprox.(result["solution"]["bus"]["tn_1"]["vm"], [1.045, 1.05]; atol=1E-3))
-            @test all(isapprox.(result["solution"]["bus"]["tm_2"]["va"], [-120.1, 59.9]; atol=0.1))
-            @test all(isapprox.(result["solution"]["bus"]["tn_6"]["va"], [119.9, -60.1]; atol=0.1))
+            @test all(isapprox.(wrap_to_range.(result["solution"]["bus"]["tm_2"]["va"]), deg2rad.([-120.1, 59.9]); atol=0.1))
+            @test all(isapprox.(wrap_to_range.(result["solution"]["bus"]["tn_6"]["va"]), deg2rad.([119.9, -60.1]); atol=0.1))
         end
 
         @testset "3w transformer ivr opf center-tap" begin
@@ -366,8 +388,8 @@ and more thoughtful analysis is required to prevent these tests from failing. Th
             @test all(isapprox.(result["solution"]["generator"]["g1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
             @test all(isapprox.(result["solution"]["solar"]["pv1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
             @test all(isapprox.(result["solution"]["bus"]["tn_1"]["vm"], [1.045, 1.05]; atol=1E-3))
-            @test all(isapprox.(result["solution"]["bus"]["tm_2"]["va"], [-120.1, 59.9]; atol=0.1))
-            @test all(isapprox.(result["solution"]["bus"]["tn_6"]["va"], [119.9, -60.1]; atol=0.1))
+            @test all(isapprox.(wrap_to_range.(result["solution"]["bus"]["tm_2"]["va"]), deg2rad.([-120.1, 59.9]); atol=0.1))
+            @test all(isapprox.(wrap_to_range.(result["solution"]["bus"]["tn_6"]["va"]), deg2rad.([119.9, -60.1]); atol=0.1))
         end
 
         @testset "3w transformer fotp opf center-tap" begin
@@ -381,8 +403,8 @@ and more thoughtful analysis is required to prevent these tests from failing. Th
             @test all(isapprox.(result["solution"]["generator"]["g1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
             @test all(isapprox.(result["solution"]["solar"]["pv1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
             @test all(isapprox.(result["solution"]["bus"]["tn_1"]["vm"], [1.045, 1.05]; atol=1E-3))
-            @test all(isapprox.(result["solution"]["bus"]["tm_2"]["va"], [-120.1, 59.9]; atol=0.1))
-            @test all(isapprox.(result["solution"]["bus"]["tn_6"]["va"], [119.9, -60.1]; atol=0.1))
+            @test all(isapprox.(wrap_to_range.(result["solution"]["bus"]["tm_2"]["va"]), deg2rad.([-120.1, 59.9]); atol=0.1))
+            @test all(isapprox.(wrap_to_range.(result["solution"]["bus"]["tn_6"]["va"]), deg2rad.([119.9, -60.1]); atol=0.1))
         end
 
         @testset "3w transformer fotr opf center-tap" begin
@@ -397,8 +419,8 @@ and more thoughtful analysis is required to prevent these tests from failing. Th
             @test all(isapprox.(result["solution"]["generator"]["g1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
             @test all(isapprox.(result["solution"]["solar"]["pv1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
             @test all(isapprox.(result["solution"]["bus"]["tn_1"]["vm"], [1.045, 1.05]; atol=1E-3))
-            @test all(isapprox.(result["solution"]["bus"]["tm_2"]["va"], [-120.1, 59.9]; atol=0.1))
-            @test all(isapprox.(result["solution"]["bus"]["tn_6"]["va"], [119.9, -60.1]; atol=0.1))
+            @test all(isapprox.(wrap_to_range.(result["solution"]["bus"]["tm_2"]["va"]), deg2rad.([-120.1, 59.9]); atol=0.1))
+            @test all(isapprox.(wrap_to_range.(result["solution"]["bus"]["tn_6"]["va"]), deg2rad.([119.9, -60.1]); atol=0.1))
         end
 
         @testset "3w transformer fbs center-tap" begin
@@ -412,8 +434,8 @@ and more thoughtful analysis is required to prevent these tests from failing. Th
             @test all(isapprox.(result["solution"]["generator"]["g1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
             @test all(isapprox.(result["solution"]["solar"]["pv1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
             @test all(isapprox.(result["solution"]["bus"]["tn_1"]["vm"], [1.045, 1.05]; atol=1E-3))
-            @test all(isapprox.(result["solution"]["bus"]["tm_2"]["va"], [-120.1, 59.9]; atol=0.1))
-            @test all(isapprox.(result["solution"]["bus"]["tn_6"]["va"], [119.9, -60.1]; atol=0.1))
+            @test all(isapprox.(wrap_to_range.(result["solution"]["bus"]["tm_2"]["va"]), deg2rad.([-120.1, 59.9]); atol=0.1))
+            @test all(isapprox.(wrap_to_range.(result["solution"]["bus"]["tn_6"]["va"]), deg2rad.([119.9, -60.1]); atol=0.1))
         end
 
         @testset "3w transformer lpubfdiag opf center-tap" begin
@@ -486,9 +508,9 @@ and more thoughtful analysis is required to prevent these tests from failing. Th
             @test data["transformer"]["t1"]["status"] == DISABLED
             @test data["transformer"]["t2"]["status"] == DISABLED
             @test norm(result["solution"]["bus"]["4"]["vm"]-[0.9990740842103211], Inf) <= 1.5E-5
-            @test norm(result["solution"]["bus"]["4"]["va"]-[-0.39064739635881085], Inf) <= 0.1
+            @test norm(result["solution"]["bus"]["4"]["va"]-deg2rad.([-0.39064739635881085]), Inf) <= 0.1
             @test norm(result["solution"]["bus"]["4_l"]["vm"]-[0.9990723339621554], Inf) <= 1.5E-5
-            @test norm(result["solution"]["bus"]["4_l"]["va"]-[-0.3907533731198626], Inf) <= 0.1
+            @test norm(result["solution"]["bus"]["4_l"]["va"]-deg2rad.([-0.3907533731198626]), Inf) <= 0.1
         end
     end
 end
