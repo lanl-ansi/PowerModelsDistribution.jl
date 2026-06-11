@@ -98,46 +98,46 @@ and more thoughtful analysis is required to prevent these tests from failing. Th
     end
 
     #THREE WINDINGS DO NOT WORK IN RAVENS YET
-    # @testset "three winding transformer pf" begin
-        # @testset "3w transformer ac pf dyy - all non-zero"  begin
-        #     math = transform_data_model(ravens_ut_trans_3w_dyy_1)
-        #     result = solve_mc_pf(math, ACPUPowerModel, ipopt_solver; make_si=false)
-        #     @test norm(result["solution"]["bus"]["3"]["vm"]-[0.9318, 0.88828, 0.88581], Inf) <= 1.5E-5
-        #     @test norm(result["solution"]["bus"]["3"]["va"]-[30.1, -90.7, 151.2], Inf) <= 0.1
-        # end
+    @testset "three winding transformer pf" begin
+        @testset "3w transformer ac pf dyy - all non-zero"  begin
+            math = transform_data_model(ravens_ut_trans_3w_dyy_1)
+            result = solve_mc_pf(math, ACPUPowerModel, ipopt_solver; make_si=false)
+            @test norm(result["solution"]["bus"]["3"]["vm"]-[0.9318, 0.88828, 0.88581], Inf) <= 1.5E-5
+            @test norm(result["solution"]["bus"]["3"]["va"]-[30.1, -90.7, 151.2], Inf) <= 0.1
+        end
 
-        # @testset "3w transformer ac pf dyy - some non-zero" begin
-        #     math = transform_data_model(ravens_ut_trans_3w_dyy_2)
-        #     result = solve_mc_pf(math, ACPUPowerModel, ipopt_solver; make_si=false)
-        #     #@test isapprox(vm(result, eng, "3"), [0.93876, 0.90227, 0.90454], atol=1E-4)
-        #     @test norm(result["solution"]["bus"]["3"]["vm"]-[0.93876, 0.90227, 0.90454], Inf) <= 1.5E-5
-        #     @test norm(result["solution"]["bus"]["3"]["va"]-[31.6, -88.8, 153.3], Inf) <= 0.1
-        # end
+        @testset "3w transformer ac pf dyy - some non-zero" begin
+            math = transform_data_model(ravens_ut_trans_3w_dyy_2)
+            result = solve_mc_pf(math, ACPUPowerModel, ipopt_solver; make_si=false)
+            #@test isapprox(vm(result, eng, "3"), [0.93876, 0.90227, 0.90454], atol=1E-4)
+            @test norm(result["solution"]["bus"]["3"]["vm"]-[0.93876, 0.90227, 0.90454], Inf) <= 1.5E-5
+            @test norm(result["solution"]["bus"]["3"]["va"]-[31.6, -88.8, 153.3], Inf) <= 0.1
+        end
 
-        # @testset "3w transformer ac pf dyy - all zero" begin
-        #     math = transform_data_model(ravens_ut_trans_3w_dyy_3)
-        #     result = solve_mc_pf(math, ACPUPowerModel, ipopt_solver; make_si=false)
-        #     @test norm(result["solution"]["bus"]["3"]["vm"]-[0.97047, 0.93949, 0.946], Inf) <= 1.5E-5
-        #     @test norm(result["solution"]["bus"]["3"]["va"]-[30.6, -90.0, 151.9], Inf) <= 0.1
-        # end
+        @testset "3w transformer ac pf dyy - all zero" begin
+            math = transform_data_model(ravens_ut_trans_3w_dyy_3)
+            result = solve_mc_pf(math, ACPUPowerModel, ipopt_solver; make_si=false)
+            @test norm(result["solution"]["bus"]["3"]["vm"]-[0.97047, 0.93949, 0.946], Inf) <= 1.5E-5
+            @test norm(result["solution"]["bus"]["3"]["va"]-[30.6, -90.0, 151.9], Inf) <= 0.1
+        end
 
-        # @testset "3w transformer ac pf dyy - %loadloss=0" begin
-        #     math = transform_data_model(ravens_ut_trans_3w_dyy_3_loadloss)
-        #     result = solve_mc_pf(math, ACPUPowerModel, ipopt_solver; make_si=false)
-        #     @test norm(result["solution"]["bus"]["3"]["vm"]-[0.969531, 0.938369, 0.944748], Inf) <= 1.5E-5
-        #     @test norm(result["solution"]["bus"]["3"]["va"]-[30.7, -90.0, 152.0], Inf) <= 0.1
-        # end
+        @testset "3w transformer ac pf dyy - %loadloss=0" begin
+            math = transform_data_model(ravens_ut_trans_3w_dyy_3_loadloss)
+            result = solve_mc_pf(math, ACPUPowerModel, ipopt_solver; make_si=false)
+            @test norm(result["solution"]["bus"]["3"]["vm"]-[0.969531, 0.938369, 0.944748], Inf) <= 1.5E-5
+            @test norm(result["solution"]["bus"]["3"]["va"]-[30.7, -90.0, 152.0], Inf) <= 0.1
+        end
 
-        # @testset "3w transformer ac pf center-tap" begin
-        #     math = transform_data_model(ravens_trans_3w_center_tap)
-        #     result = solve_mc_pf(math, ACPUPowerModel, ipopt_solver; make_si=false)
-        #     sbase = math["settings"]["sbase_default"]
+        @testset "3w transformer ac pf center-tap" begin
+            math = transform_data_model(ravens_trans_3w_center_tap)
+            result = solve_mc_pf(math, ACPUPowerModel, ipopt_solver; make_si=false)
+            sbase = math["settings"]["sbase_default"]
 
-        #     @test all(isapprox.(sum(result["solution"]["load"]["l3"]["pd"])*sbase, 20.0; atol=1E-5))
-        #     @test all(isapprox.(sum(result["solution"]["generator"]["g1"]["pg_bus"])*sbase, 7.0; atol=9E-4))
-        #     @test all(isapprox.(sum(result["solution"]["solar"]["pv1"]["pg_bus"])*sbase, 3.0; atol=9E-4))
-        # end
-    # end
+            @test all(isapprox.(sum(result["solution"]["load"]["l3"]["pd"])*sbase, 20.0; atol=1E-5))
+            @test all(isapprox.(sum(result["solution"]["generator"]["g1"]["pg_bus"])*sbase, 7.0; atol=9E-4))
+            @test all(isapprox.(sum(result["solution"]["solar"]["pv1"]["pg_bus"])*sbase, 3.0; atol=9E-4))
+        end
+    end
 
     @testset "oltc tests" begin
         @testset "2w transformer acp opf_oltc yy" begin
@@ -172,17 +172,17 @@ and more thoughtful analysis is required to prevent these tests from failing. Th
             @test_skip norm(result["solution"]["bus"]["3"]["w"]-[0.76674, 0.74840, 0.73846], Inf) <= 1E-4
         end
 
-        # @testset "3w_dyy_1" begin
-        #     math = transform_data_model(ravens_ut_trans_3w_dyy_1)
-        #     result = solve_mc_opf(math, LPUBFDiagPowerModel, ipopt_solver)
-        #     @test norm(result["solution"]["bus"]["3"]["w"]-[0.86095, 0.81344, 0.80480], Inf) <= 1E-4
-        # end
+        @testset "3w_dyy_1" begin
+            math = transform_data_model(ravens_ut_trans_3w_dyy_1)
+            result = solve_mc_opf(math, LPUBFDiagPowerModel, ipopt_solver)
+            @test norm(result["solution"]["bus"]["3"]["w"]-[0.86095, 0.81344, 0.80480], Inf) <= 1E-4
+        end
 
-        # @testset "3w_dyy_2" begin
-        #     math = transform_data_model(ravens_ut_trans_3w_dyy_2)
-        #     result = solve_mc_opf(math, LPUBFDiagPowerModel, ipopt_solver)
-        #     @test norm(result["solution"]["bus"]["3"]["w"]-[0.87086, 0.83270, 0.83208], Inf) <= 1E-4
-        # end
+        @testset "3w_dyy_2" begin
+            math = transform_data_model(ravens_ut_trans_3w_dyy_2)
+            result = solve_mc_opf(math, LPUBFDiagPowerModel, ipopt_solver)
+            @test norm(result["solution"]["bus"]["3"]["w"]-[0.87086, 0.83270, 0.83208], Inf) <= 1E-4
+        end
 
         @testset "2w_dy_lead_small_series_impedance" begin
             math1 = transform_data_model(ravens_ut_trans_2w_dy_lead_small_series_impedance)
@@ -325,110 +325,110 @@ and more thoughtful analysis is required to prevent these tests from failing. Th
         end
 
         #3W Center Tap not supported
-        # @testset "3w transformer acp opf center-tap" begin
-        #     math = transform_data_model(ravens_trans_3w_center_tap)
-        #     result = solve_mc_opf(math, ACPUPowerModel, ipopt_solver; make_si=false)
-        #     @test result["termination_status"] == LOCALLY_SOLVED
+        @testset "3w transformer acp opf center-tap" begin
+            math = transform_data_model(ravens_trans_3w_center_tap)
+            result = solve_mc_opf(math, ACPUPowerModel, ipopt_solver; make_si=false)
+            @test result["termination_status"] == LOCALLY_SOLVED
 
-        #     sbase = trans_3w_center_tap["settings"]["sbase_default"]
+            sbase = trans_3w_center_tap["settings"]["sbase_default"]
 
-        #     @test all(isapprox.(result["solution"]["load"]["l3"]["pd"]*sbase, [10.0, 10.0]; atol=1E-5))
-        #     @test all(isapprox.(result["solution"]["generator"]["g1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
-        #     @test all(isapprox.(result["solution"]["solar"]["pv1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
-        #     @test all(isapprox.(result["solution"]["bus"]["tn_1"]["vm"], [1.045, 1.05]; atol=1E-3))
-        #     @test all(isapprox.(result["solution"]["bus"]["tm_2"]["va"], [-120.1, 59.9]; atol=0.1))
-        #     @test all(isapprox.(result["solution"]["bus"]["tn_6"]["va"], [119.9, -60.1]; atol=0.1))
-        # end
+            @test all(isapprox.(result["solution"]["load"]["l3"]["pd"]*sbase, [10.0, 10.0]; atol=1E-5))
+            @test all(isapprox.(result["solution"]["generator"]["g1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
+            @test all(isapprox.(result["solution"]["solar"]["pv1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
+            @test all(isapprox.(result["solution"]["bus"]["tn_1"]["vm"], [1.045, 1.05]; atol=1E-3))
+            @test all(isapprox.(result["solution"]["bus"]["tm_2"]["va"], [-120.1, 59.9]; atol=0.1))
+            @test all(isapprox.(result["solution"]["bus"]["tn_6"]["va"], [119.9, -60.1]; atol=0.1))
+        end
 
-    #     @testset "3w transformer acr opf center-tap" begin
-    #         math = transform_data_model(ravens_trans_3w_center_tap)
-    #         result = solve_mc_opf(math, ACRUPowerModel, ipopt_solver; solution_processors=[sol_data_model!], make_si=false)
-    #         @test result["termination_status"] == LOCALLY_SOLVED
+        @testset "3w transformer acr opf center-tap" begin
+            math = transform_data_model(ravens_trans_3w_center_tap)
+            result = solve_mc_opf(math, ACRUPowerModel, ipopt_solver; solution_processors=[sol_data_model!], make_si=false)
+            @test result["termination_status"] == LOCALLY_SOLVED
 
-    #         sbase = math["settings"]["sbase_default"]
+            sbase = math["settings"]["sbase_default"]
 
-    #         @test all(isapprox.(result["solution"]["load"]["l3"]["pd"]*sbase, [10.0, 10.0]; atol=1E-5))
-    #         @test all(isapprox.(result["solution"]["generator"]["g1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
-    #         @test all(isapprox.(result["solution"]["solar"]["pv1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
-    #         @test all(isapprox.(result["solution"]["bus"]["tn_1"]["vm"], [1.045, 1.05]; atol=1E-3))
-    #         @test all(isapprox.(result["solution"]["bus"]["tm_2"]["va"], [-120.1, 59.9]; atol=0.1))
-    #         @test all(isapprox.(result["solution"]["bus"]["tn_6"]["va"], [119.9, -60.1]; atol=0.1))
-    #     end
+            @test all(isapprox.(result["solution"]["load"]["l3"]["pd"]*sbase, [10.0, 10.0]; atol=1E-5))
+            @test all(isapprox.(result["solution"]["generator"]["g1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
+            @test all(isapprox.(result["solution"]["solar"]["pv1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
+            @test all(isapprox.(result["solution"]["bus"]["tn_1"]["vm"], [1.045, 1.05]; atol=1E-3))
+            @test all(isapprox.(result["solution"]["bus"]["tm_2"]["va"], [-120.1, 59.9]; atol=0.1))
+            @test all(isapprox.(result["solution"]["bus"]["tn_6"]["va"], [119.9, -60.1]; atol=0.1))
+        end
 
-    #     @testset "3w transformer ivr opf center-tap" begin
-    #         math = transform_data_model(ravens_trans_3w_center_tap)
-    #         result = solve_mc_opf(math, IVRUPowerModel, ipopt_solver; solution_processors=[sol_data_model!], make_si=false)
-    #         @test result["termination_status"] == LOCALLY_SOLVED
+        @testset "3w transformer ivr opf center-tap" begin
+            math = transform_data_model(ravens_trans_3w_center_tap)
+            result = solve_mc_opf(math, IVRUPowerModel, ipopt_solver; solution_processors=[sol_data_model!], make_si=false)
+            @test result["termination_status"] == LOCALLY_SOLVED
 
-    #         sbase = trans_3w_center_tap["settings"]["sbase_default"]
+            sbase = trans_3w_center_tap["settings"]["sbase_default"]
 
-    #         @test all(isapprox.(result["solution"]["load"]["l3"]["pd"]*sbase, [10.0, 10.0]; atol=1E-5))
-    #         @test all(isapprox.(result["solution"]["generator"]["g1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
-    #         @test all(isapprox.(result["solution"]["solar"]["pv1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
-    #         @test all(isapprox.(result["solution"]["bus"]["tn_1"]["vm"], [1.045, 1.05]; atol=1E-3))
-    #         @test all(isapprox.(result["solution"]["bus"]["tm_2"]["va"], [-120.1, 59.9]; atol=0.1))
-    #         @test all(isapprox.(result["solution"]["bus"]["tn_6"]["va"], [119.9, -60.1]; atol=0.1))
-    #     end
+            @test all(isapprox.(result["solution"]["load"]["l3"]["pd"]*sbase, [10.0, 10.0]; atol=1E-5))
+            @test all(isapprox.(result["solution"]["generator"]["g1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
+            @test all(isapprox.(result["solution"]["solar"]["pv1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
+            @test all(isapprox.(result["solution"]["bus"]["tn_1"]["vm"], [1.045, 1.05]; atol=1E-3))
+            @test all(isapprox.(result["solution"]["bus"]["tm_2"]["va"], [-120.1, 59.9]; atol=0.1))
+            @test all(isapprox.(result["solution"]["bus"]["tn_6"]["va"], [119.9, -60.1]; atol=0.1))
+        end
 
-    #     @testset "3w transformer fotp opf center-tap" begin
-    #         math = transform_data_model(ravens_trans_3w_center_tap)
-    #         result = solve_mc_opf(math, FOTPUPowerModel, ipopt_solver; make_si=false)
-    #         @test result["termination_status"] == LOCALLY_SOLVED
+        @testset "3w transformer fotp opf center-tap" begin
+            math = transform_data_model(ravens_trans_3w_center_tap)
+            result = solve_mc_opf(math, FOTPUPowerModel, ipopt_solver; make_si=false)
+            @test result["termination_status"] == LOCALLY_SOLVED
 
-    #         sbase = math["settings"]["sbase_default"]
+            sbase = math["settings"]["sbase_default"]
 
-    #         @test all(isapprox.(result["solution"]["load"]["l3"]["pd"]*sbase, [10.0, 10.0]; atol=1E-5))
-    #         @test all(isapprox.(result["solution"]["generator"]["g1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
-    #         @test all(isapprox.(result["solution"]["solar"]["pv1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
-    #         @test all(isapprox.(result["solution"]["bus"]["tn_1"]["vm"], [1.045, 1.05]; atol=1E-3))
-    #         @test all(isapprox.(result["solution"]["bus"]["tm_2"]["va"], [-120.1, 59.9]; atol=0.1))
-    #         @test all(isapprox.(result["solution"]["bus"]["tn_6"]["va"], [119.9, -60.1]; atol=0.1))
-    #     end
+            @test all(isapprox.(result["solution"]["load"]["l3"]["pd"]*sbase, [10.0, 10.0]; atol=1E-5))
+            @test all(isapprox.(result["solution"]["generator"]["g1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
+            @test all(isapprox.(result["solution"]["solar"]["pv1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
+            @test all(isapprox.(result["solution"]["bus"]["tn_1"]["vm"], [1.045, 1.05]; atol=1E-3))
+            @test all(isapprox.(result["solution"]["bus"]["tm_2"]["va"], [-120.1, 59.9]; atol=0.1))
+            @test all(isapprox.(result["solution"]["bus"]["tn_6"]["va"], [119.9, -60.1]; atol=0.1))
+        end
 
-    #     @testset "3w transformer fotr opf center-tap" begin
-    #         math = transform_data_model(ravens_trans_3w_center_tap)
-    #         apply_voltage_bounds_math!(math; vm_lb=0.95, vm_ub=1.05)
-    #         result = solve_mc_opf(math, FOTRUPowerModel, ipopt_solver; solution_processors=[sol_data_model!], make_si=false)
-    #         @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
+        @testset "3w transformer fotr opf center-tap" begin
+            math = transform_data_model(ravens_trans_3w_center_tap)
+            apply_voltage_bounds_math!(math; vm_lb=0.95, vm_ub=1.05)
+            result = solve_mc_opf(math, FOTRUPowerModel, ipopt_solver; solution_processors=[sol_data_model!], make_si=false)
+            @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
 
-    #         sbase = trans_3w_center_tap["settings"]["sbase_default"]
+            sbase = trans_3w_center_tap["settings"]["sbase_default"]
 
-    #         @test all(isapprox.(result["solution"]["load"]["l3"]["pd"]*sbase, [10.0, 10.0]; atol=1E-5))
-    #         @test all(isapprox.(result["solution"]["generator"]["g1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
-    #         @test all(isapprox.(result["solution"]["solar"]["pv1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
-    #         @test all(isapprox.(result["solution"]["bus"]["tn_1"]["vm"], [1.045, 1.05]; atol=1E-3))
-    #         @test all(isapprox.(result["solution"]["bus"]["tm_2"]["va"], [-120.1, 59.9]; atol=0.1))
-    #         @test all(isapprox.(result["solution"]["bus"]["tn_6"]["va"], [119.9, -60.1]; atol=0.1))
-    #     end
+            @test all(isapprox.(result["solution"]["load"]["l3"]["pd"]*sbase, [10.0, 10.0]; atol=1E-5))
+            @test all(isapprox.(result["solution"]["generator"]["g1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
+            @test all(isapprox.(result["solution"]["solar"]["pv1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
+            @test all(isapprox.(result["solution"]["bus"]["tn_1"]["vm"], [1.045, 1.05]; atol=1E-3))
+            @test all(isapprox.(result["solution"]["bus"]["tm_2"]["va"], [-120.1, 59.9]; atol=0.1))
+            @test all(isapprox.(result["solution"]["bus"]["tn_6"]["va"], [119.9, -60.1]; atol=0.1))
+        end
 
-    #     @testset "3w transformer fbs center-tap" begin
-    #         math = transform_data_model(ravens_trans_3w_center_tap)
-    #         result = solve_mc_opf(math, FBSUBFPowerModel, ipopt_solver; solution_processors=[sol_data_model!], make_si=false)
-    #         @test result["termination_status"] == LOCALLY_SOLVED
+        @testset "3w transformer fbs center-tap" begin
+            math = transform_data_model(ravens_trans_3w_center_tap)
+            result = solve_mc_opf(math, FBSUBFPowerModel, ipopt_solver; solution_processors=[sol_data_model!], make_si=false)
+            @test result["termination_status"] == LOCALLY_SOLVED
 
-    #         sbase = math["settings"]["sbase_default"]
+            sbase = math["settings"]["sbase_default"]
 
-    #         @test all(isapprox.(result["solution"]["load"]["l3"]["pd"]*sbase, [10.0, 10.0]; atol=1E-5))
-    #         @test all(isapprox.(result["solution"]["generator"]["g1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
-    #         @test all(isapprox.(result["solution"]["solar"]["pv1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
-    #         @test all(isapprox.(result["solution"]["bus"]["tn_1"]["vm"], [1.045, 1.05]; atol=1E-3))
-    #         @test all(isapprox.(result["solution"]["bus"]["tm_2"]["va"], [-120.1, 59.9]; atol=0.1))
-    #         @test all(isapprox.(result["solution"]["bus"]["tn_6"]["va"], [119.9, -60.1]; atol=0.1))
-    #     end
+            @test all(isapprox.(result["solution"]["load"]["l3"]["pd"]*sbase, [10.0, 10.0]; atol=1E-5))
+            @test all(isapprox.(result["solution"]["generator"]["g1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
+            @test all(isapprox.(result["solution"]["solar"]["pv1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
+            @test all(isapprox.(result["solution"]["bus"]["tn_1"]["vm"], [1.045, 1.05]; atol=1E-3))
+            @test all(isapprox.(result["solution"]["bus"]["tm_2"]["va"], [-120.1, 59.9]; atol=0.1))
+            @test all(isapprox.(result["solution"]["bus"]["tn_6"]["va"], [119.9, -60.1]; atol=0.1))
+        end
 
-    #     @testset "3w transformer lpubfdiag opf center-tap" begin
-    #         math = transform_data_model(ravens_trans_3w_center_tap)
-    #         apply_voltage_bounds_math!(math; vm_lb=0.95, vm_ub=1.05)
-    #         result = solve_mc_opf(math, LPUBFDiagPowerModel, ipopt_solver; solution_processors=[sol_data_model!], make_si=false)
-    #         @test result["termination_status"] == LOCALLY_SOLVED
+        @testset "3w transformer lpubfdiag opf center-tap" begin
+            math = transform_data_model(ravens_trans_3w_center_tap)
+            apply_voltage_bounds_math!(math; vm_lb=0.95, vm_ub=1.05)
+            result = solve_mc_opf(math, LPUBFDiagPowerModel, ipopt_solver; solution_processors=[sol_data_model!], make_si=false)
+            @test result["termination_status"] == LOCALLY_SOLVED
 
-    #         sbase = math["settings"]["sbase_default"]
+            sbase = math["settings"]["sbase_default"]
 
-    #         @test all(isapprox.(result["solution"]["load"]["l3"]["pd"]*sbase, [10.0, 10.0]; atol=1E-5))
-    #         @test all(isapprox.(result["solution"]["generator"]["g1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
-    #         @test all(isapprox.(result["solution"]["solar"]["pv1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
-    #         @test all(isapprox.(result["solution"]["bus"]["tn_1"]["vm"], [1.045, 1.05]; atol=5E-3))
-    #     end
+            @test all(isapprox.(result["solution"]["load"]["l3"]["pd"]*sbase, [10.0, 10.0]; atol=1E-5))
+            @test all(isapprox.(result["solution"]["generator"]["g1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
+            @test all(isapprox.(result["solution"]["solar"]["pv1"]["pg_bus"]*sbase, [0.0, 0.0]; atol=9E-4))
+            @test all(isapprox.(result["solution"]["bus"]["tn_1"]["vm"], [1.045, 1.05]; atol=5E-3))
+        end
     end
 
     @testset "transformer SOC relaxations" begin
@@ -452,43 +452,43 @@ and more thoughtful analysis is required to prevent these tests from failing. Th
             @test_skip norm(result["solution"]["bus"]["3"]["vm"]-[0.93180, 0.88827, 0.88581], Inf) <= 1E-1
         end
 
-        # @testset "3w_center_tap" begin
-        #     math = transform_data_model(ravens_trans_3w_center_tap)
-        #     apply_voltage_bounds_math!(math; vm_lb=0.95, vm_ub=1.05)
-        #     result = solve_mc_opf(math, SOCConicUBFPowerModel, scs_solver; solution_processors=[sol_data_model!], make_si=false)
+        @testset "3w_center_tap" begin
+            math = transform_data_model(ravens_trans_3w_center_tap)
+            apply_voltage_bounds_math!(math; vm_lb=0.95, vm_ub=1.05)
+            result = solve_mc_opf(math, SOCConicUBFPowerModel, scs_solver; solution_processors=[sol_data_model!], make_si=false)
 
-        #     sbase = math["settings"]["sbase_default"]
+            sbase = math["settings"]["sbase_default"]
 
-        #     @test all(isapprox.(result["solution"]["load"]["l2a"]["pd"]*sbase, 12.0; atol=1E-5))
-        #     @test all(isapprox.(result["solution"]["load"]["l3"]["pd"]*sbase, [10.0, 10.0]; atol=1E-5))
-        #     @test all(isapprox.(result["solution"]["bus"]["tn_1"]["vm"], [1.045, 1.05]; atol=5E-3))
-        # end
+            @test all(isapprox.(result["solution"]["load"]["l2a"]["pd"]*sbase, 12.0; atol=1E-5))
+            @test all(isapprox.(result["solution"]["load"]["l3"]["pd"]*sbase, [10.0, 10.0]; atol=1E-5))
+            @test all(isapprox.(result["solution"]["bus"]["tn_1"]["vm"], [1.045, 1.05]; atol=5E-3))
+        end
     end
 
-    # @testset "test center tap eq" begin
-    #     @testset "trans_3w_center_tap" begin
-    #         math = transform_data_model(ravens_trans_3w_center_tap)
-    #         data = deepcopy(math)
-    #         remove_distribution_transformers!(data)
+    @testset "test center tap eq" begin
+        @testset "trans_3w_center_tap" begin
+            math = transform_data_model(ravens_trans_3w_center_tap)
+            data = deepcopy(math)
+            remove_distribution_transformers!(data)
 
-    #         @test data["transformer"]["xfmr_1"]["status"] == ENABLED
-    #         @test data["transformer"]["xfmr_2"]["status"] == ENABLED
-    #         @test data["transformer"]["xfmr_3"]["status"] == ENABLED
-    #     end
+            @test data["transformer"]["xfmr_1"]["status"] == ENABLED
+            @test data["transformer"]["xfmr_2"]["status"] == ENABLED
+            @test data["transformer"]["xfmr_3"]["status"] == ENABLED
+        end
 
-    #     @testset "dist_transformer" begin
-    #         math = transform_data_model(ravens_dist_transformer)
-    #         data = deepcopy(math)
-    #         remove_distribution_transformers!(data)
+        @testset "dist_transformer" begin
+            math = transform_data_model(ravens_dist_transformer)
+            data = deepcopy(math)
+            remove_distribution_transformers!(data)
 
-    #         result = solve_mc_pf(data, ACPUPowerModel, ipopt_solver; make_si=false)
+            result = solve_mc_pf(data, ACPUPowerModel, ipopt_solver; make_si=false)
 
-    #         @test data["transformer"]["t1"]["status"] == DISABLED
-    #         @test data["transformer"]["t2"]["status"] == DISABLED
-    #         @test norm(result["solution"]["bus"]["4"]["vm"]-[0.9990740842103211], Inf) <= 1.5E-5
-    #         @test norm(result["solution"]["bus"]["4"]["va"]-[-0.39064739635881085], Inf) <= 0.1
-    #         @test norm(result["solution"]["bus"]["4_l"]["vm"]-[0.9990723339621554], Inf) <= 1.5E-5
-    #         @test norm(result["solution"]["bus"]["4_l"]["va"]-[-0.3907533731198626], Inf) <= 0.1
-    #     end
-    # end
+            @test data["transformer"]["t1"]["status"] == DISABLED
+            @test data["transformer"]["t2"]["status"] == DISABLED
+            @test norm(result["solution"]["bus"]["4"]["vm"]-[0.9990740842103211], Inf) <= 1.5E-5
+            @test norm(result["solution"]["bus"]["4"]["va"]-[-0.39064739635881085], Inf) <= 0.1
+            @test norm(result["solution"]["bus"]["4_l"]["vm"]-[0.9990723339621554], Inf) <= 1.5E-5
+            @test norm(result["solution"]["bus"]["4_l"]["va"]-[-0.3907533731198626], Inf) <= 0.1
+        end
+    end
 end
