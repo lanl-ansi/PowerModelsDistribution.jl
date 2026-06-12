@@ -1199,21 +1199,22 @@ function _map_ravens2math_energy_consumer!(data_math::MathematicalModel{NetworkM
 
         # TODO: Handle Load Response Characteristics by properties, not name
         load_response_characts = get(ravens_obj,"EnergyConsumer.LoadResponse",Dict{Any,Dict{String,Any}}())
-        if load_response_characts == "Constant Z"
+        lrc_name = get(load_response_characts,"IdentifiedObject.name","")
+        if lrc_name == "Constant Z"
             math_obj["model"] = IMPEDANCE
-        elseif load_response_characts == "Motor"
+        elseif lrc_name == "Motor"
             @error("Load model not supported yet!")
         elseif load_response_characts == "Mix Motor/Res"
             @error("Load model not supported yet!")
-        elseif load_response_characts == "Constant I"
+        elseif lrc_name == "Constant I"
             math_obj["model"] = CURRENT
-        elseif load_response_characts == "Variable P, Fixed Q"
+        elseif lrc_name == "Variable P, Fixed Q"
             @error("Load model not supported yet!")
-        elseif load_response_characts == "Variable P, Fixed X"
+        elseif lrc_name == "Variable P, Fixed X"
             @error("Load model not supported yet!")
         else
-            if load_response_characts != "Constant kVA"
-                @warn("Load model (response characteristic) for $(name) not supported! Defaulting to 'Constant kVA'")
+            if lrc_name != "Constant kVA"
+                @warn("Load model (response characteristic) $(lrc_name) for $(name) not supported! Defaulting to 'Constant kVA'")
             end
             # Set default model and consumption values
             math_obj["model"] = POWER
