@@ -145,14 +145,10 @@ And then we need to change `(length(math["branch"]))*2` to `(length(math["branch
 
 ## Transformers
 
+### Note on Center Taps
+
+Center tap transformers are not implemented in this version of this branch. Pending roberts implementation under the ref-ravens schema we need to see if this tests still pass. Currently they error as expected on the unimplemented center tap phase codes.
+
 ### All Tests
 
-Voltage angles all needed a degree->radian conversion to run and also needed to be pegged to between -2pi and 2pi. 
-
-Voltage magnitude needed a 
-
-### 2 Winding voltage angle and magnitude tests
-
-
-
-
+Voltage angles all needed a degree->radian conversion to run and also needed to be pegged to between -2pi and 2pi.
