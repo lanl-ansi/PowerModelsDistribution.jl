@@ -124,7 +124,6 @@ ravens_case5_phase_drop = parse_file("../test/data/ravens/ravens_case5_phase_dro
 
 # 4-bus 2w transformer
 ravens_ut_trans_2w_yy = parse_file("../test/data/ravens/ravens_ut_trans_2w_yy.json")
-ravens_ut_trans_2w_yy = parse_file("../test/data/ravens/ravens_ut_trans_2w_yy.json")
 ravens_ut_trans_2w_dy_lead = parse_file("../test/data/ravens/ravens_ut_trans_2w_dy_lead.json")
 ravens_ut_trans_2w_dy_lag = parse_file("../test/data/ravens/ravens_ut_trans_2w_dy_lag.json")
 ravens_ut_trans_2w_dy_lead_small_series_impedance = parse_file("../test/data/ravens/ravens_ut_trans_2w_dy_lead_small_series_impedance.json")
