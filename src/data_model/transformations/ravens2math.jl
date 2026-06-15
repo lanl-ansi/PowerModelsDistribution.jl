@@ -669,7 +669,7 @@ function _map_ravens2math_power_transformer!(data_math::MathematicalModel{Networ
 
                 # reactance
                 x_sc[wdg_endNumber] = get(xfmr_mesh_impedance, "TransformerMeshImpedance.x",
-                    get(xfmr_star_impedance, "TransformerStarImpedance.x", 0.0)) ./ (zbase[1]) #TODO: Validate that this is a correct change
+                    get(xfmr_star_impedance, "TransformerStarImpedance.x", 0.0)) ./ (zbase[wdg_endNumber]) #TODO: Validate that this is a correct change
 
                 # admittance
                 transf_core_impedance = get(wdgs[wdg_endNumber], "TransformerEnd.CoreAdmittance", Dict())
