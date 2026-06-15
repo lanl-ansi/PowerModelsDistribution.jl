@@ -143,7 +143,32 @@ This is because instantiate_mc_model_ravens does not produce an engineering mode
 
 And then we need to change `(length(math["branch"]))*2` to `(length(math["branch"])+1)*2` as the math model is missing a branch created by the dss math model.
 
-## Transformers
+## Transformers [ACTIVE]
+
+### Major Infeasibility Issue
+
+All transformer test cases yeild infeasible solutions. What I have found so far is that transformers when generated from the dss->eng->math pipeline differ from those generated in ravens.
+
+```julia
+julia> math_dss["transformer"]
+Dict{String, Any} with 2 entries:
+  "1" => Dict{String, Any}("source_id"=>"_virtual_transformer.transformer.tx1.1", "t_connections"=>[1, 2, 3], "f_bus"=>1, "polarity"=>1, "sm_ub"=>750.0, "cm_ub"=>Inf, "tm_fix"=>Bool[1, 1, 1], "tm_lb"=>[0.9, 0.9, 0.9], "tm_set"=>[1.02, 1.02, 1.02], "t_vbase"=>0.57735…)
+  "2" => Dict{String, Any}("source_id"=>"_virtual_transformer.transformer.tx1.2", "t_connections"=>[1, 2, 3], "f_bus"=>3, "polarity"=>1, "sm_ub"=>750.0, "cm_ub"=>Inf, "tm_fix"=>Bool[1, 1, 1], "tm_lb"=>[0.9, 0.9, 0.9], "tm_set"=>[0.97, 0.97, 0.97], "t_vbase"=>0.57735…)
+
+julia> math_ravens["transformer"]
+Dict{String, Any} with 2 entries:
+  "1" => Dict{String, Any}("source_id"=>"_virtual_transformer.transformer.tx1.1", "t_connections"=>[1, 2, 3], "f_bus"=>1, "polarity"=>1, "sm_ub"=>0.5, "cm_ub"=>Inf, "tm_fix"=>Bool[1, 1, 1], "tm_lb"=>[0.9, 0.9, 0.9], "tm_set"=>[1.0, 1.0, 1.0], "t_vbase"=>0.57735…)
+  "2" => Dict{String, Any}("source_id"=>"_virtual_transformer.transformer.tx1.2", "t_connections"=>[1, 2, 3], "f_bus"=>3, "polarity"=>1, "sm_ub"=>0.5, "cm_ub"=>Inf, "tm_fix"=>Bool[1, 1, 1], "tm_lb"=>[0.9, 0.9, 0.9], "tm_set"=>[1.0, 1.0, 1.0], "t_vbase"=>0.57735…)
+```
+
+Here we can see that the dss transformer properly stores the `1.02` and `0.97` `tm_set` values while the ravens transformer does not.
+The Ravens transformer also does not store the correct 'sm_ub' value.
+
+My hypothosis is that the ravens transformer does not actually store the tm_set values from the dss in the json and thus nothing is propogated to PMD ever.
+
+Manually setting these to the dss version does not appear to fix things.
+
+While this is almost certainly an issue it seems like the actual fix has something to do with br_X on the virtual transformer ~pi~ model being 100x too high realitive to what we would expect from the dss version of the math model. This is fixed by dividing by zbase in the ravens2math mirroring the work done in eng2math.
 
 ### Note on Center Taps
 
