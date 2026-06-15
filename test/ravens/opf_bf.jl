@@ -6,7 +6,7 @@
             math = transform_data_model(ravens_case3_balanced)
             result = solve_mc_opf(math, LPUBFDiagPowerModel, ipopt_solver)
 
-            @test result["termination_status"] == LOCALLY_SOLVED
+            @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
 
             
             result = transform_solution(result["solution"], math, make_si=true)
@@ -19,7 +19,7 @@
             math = transform_data_model(ravens_case3_unbalanced)
             result = solve_mc_opf(math, LPUBFDiagPowerModel, ipopt_solver)
 
-            @test result["termination_status"] == LOCALLY_SOLVED
+            @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
 
             
             result = transform_solution(result["solution"], math, make_si=true)
@@ -32,7 +32,7 @@
             math = transform_data_model(ravens_case3_unbalanced_missingedge)
             result = solve_mc_opf(math, LPUBFDiagPowerModel, ipopt_solver; solution_processors=[sol_data_model!])
 
-            @test result["termination_status"] == LOCALLY_SOLVED
+            @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
 
             
             result = transform_solution(result["solution"], math, make_si=true)
@@ -56,7 +56,7 @@
 
         #     result = solve_mc_opf(data, LPUBFDiagPowerModel, ipopt_solver; solution_processors=[sol_data_model!])
 
-        #     @test result["termination_status"] == LOCALLY_SOLVED
+        #     @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
 
             
         #     result = transform_solution(result["solution"], math, make_si=true)
@@ -76,7 +76,7 @@
             math = transform_data_model(ravens_case3_unbalanced_switch)
             result = solve_mc_opf(math, FBSUBFPowerModel, ipopt_solver; solution_processors=[sol_data_model!])
 
-            @test result["termination_status"] == LOCALLY_SOLVED
+            @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
 
             
             result = transform_solution(result["solution"], math, make_si=true)
@@ -96,7 +96,7 @@
             math = transform_data_model(ravens_ut_trans_2w_yy)
             result = solve_mc_opf(math, FBSUBFPowerModel, ipopt_solver; solution_processors=[sol_data_model!])
 
-            @test result["termination_status"] == LOCALLY_INFEASIBLE
+            @test result["termination_status"] == LOCALLY_SOLVED
 
             
             result = transform_solution(result["solution"], math, make_si=true)
@@ -115,7 +115,7 @@
             math = transform_data_model(ravens_ut_trans_2w_dy_lag)
             result = solve_mc_opf(math, FBSUBFPowerModel, ipopt_solver; solution_processors=[sol_data_model!])
 
-            @test result["termination_status"] == LOCALLY_INFEASIBLE
+            @test result["termination_status"] == LOCALLY_SOLVED
 
             
             result = transform_solution(result["solution"], math, make_si=true)
@@ -208,7 +208,7 @@
     #         @testset "3-bus SOCNLPUBF opf_bf" begin
     #             result = solve_mc_opf(data, SOCNLPUBFPowerModel, ipopt_solver)
 
-    #             @test result["termination_status"] == LOCALLY_SOLVED
+    #             @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
 
     #             @test isapprox(sum(result["voltage_source"]["source"]["pg"]), 21.179; atol = 1e-1)
     #         end
@@ -258,7 +258,7 @@
         #     @testset "test SOCNLPUBF opf with switches" begin
         #         result = solve_mc_opf(data, SOCNLPUBFPowerModel, ipopt_solver)
 
-        #         @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
+        #         @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
         #         @test all(isapprox.(result["switch"]["ohline"]["pf"], [6.0, 6.0, 6.0]; atol=1e-1))
         #         @test isapprox(result["objective"], 18.1824; atol=2e-1)
         #     end

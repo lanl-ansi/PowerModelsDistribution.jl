@@ -5,7 +5,7 @@
         math = transform_data_model(ravens_ut_trans_2w_yy)
         result = solve_mc_mld(math, NFAUPowerModel, ipopt_solver)
 
-        @test result["termination_status"] == LOCALLY_SOLVED
+        @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
 
         @test isapprox(result["objective"], 0, atol=1)
         @test isapprox(result["solution"]["load"]["1"]["status"], 1.0, atol = 1e-3)

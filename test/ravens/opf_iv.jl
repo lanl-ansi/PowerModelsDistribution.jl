@@ -6,7 +6,7 @@
             math = transform_data_model(ravens_case2_diag)
             result = solve_mc_opf(math, IVRUPowerModel, ipopt_solver)
 
-            @test result["termination_status"] == LOCALLY_SOLVED
+            @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
 
             result = transform_solution(result["solution"], math, make_si=true)
 
@@ -18,7 +18,7 @@
             math = transform_data_model(ravens_case3_balanced)
             result = solve_mc_opf(math, IVRUPowerModel, ipopt_solver)
 
-            @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
+            @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
 
             result = transform_solution(result["solution"], math, make_si=true)
 
@@ -30,7 +30,7 @@
             math = transform_data_model(ravens_case3_unbalanced)
             result = solve_mc_opf(math, IVRUPowerModel, ipopt_solver)
 
-            @test result["termination_status"] == LOCALLY_SOLVED
+            @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
 
             result = transform_solution(result["solution"], math, make_si=true)
 

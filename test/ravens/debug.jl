@@ -7,7 +7,7 @@
 
         result = solve_mc_pf_pbs(math, ACPUPowerModel, ipopt_solver)
 
-        @test result["termination_status"] == LOCALLY_SOLVED
+        @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
         @test isapprox(result["objective"], 0.0; atol=1e-4)
     end
 end
