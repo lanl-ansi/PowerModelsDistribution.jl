@@ -669,7 +669,7 @@ function _map_ravens2math_power_transformer!(data_math::MathematicalModel{Networ
 
                 # reactance
                 x_sc[wdg_endNumber] = get(xfmr_mesh_impedance, "TransformerMeshImpedance.x",
-                    get(xfmr_star_impedance, "TransformerStarImpedance.x", 0.0))
+                    get(xfmr_star_impedance, "TransformerStarImpedance.x", 0.0)) ./ (zbase[1]) #TODO: Validate that this is a correct change
 
                 # admittance
                 transf_core_impedance = get(wdgs[wdg_endNumber], "TransformerEnd.CoreAdmittance", Dict())
@@ -792,7 +792,7 @@ function _map_ravens2math_power_transformer!(data_math::MathematicalModel{Networ
                 # Transformer Object
                 transformer_2wa_obj = Dict{String,Any}(
                     "name" => "_virtual_transformer.$name.$wdg_id",
-                    "source_id" => "_virtual_transformer.PowerTransformer.$name.$wdg_id",
+                    "source_id" => "_virtual_transformer.transformer.$name.$wdg_id",
                     "f_bus" => data_math["bus_lookup"][f_node_wdgterm],
                     "t_bus" => transformer_t_bus_w[wdg_id],
                     "tm_nom" => tm_nom,
@@ -1140,7 +1140,7 @@ function _map_ravens2math_power_transformer!(data_math::MathematicalModel{Networ
                 # Transformer Object
                 transformer_2wa_obj = Dict{String,Any}(
                     "name" => "_virtual_transformer.$name.$wdg_id",
-                    "source_id" => "_virtual_transformer.PowerTransformer.$name.$wdg_id",
+                    "source_id" => "_virtual_transformer.transformer.$name.$wdg_id",
                     "f_bus" => data_math["bus_lookup"][nodes[wdg_id]],
                     "t_bus" => transformer_t_bus_w[wdg_id],
                     "tm_nom" => tm_nom,
@@ -1150,7 +1150,7 @@ function _map_ravens2math_power_transformer!(data_math::MathematicalModel{Networ
                     "polarity" => polarity[wdg_id],
                     "tm_set" => tm_set[wdg_id],
                     "tm_fix" => tm_fix[wdg_id],
-                    "sm_ub" => sm_ub[wdg_id] / power_scale_factor,
+                    "sm_ub" => sm_ub[wdg_id], # TODO: this may also need scaling
                     "cm_ub" => cm_ub[wdg_id], # TODO: this may need scaling
                     "status" => status,
                     "index" => length(data_math["transformer"]) + 1
