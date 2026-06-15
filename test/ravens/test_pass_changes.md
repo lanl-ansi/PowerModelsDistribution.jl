@@ -168,7 +168,7 @@ My hypothosis is that the ravens transformer does not actually store the tm_set 
 
 Manually setting these to the dss version does not appear to fix things.
 
-While this is almost certainly an issue it seems like the actual fix has something to do with br_X on the virtual transformer ~pi~ model being 100x too high realitive to what we would expect from the dss version of the math model. This is fixed by dividing by zbase in the ravens2math mirroring the work done in eng2math.
+While this is almost certainly an issue it seems like the actual fix has something to do with the middle branches br_X on the virtual transformer ~pi~ model being 100x too high realitive to what we would expect from the dss version of the math model. This is fixed by dividing `x_sc` by zbase in the ravens2math mirroring the work done in eng2math.
 
 ### Note on Center Taps
 
