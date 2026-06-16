@@ -32,7 +32,7 @@ Leaving this test as failed as this actually suggests a meaningful error on lpub
 
 Results should be different when computing only based on the diagonal elements. But the issue is that in RAVENS the GS and BS matrices both become diagonal. Leaving this test as failed because it represents a meaningful error in ravens representation of a shunt.
 
-Seemingly RAVENS only specifies b, g, b0, and g0 with option for a matrix spec of a shunt. This clearly does not model interphase admittance, loosing a functionality in the dss. 
+Seemingly RAVENS only specifies b, g, b0, and g0 with option for a matrix spec of a shunt. This clearly does not model interphase admittance, loosing a functionality in the dss.
 
 ``` julia
 @test(all([shunt["bs"][c,d]!=0 for c in 1:3, d in 1:3 if c!=d]))
@@ -110,12 +110,9 @@ The last test only holds up to 10^-2 ie:
 
 ## opf bf
 
-### 3-bus unbalanced fbs opf_bf with voltage-dependent loads
+### voltage dependent loads
 
-```julia
-@test all(isapprox.(result["bus"]["loadbus"]["vm"] ./ vbase, [0.9512, 0.9964, 0.9936]; atol=2e-3))
-    #yeilds: [0.9512706468876924, 0.9807522438366527, 0.9773347164780088] needing an atol of 9e-1 to pass
-```
+Currently yeilds infeasible optimzation problem. Ignoring all downstream tests
 
 ## opv iv
 
