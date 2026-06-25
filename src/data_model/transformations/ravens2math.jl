@@ -550,6 +550,30 @@ function _map_ravens2math_conductor!(data_math::MathematicalModel{NetworkModel},
     end
 end
 
+function _validate_transformer_tanks(name, tanks)
+    @assert !isempty(tanks) "PowerTransformer $name has no TransformerTank entries"
+
+    expected_nrw = length(tanks[1]["TransformerTank.TransformerTankEnd"])
+    expected_end_numbers = collect(1:expected_nrw)
+
+    for tank_id in eachindex(tanks)
+        tank_ends = tanks[tank_id]["TransformerTank.TransformerTankEnd"]
+        end_numbers = [wdg["TransformerEnd.endNumber"] for wdg in tank_ends]
+
+        @assert length(tank_ends) == expected_nrw """
+        PowerTransformer $name has inconsistent TransformerTankEnd counts:
+        tank 1 has $expected_nrw, tank $tank_id has $(length(tank_ends)).
+        """
+
+        @assert sort(end_numbers) == expected_end_numbers """
+        PowerTransformer $name tank $tank_id has invalid TransformerEnd.endNumber values:
+        expected $expected_end_numbers, got $(sort(end_numbers)).
+        """
+    end
+
+    return expected_nrw
+end
+
 
 "converts ravens n-winding transformers into mathematical ideal 2-winding lossless transformer branches and impedance branches to represent the loss model"
 function _map_ravens2math_power_transformer!(data_math::MathematicalModel{NetworkModel}, data_ravens::RavensModel; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
@@ -580,7 +604,7 @@ function _map_ravens2math_power_transformer!(data_math::MathematicalModel{Networ
             wdgs_confs = Vector{ConnConfig}(undef, nrw)
 
             # RegulatorControls flag
-            reg_controls = [false for _ in 1:nrw]
+            reg_controls = falses(nrw)
             reg_obj = [Dict() for _ in 1:nrw]
 
             # Transformer data for each winding
@@ -837,14 +861,16 @@ function _map_ravens2math_power_transformer!(data_math::MathematicalModel{Networ
             ntanks = length(tanks)
 
             # TODO: IMPORTANT ASSUMPTIONS
-            # 1) assume there is at least 1 tank and that all tanks have the same number of windings (i.e., TransformerTankEnds)
-            # 2) assume the number of phases is equal to the number of tanks - DEPRECATED
+            # 1) DONE assume there is at least 1 tank and that all tanks have the same number of windings (i.e., TransformerTankEnds)
+            # 2) DONE assume the number of phases is equal to the number of tanks - DEPRECATED
             # 3) assumes number of phases are indicated correctly in terminal # 1
             phasecode = ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.phases"] # terminal 1 phasecode
             nphases = length(_phasecode_map[phasecode])
             # nphases = length(tanks) # assume nphases == ntanks
 
-            nrw = length(tanks[1]["TransformerTank.TransformerTankEnd"])
+            @assert length(tanks) >= 1 "No tanks found!"
+            #cehck that number of windings is the same across tanks
+            nrw = _validate_transformer_tanks(name, tanks)
 
             # init connections vector for combined transformer windings
             connections = [zeros(Int64, nphases) for _ in 1:nrw]
