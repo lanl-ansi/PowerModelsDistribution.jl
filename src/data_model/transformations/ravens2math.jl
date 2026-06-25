@@ -869,7 +869,7 @@ function _map_ravens2math_power_transformer!(data_math::MathematicalModel{Networ
             # nphases = length(tanks) # assume nphases == ntanks
 
             @assert length(tanks) >= 1 "No tanks found!"
-            #cehck that number of windings is the same across tanks
+            #check that number of windings is the same across tanks
             nrw = _validate_transformer_tanks(name, tanks)
 
             # init connections vector for combined transformer windings
