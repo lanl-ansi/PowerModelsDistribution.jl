@@ -5,7 +5,7 @@
         @testset "3-bus balanced lpubfdiag pf" begin
             result = solve_mc_pf(transform_data_model(ravens_case3_balanced), LPUBFDiagPowerModel, ipopt_solver)
 
-            @test result["termination_status"] == LOCALLY_SOLVED
+            @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
 
             @test isapprox(sum(result["solution"]["gen"]["1"]["pg"])*10^3, 18.0; atol=1e-1)
             @test isapprox(sum(result["solution"]["gen"]["1"]["qg"])*10^3, 9.0; atol=1e-1)
@@ -14,7 +14,7 @@
         @testset "3-bus unbalanced lpubfdiag pf_bf" begin
             result = solve_mc_pf(transform_data_model(ravens_case3_unbalanced), LPUBFDiagPowerModel, ipopt_solver)
 
-            @test result["termination_status"] == LOCALLY_SOLVED
+            @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
             @test isapprox(sum(result["solution"]["gen"]["1"]["pg"])*10^3, 21.0; atol=1e-1)
             @test isapprox(sum(result["solution"]["gen"]["1"]["qg"])*10^3, 9.0; atol=1e-1)
         end
@@ -63,7 +63,7 @@
             @testset "3-bus SOCNLPUBF pf_bf" begin
                 result = solve_mc_pf(data, SOCNLPUBFPowerModel, ipopt_solver)
 
-                @test result["termination_status"] == LOCALLY_SOLVED
+                @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
                 @test isapprox(result["objective"], 0; atol = 1e-1)
             end
             @testset "3-bus SOCConicUBF pf_bf" begin

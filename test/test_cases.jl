@@ -85,7 +85,6 @@ ravens_case3_withgens_mn = parse_file("../test/data/ravens/ravens_case3_withgens
 ravens_case2_diag = parse_file("../test/data/ravens/ravens_case2_diag.json")
 ravens_case2_mxshunt = parse_file("../test/data/ravens/ravens_case_mxshunt.json")
 ravens_case2_mxshunt_2 = parse_file("../test/data/ravens/ravens_case_mxshunt_2.json")
-ravens_case2_mxshunt_2 = parse_file("../test/data/ravens/ravens_case_mxshunt_2.json")
 ravens_case2_virtual_sourcebus = parse_file("../test/data/ravens/ravens_virtual_sourcebus.json")
 
 # 3-bus balanced
@@ -124,7 +123,6 @@ ravens_case4_phase_drop = parse_file("../test/data/ravens/ravens_case4_phase_dro
 ravens_case5_phase_drop = parse_file("../test/data/ravens/ravens_case5_phase_drop.json")
 
 # 4-bus 2w transformer
-ravens_ut_trans_2w_yy = parse_file("../test/data/ravens/ravens_ut_trans_2w_yy.json")
 ravens_ut_trans_2w_yy = parse_file("../test/data/ravens/ravens_ut_trans_2w_yy.json")
 ravens_ut_trans_2w_dy_lead = parse_file("../test/data/ravens/ravens_ut_trans_2w_dy_lead.json")
 ravens_ut_trans_2w_dy_lag = parse_file("../test/data/ravens/ravens_ut_trans_2w_dy_lag.json")

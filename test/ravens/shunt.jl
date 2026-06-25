@@ -14,6 +14,10 @@
     data_diag_shunt = deepcopy(data)
 
     data_diag_shunt["shunt"]["1"]["bs"] = shunt["bs"].*[c==d for c in 1:3, d in 1:3]
+    println(data_diag_shunt["shunt"]["1"]["bs"])
+    println(shunt["bs"])
+    println(data_diag_shunt["shunt"])
+    println(shunt)
 
     result_acp_diag = solve_mc_pf(data_diag_shunt, ACPUPowerModel, ipopt_solver)
     result_acp = solve_mc_pf(data, ACPUPowerModel, ipopt_solver)

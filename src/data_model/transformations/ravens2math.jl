@@ -693,7 +693,7 @@ function _map_ravens2math_power_transformer!(data_math::MathematicalModel{Networ
 
                 # reactance
                 x_sc[wdg_endNumber] = get(xfmr_mesh_impedance, "TransformerMeshImpedance.x",
-                    get(xfmr_star_impedance, "TransformerStarImpedance.x", 0.0))
+                    get(xfmr_star_impedance, "TransformerStarImpedance.x", 0.0)) ./ (zbase[wdg_endNumber]) #TODO: Validate that this is a correct change
 
                 # admittance
                 transf_core_impedance = get(wdgs[wdg_endNumber], "TransformerEnd.CoreAdmittance", Dict())
@@ -816,7 +816,7 @@ function _map_ravens2math_power_transformer!(data_math::MathematicalModel{Networ
                 # Transformer Object
                 transformer_2wa_obj = Dict{String,Any}(
                     "name" => "_virtual_transformer.$name.$wdg_id",
-                    "source_id" => "_virtual_transformer.PowerTransformer.$name.$wdg_id",
+                    "source_id" => "_virtual_transformer.transformer.$name.$wdg_id",
                     "f_bus" => data_math["bus_lookup"][f_node_wdgterm],
                     "t_bus" => transformer_t_bus_w[wdg_id],
                     "tm_nom" => tm_nom,
@@ -1166,7 +1166,7 @@ function _map_ravens2math_power_transformer!(data_math::MathematicalModel{Networ
                 # Transformer Object
                 transformer_2wa_obj = Dict{String,Any}(
                     "name" => "_virtual_transformer.$name.$wdg_id",
-                    "source_id" => "_virtual_transformer.PowerTransformer.$name.$wdg_id",
+                    "source_id" => "_virtual_transformer.transformer.$name.$wdg_id",
                     "f_bus" => data_math["bus_lookup"][nodes[wdg_id]],
                     "t_bus" => transformer_t_bus_w[wdg_id],
                     "tm_nom" => tm_nom,
@@ -1176,7 +1176,7 @@ function _map_ravens2math_power_transformer!(data_math::MathematicalModel{Networ
                     "polarity" => polarity[wdg_id],
                     "tm_set" => tm_set[wdg_id],
                     "tm_fix" => tm_fix[wdg_id],
-                    "sm_ub" => sm_ub[wdg_id] / power_scale_factor,
+                    "sm_ub" => sm_ub[wdg_id], # TODO: this may also need scaling
                     "cm_ub" => cm_ub[wdg_id], # TODO: this may need scaling
                     "status" => status,
                     "index" => length(data_math["transformer"]) + 1
@@ -1225,21 +1225,22 @@ function _map_ravens2math_energy_consumer!(data_math::MathematicalModel{NetworkM
 
         # TODO: Handle Load Response Characteristics by properties, not name
         load_response_characts = get(ravens_obj,"EnergyConsumer.LoadResponse",Dict{Any,Dict{String,Any}}())
-        if load_response_characts == "Constant Z"
+        lrc_name = get(load_response_characts,"IdentifiedObject.name","")
+        if lrc_name == "Constant Z"
             math_obj["model"] = IMPEDANCE
-        elseif load_response_characts == "Motor"
+        elseif lrc_name == "Motor"
             @error("Load model not supported yet!")
         elseif load_response_characts == "Mix Motor/Res"
             @error("Load model not supported yet!")
-        elseif load_response_characts == "Constant I"
+        elseif lrc_name == "Constant I"
             math_obj["model"] = CURRENT
-        elseif load_response_characts == "Variable P, Fixed Q"
+        elseif lrc_name == "Variable P, Fixed Q"
             @error("Load model not supported yet!")
-        elseif load_response_characts == "Variable P, Fixed X"
+        elseif lrc_name == "Variable P, Fixed X"
             @error("Load model not supported yet!")
         else
-            if load_response_characts != "Constant kVA"
-                @warn("Load model (response characteristic) for $(name) not supported! Defaulting to 'Constant kVA'")
+            if lrc_name != "Constant kVA"
+                @warn("Load model (response characteristic) $(lrc_name) for $(name) not supported! Defaulting to 'Constant kVA'")
             end
             # Set default model and consumption values
             math_obj["model"] = POWER
