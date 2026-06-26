@@ -44,7 +44,7 @@
             optimizer=ipopt_solver,
             solution_processors=Function[]
         )
-        @test result["termination_status"] == LOCALLY_INFEASIBLE
+        @test result["termination_status"] == LOCALLY_SOLVED
     end
 
     @testset "Test trans 2w dy" begin
@@ -55,7 +55,7 @@
             optimizer=ipopt_solver,
             solution_processors=Function[]
         )
-        @test result["termination_status"] == LOCALLY_INFEASIBLE
+        @test result["termination_status"] == LOCALLY_SOLVED
     end
 
     @testset "Test trans 2w yy lag" begin
@@ -66,7 +66,7 @@
             optimizer=ipopt_solver,
             solution_processors=Function[]
         )
-        @test result["termination_status"] == LOCALLY_INFEASIBLE
+        @test result["termination_status"] == LOCALLY_SOLVED
     end
 
     @testset "Test trans 2w yy lssi" begin
@@ -77,7 +77,7 @@
             optimizer=ipopt_solver,
             solution_processors=Function[]
         )
-        @test result["termination_status"] == LOCALLY_INFEASIBLE
+        @test result["termination_status"] == LOCALLY_SOLVED
     end
 
     @testset "Test trans 2w yy bank" begin
@@ -223,7 +223,7 @@
             optimizer=ipopt_solver,
             solution_processors=Function[]
         )
-        @test result["termination_status"] == LOCALLY_INFEASIBLE #LOCALLY_SOLVED
+        @test result["termination_status"] == LOCALLY_SOLVED
     end
     
 
