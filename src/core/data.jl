@@ -434,22 +434,27 @@ end
 
 
 "Calculates the tap scale factor for the non-dimensionalized equations."
-function calculate_tm_scale(trans::Dict{String,Any}, bus_fr::Dict{String,Any}, bus_to::Dict{String,Any})
+function calculate_tm_scale(
+    trans::Dict{String,Any},
+    bus_fr::Dict{String,Any},
+    bus_to::Dict{String,Any},
+)
     tm_nom = trans["tm_nom"]
 
-    f_vbase = haskey(bus_fr, "vbase") ? bus_fr["vbase"] : bus_fr["base_kv"]
-    t_vbase = haskey(bus_to, "vbase") ? bus_to["vbase"] : bus_to["base_kv"]
+    f_vbase = haskey(bus_fr, "vbase") ? bus_fr["vbase"] : error("from bus is missing vbase")
+    t_vbase = haskey(bus_to, "vbase") ? bus_to["vbase"] : error("to bus is missing vbase")
     config = trans["configuration"]
 
-    tm_scale = tm_nom*(t_vbase/f_vbase)
+    tm_scale = tm_nom * (t_vbase / f_vbase)
+
     if config == DELTA
-        #TODO is this still needed?
+        # TODO: confirm whether delta-side voltage bases are line-to-line or line-to-neutral
         tm_scale *= sqrt(3)
     elseif config == "zig-zag"
         error("Zig-zag not yet supported.")
     end
 
-    return tm_nom
+    return tm_scale #not returning tm_nom
 end
 
 
