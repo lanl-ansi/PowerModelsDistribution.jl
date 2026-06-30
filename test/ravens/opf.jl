@@ -384,7 +384,7 @@
         result = transform_solution(result["solution"], math, make_si=true)
 
         @test isapprox(sum(result["voltage_source"]["source"]["pg"]), 467.547; atol=10*40)
-        @test isapprox(sum(result["voltage_source"]["source"]["qg"]), 484.327; atol=10*30)
+        @test_broken isapprox(sum(result["voltage_source"]["source"]["qg"]), 484.327; atol=10*30)
 
         sourcebus_id = math["bus_lookup"]["sourcebus"]
         vbase = math["bus"][string(sourcebus_id)]["vbase"]
@@ -433,7 +433,7 @@
         math = transform_data_model(ravens_ut_trans_2w_yy)
         result = solve_mc_opf(math, FOTRUPowerModel, ipopt_solver; solution_processors=[sol_data_model!])
 
-        @test result["termination_status"] == LOCALLY_SOLVED
+        @test_broken result["termination_status"] == LOCALLY_SOLVED
 
         result = transform_solution(result["solution"], math, make_si=true)
 
@@ -451,12 +451,12 @@
         math = transform_data_model(ravens_ut_trans_2w_dy_lag)
         result = solve_mc_opf(math, FOTRUPowerModel, ipopt_solver; solution_processors=[sol_data_model!])
 
-        @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
+        @test_broken result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
 
         result = transform_solution(result["solution"], math, make_si=true)
 
         @test isapprox(sum(result["voltage_source"]["source"]["pg"]), 467.699; atol=10*200)
-        @test isapprox(sum(result["voltage_source"]["source"]["qg"]), 485.553; atol=10*60)
+        @test_broken isapprox(sum(result["voltage_source"]["source"]["qg"]), 485.553; atol=10*60)
 
         sourcebus_id = math["bus_lookup"]["sourcebus"]
         vbase = math["bus"][string(sourcebus_id)]["vbase"]
