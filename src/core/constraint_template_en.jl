@@ -118,6 +118,7 @@ function constraint_mc_transformer_voltage(pm::ExplicitNeutralModels, i::Int; nw
     tm_scale = calculate_tm_scale(transformer, ref(pm, nw, :bus, f_bus), ref(pm, nw, :bus, t_bus))
 
     #TODO change data model
+    #note SR 07/01: change which data model? make what change? more info needed
     # there is redundancy in specifying polarity seperately on from and to side
     #TODO change this once migrated to new data model
     pol = transformer["polarity"]
