@@ -1917,7 +1917,7 @@ end
 
 
 "infer the internal dimension of a winding, load or generator based on the connections and the configuration"
-function _infer_int_dim(connections::Vector, configuration::ConnConfig, kron_reduced)
+function _infer_int_dim(connections::Vector, configuration::ConnConfig, kron_reduced::Bool=false)
     if configuration==WYE
         if kron_reduced
             return length(connections)
