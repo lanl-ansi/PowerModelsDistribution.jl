@@ -1119,6 +1119,7 @@ function _map_ravens2math_power_transformer!(data_math::MathematicalModel{Networ
             r_s = [r_s[i][1] for i in 1:nrw]
             #TODO: clean up this mess. why is x_sc defined multiple times
             # x_sc = [x_sc[i][1] for i in 1:nrw] # sum the x_sc for all tanks per wdg
+            # leakage reactance
             @assert nrw==2 "xfmr tank x_sc conversion currently only supports 2 winding transformers"
             x_sc = [x_sc[1][1]]      # get x_sc wrt to wdg 1
             g_sh = g_sh[1]      # wrt to wdg 1

@@ -121,6 +121,7 @@ function constraint_mc_transformer_voltage(pm::ExplicitNeutralModels, i::Int; nw
     #note SR 07/01: change which data model? make what change? more info needed
     # there is redundancy in specifying polarity seperately on from and to side
     #TODO change this once migrated to new data model
+    #SR note 7/7/26: the above comment was 4 years ago. ready to be migrated?
     pol = transformer["polarity"]
 
     if configuration == WYE
