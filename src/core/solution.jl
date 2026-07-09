@@ -34,12 +34,7 @@ function _IM.build_solution_values(var::LinearAlgebra.Symmetric{JuMP.VariableRef
     return JuMP.value.(var.data)
 end
 
-#helper for code robustness in sol data model W
-function _wrap_to_pi(x::Real)
-    return mod(x + pi, 2*pi) - pi
-end
-
-function _order_phase_angles_abc(va::AbstractVector{<:Real})
+function _order_phase_angles_abc(va::AbstractVector{<:Real})::Vector{Float64}
     @assert length(va) == 3
 
     # a near 0, b near -120 degrees, c near +120 degrees
@@ -67,7 +62,6 @@ function _order_phase_angles_abc(va::AbstractVector{<:Real})
 
     return [_wrap_to_pi(va[best_perm[k]]) for k in 1:3]
 end
-
 "converts w models voltages to standard voltage magnitude (sqrt)"
 function _sol_data_model_w!(solution::Dict{String,<:Any})
     if haskey(solution, "nw")

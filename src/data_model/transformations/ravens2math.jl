@@ -973,8 +973,10 @@ function _map_ravens2math_power_transformer!(data_math::MathematicalModel{Networ
 
                     # -- alternative computation of xsc using sc tests
                     if haskey(transf_end_info[wdg_endNumber], "TransformerEndInfo.EnergisedEndShortCircuitTests")
-                        leak_impedance_wdg = transf_end_info[wdg_endNumber]["TransformerEndInfo.EnergisedEndShortCircuitTests"][1]["ShortCircuitTest.leakageImpedance"]
-                        rs_pct = (r_s[wdg_endNumber][tank_id] / zbase[wdg_endNumber]) * 100.0
+                        leak_impedance_wdg = transf_end_info[wdg_endNumber]["TransformerEndInfo.EnergisedEndShortCircuitTests"][1]["ShortCircuitTest.leakageImpedance"] #safe to assume this is SI units
+                        rs_pct = (r_s[wdg_endNumber][tank_id] / zbase[wdg_endNumber]) 
+                        # assuming both windings contribute equally to the series leakage reactance: questionable approximation
+                        # leakage_z/zbase gives a per unit value, rs_pct is in percent. probably causes a units mismatch
                         x_sc[wdg_endNumber][tank_id] = (sqrt((leak_impedance_wdg / zbase[wdg_endNumber])^2 - (rs_pct + rs_pct)^2) / 100) * zbase[wdg_endNumber]
                     end
 
@@ -1116,6 +1118,8 @@ function _map_ravens2math_power_transformer!(data_math::MathematicalModel{Networ
             end
 
             # wdg i, tank 1  - assumes tank 1 always exists
+            #calculate resistance per winding AND per tank, then throw out all but tank 1
+            #this is a problem if the tanks are different
             r_s = [r_s[i][1] for i in 1:nrw]
             # leakage reactance
             @assert nrw==2 "xfmr tank x_sc conversion currently only supports 2 winding transformers"

@@ -214,7 +214,7 @@ end
 
 "wraps angles in radians to pi"
 function _wrap_to_pi(radians)
-    return radians - 2*pi*floor.((radians .+ pi)/(2*pi))
+    return mod(x + radians(pi), radians(2*pi)) - radians(pi)
 end
 
 
