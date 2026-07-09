@@ -660,7 +660,6 @@ function _map_eng2math_shunt!(data_math::MathematicalModel{NetworkModel}, data_e
     for (name, eng_obj) in get(data_eng, "shunt", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("shunt", name, eng_obj, length(data_math["shunt"])+1; pass_props=pass_props)
 
-        # TODO change to new capacitor shunt calc logic
         math_obj["shunt_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
 
         math_obj["gs"] = get(eng_obj, "gs", zeros(size(eng_obj["bs"])))

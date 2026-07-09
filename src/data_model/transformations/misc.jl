@@ -445,7 +445,8 @@ function _merge_terminals!(data_eng::EngineeringModel{NetworkModel}, bus_id::Str
         end
     end
 
-    #TODO take care of other bounds in the bus data model
+    #future task: take care of other bounds in the bus data model
+    #originally a rahmat comment from 3 years ago
 
     # update connection properties to reflect the merge
     for type in setdiff(intersect(pmd_eng_asset_types, keys(data_eng)), ["bus"])
@@ -590,7 +591,6 @@ function _remove_unconnected_terminals!(data_eng::EngineeringModel{NetworkModel}
             keep_gr_order = (!).(bus["grounded"] .== t)
             _apply_filter!(bus, ["grounded", "rg", "xg"], keep_gr_order)
         end
-        #TODO other bounds
     end
 
     return data_eng

@@ -80,6 +80,7 @@ end
 "converts impendance in Ohm/m in EnergySource"
 function _impedance_conversion_ravens_energy_source(data_eng::Dict{String,Any}, eng_obj::Dict{String,<:Any}, z1::Complex, z0::Complex)
     # TODO : Single-phase
+    #add conditional for single/3 
     a = 1*exp(120*im*π/180)
     A = [1 1 1; 1 a a^2; 1 a^2 a]
     Z_012 = [z0 0im 0im; 0im z1 0im; 0im 0im z1]

@@ -277,8 +277,9 @@ function transform_solution_ravens(
 		        end
 
 				# --- PowerFlow ---
-				num_ends = 1 # TODO: (Optional) Change to 2 if you would like to get both 'to' and 'from' flows for edge elements
-				for end_n in num_ends
+				num_ends = 1 # (Optional) Change to 2 if you would like to get both 'to' and 'from' flows for edge elements
+                #this is a revisit
+				for end_n in [num_ends] #this is incredibly hacky
                     # information related to direction flow, terminals, and phases
 					conn_flow, p_flow, q_flow = end_n == 1 ? ("f_connections", "pf", "qf") : ("t_connections", "pt", "qt")
 					terminals = nw_data[ed][ed_id][conn_flow]

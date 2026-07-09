@@ -75,6 +75,7 @@ function _dss2eng_load!(data_eng::EngineeringModel{NetworkModel}, data_dss::Open
         nphases = dss_obj["phases"]
         bus = _parse_bus_id(dss_obj["bus1"])[1]
         conf = nphases==1 && dss_obj["kv"]==0.24 ? DELTA : dss_obj["conn"] # check if load is connected between split-phase terminals of triplex node (nominal line-line voltage=240V), TODO: better generalization
+        #^logic for center tap xfmr?
 
         if conf==DELTA
             @assert(nphases in [1, 3], "$id: only 1 and 3-phase delta loads are supported!")

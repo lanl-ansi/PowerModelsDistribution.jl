@@ -71,7 +71,6 @@ function _map_ravens2math(
 
     add_base_voltages!(_data_ravens; overwrite=false)
 
-    # TODO: Add settings (defaults)
     basemva = 1
     _settings = Dict("sbase_default" => basemva * 1e3,
         "voltage_scale_factor" => 1e3,
@@ -131,6 +130,7 @@ function _map_ravens2math(
                                 "per_unit" => get(_data_ravens, "per_unit", false),
                                 "is_projected" => get(_data_ravens, "is_projected", false),
                                 "is_kron_reduced" => get(_data_ravens, "is_kron_reduced", true), # TODO: Kron reduction?
+                                #clarify? 
                                 "settings" => deepcopy(_settings),
                                 "time_elapsed" => get(_data_ravens, "time_elapsed", 1.0),
                                 "switch_close_actions_ub" => switch_close_actions_ub,
@@ -1117,8 +1117,6 @@ function _map_ravens2math_power_transformer!(data_math::MathematicalModel{Networ
 
             # wdg i, tank 1  - assumes tank 1 always exists
             r_s = [r_s[i][1] for i in 1:nrw]
-            #TODO: clean up this mess. why is x_sc defined multiple times
-            # x_sc = [x_sc[i][1] for i in 1:nrw] # sum the x_sc for all tanks per wdg
             # leakage reactance
             @assert nrw==2 "xfmr tank x_sc conversion currently only supports 2 winding transformers"
             x_sc = [x_sc[1][1]]      # get x_sc wrt to wdg 1

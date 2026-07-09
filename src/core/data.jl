@@ -449,6 +449,7 @@ function calculate_tm_scale(
 
     if config == DELTA
         # TODO: confirm whether delta-side voltage bases are line-to-line or line-to-neutral
+        #this is for kron reduce, line to line
         tm_scale *= sqrt(3)
     elseif config == "zig-zag"
         error("Zig-zag not yet supported.")
@@ -825,13 +826,8 @@ function _make_hermitian_matrix_variable(
 
     Trealout = promote_type(Tdiag, Treal)
 
-    matrixreal = Matrix{Trealout}(undef, n, n)
-    matriximag = fill(0 * lowertriangleimag[1], n, n)
-
-    for i in 1:n
-        matrixreal[i, i] = diag[i]
-        matriximag[i, i] = 0 * lowertriangleimag[1]
-    end
+    matrixreal = LinearAlgebra.diagm(Trealout.(diag))
+    matriximag = fill(zero(Timag), n, n)
 
     k = 1
     for i in 2:n
@@ -868,12 +864,10 @@ function _make_full_matrix_variable(
     @assert length(lowertriangle) == expected
     @assert length(uppertriangle) == expected
 
-    Tout = promote_type(Tdiag, Tlower, Tupper)
+    Tout = promote_type(Tdiag, Tlower, Tupper) #general type that can hold these elements
     matrix = Matrix{Tout}(undef, n, n)
 
-    for i in 1:n
-        matrix[i, i] = diag[i]
-    end
+    matrix = LinearAlgebra.diagm(Tout.(diag)) #cast "diag" to this type, use as diagonal
 
     k = 1
     for i in 2:n

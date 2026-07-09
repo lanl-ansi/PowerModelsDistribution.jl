@@ -81,6 +81,7 @@ function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}
     line.cmatrix = :cmatrix ∈ raw_fields ? line.cmatrix : imag(Yc) / (2 * pi * line.basefreq)
 
     # TODO: support length mismatch between line and linecode?
+    # DSS _does_ allow this, here would likely be good place to throw error
     # Currently this does not change the values of rmatrix and xmatrix due to
     # lenmult=1, code is only in place for future use.
     lenmult = 1.0
@@ -153,6 +154,7 @@ function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}
     end
 
     # TODO: handle `parallel`
+    # parallel is a dss reactor type, we don't support that here
     if (:kv ∈ raw_fields && :kvar ∈ raw_fields) || :x ∈ raw_fields || :lmh ∈ raw_fields || :z ∈ raw_fields
         if :kvar ∈ raw_fields && :kv ∈ raw_fields
             kvarperphase = reactor.kvar / reactor.phases
@@ -195,6 +197,9 @@ function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}
         reactor.x = reactor.xmatrix[1, 1]
 
         # TODO: account for off-diagonal and single phase
+        # likely not a big issue
+        # trying to collapse full matrix into dss-style scalars
+        # assumes all matrices are diagonal, all phases are identical
         reactor.z = reactor.z1 = reactor.z2 = reactor.z0 = [reactor.r, reactor.x]
         reactor.lmh = reactor.x / (2 * pi) / reactor.basefreq * 1e3
     elseif :z1 ∈ raw_fields

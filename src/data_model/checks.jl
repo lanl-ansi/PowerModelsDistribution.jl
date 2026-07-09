@@ -533,7 +533,6 @@ function _check_transformer(data_eng::Dict{String,<:Any}, name::Any)
         @assert transformer["sm_nom"][w] > 0.0 "$context: sm_nom must be positive"
 
         push!(nphs, nph)
-        #TODO check length other properties
     end
 
     _check_connectivity(data_eng, transformer; context="transformer_nw $name")
