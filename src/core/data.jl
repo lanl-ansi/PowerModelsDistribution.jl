@@ -213,8 +213,12 @@ end
 
 
 "wraps angles in radians to pi"
-function _wrap_to_pi(radians)
-    return mod(x + radians(pi), radians(2*pi)) - radians(pi)
+function _wrap_to_pi(x)
+    return mod(x + pi, 2*pi) - pi
+end
+
+function _wrap_to_pi(x::AbstractVector{<:Real})
+    return mod.(x .+ pi, 2*pi) .- pi
 end
 
 

@@ -545,6 +545,7 @@ function _dss2eng_xfmrcode!(data_eng::EngineeringModel{NetworkModel}, data_dss::
         nphases = dss_obj["phases"]
         nrw = dss_obj["windings"]
 
+        #maybe assert n windings not greater than 3?
         eng_obj = Dict{String,Any}(
             "tm_set" => Vector{Vector{Float64}}([fill(tap, nphases) for tap in dss_obj["taps"]]),
             "tm_lb" => Vector{Vector{Float64}}(fill(fill(dss_obj["mintap"], nphases), nrw)),
@@ -558,7 +559,8 @@ function _dss2eng_xfmrcode!(data_eng::EngineeringModel{NetworkModel}, data_dss::
             "rw" => Vector{Float64}(dss_obj["%rs"] ./ 100),
             "noloadloss" => dss_obj["%noloadloss"] / 100,
             "cmag" => dss_obj["%imag"] / 100,
-            "xsc" => nrw == 2 ? [dss_obj["xhl"] / 100] : [dss_obj["xhl"], dss_obj["xht"], dss_obj["xlt"]] ./ 100,
+            #what if there are more than 3 windings?
+            "xsc" => nrw == 2 ? [dss_obj["xhl"] / 100] : [dss_obj["xhl"], dss_obj["xht"], dss_obj["xlt"]] ./ 100, #units will be SI
             "source_id" => "xfmrcode.$id",
         )
 

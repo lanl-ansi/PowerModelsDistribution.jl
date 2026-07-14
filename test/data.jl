@@ -22,7 +22,7 @@ end
 @testset "test data handling functions" begin
 
     @testset "angle wrapper functions" begin
-        wrappedradians = PMD._wrap_to_pi([0, pi/2, pi, 3pi/2, 2pi])
+        wrappedradians = PMD._wrap_to_pi.([0, pi/2, pi, 3pi/2, 2pi])
         @test isapprox(wrappedradians, [0, pi/2, -pi, -pi/2, 0]; atol=1e-12)
 
         wrappeddegrees = PMD._wrap_to_180([0, 90, 180, 270, 360])

@@ -974,10 +974,10 @@ function _map_ravens2math_power_transformer!(data_math::MathematicalModel{Networ
                     # -- alternative computation of xsc using sc tests
                     if haskey(transf_end_info[wdg_endNumber], "TransformerEndInfo.EnergisedEndShortCircuitTests")
                         leak_impedance_wdg = transf_end_info[wdg_endNumber]["TransformerEndInfo.EnergisedEndShortCircuitTests"][1]["ShortCircuitTest.leakageImpedance"] #safe to assume this is SI units
-                        rs_pct = (r_s[wdg_endNumber][tank_id] / zbase[wdg_endNumber]) 
-                        # assuming both windings contribute equally to the series leakage reactance: questionable approximation
-                        # leakage_z/zbase gives a per unit value, rs_pct is in percent. probably causes a units mismatch
-                        x_sc[wdg_endNumber][tank_id] = (sqrt((leak_impedance_wdg / zbase[wdg_endNumber])^2 - (rs_pct + rs_pct)^2) / 100) * zbase[wdg_endNumber]
+                        rs_pct = (r_s[wdg_endNumber][tank_id] / zbase[wdg_endNumber]) #rename this to just rs?
+                        # assuming both windings contribute equally to the series leakage reactance: this is not a big contributor to error
+                        # leakage_z/zbase gives a per unit value, rs_pct is in percent NOTE I changed this - SR
+                        x_sc[wdg_endNumber][tank_id] = (sqrt((leak_impedance_wdg / zbase[wdg_endNumber])^2 - (rs_pct + rs_pct)^2))
                     end
 
                     # RS and XSC computation based on ratios
