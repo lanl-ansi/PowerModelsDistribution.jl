@@ -486,7 +486,7 @@ Transform line loops (connected to a single bus), which are not allowed in the m
 Lossy line loops are converted to equivalent shunts, and lossless ones (i.e. short-circuits) are represented by merging the short-circuited terminals.
 The argument 'zero_series_impedance_threshold' controls the threshold below which the series impedance is considered to be a short-ciruit.
 This is useful because OpenDSS modelers have to insert tiny impedances to represent short-circuit reactors.
-The addmittance to ground should be zero to trigger the short-circuit handling.
+The admittance to ground should be zero to trigger the short-circuit handling.
 """
 function transform_loops!(
     data::EngineeringModel{T};

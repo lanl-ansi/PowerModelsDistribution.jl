@@ -1358,7 +1358,7 @@ end
 function _check_branch_loops(data_math::MathematicalModel{NetworkModel})
     for (i, branch) in data_math["branch"]
         if branch["f_bus"] == branch["t_bus"]
-            error("both sides of branch $(i) connect to bus $(branch["f_bus"])")
+            error("both sides of branch $(i) connect to bus $(branch["f_bus"])\n include `transformations = [transform_loops!]` in the `parse_file` call")
         end
     end
 end
