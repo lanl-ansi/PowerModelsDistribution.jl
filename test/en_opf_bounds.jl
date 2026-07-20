@@ -302,7 +302,9 @@ end
 
     @testset "transformer total power magnitude upper bound" begin
         sm_ub = 100.0
-        data_eng = parse_file("..\\test\\data\\en_validation_case_data\\test_trans_dy.dss"; transformations=[transform_loops!])
+        pkg_root = dirname(dirname(pathof(PowerModelsDistribution)))
+        filepath = joinpath(pkg_root, "test", "data", "en_validation_case_data", "test_trans_dy.dss")
+        data_eng = parse_file(filepath; transformations=[transform_loops!])
         # copy in solar from test_gen_3ph_wye.dss
         data_eng["solar"] = deepcopy(test_gen_3ph_wye["solar"])
         data_eng["settings"]["sbase_default"] = 500.0
