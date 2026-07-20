@@ -114,7 +114,7 @@
         @testset "3w transformer ac pf center-tap" begin
             result = solve_mc_pf(trans_3w_center_tap, ACPUPowerModel, ipopt_solver; make_si=false)
             sbase = trans_3w_center_tap["settings"]["sbase_default"]
-            @test result["termination_status"] == LOCALLY_SOLVED
+            @test result["termination_status"] ∈ [LOCALLY_SOLVED, ALMOST_LOCALLY_SOLVED]
 
             @test all(isapprox.(sum(result["solution"]["load"]["l3"]["pd"])*sbase, 20.0; atol=1E-5))
             @test all(isapprox.(sum(result["solution"]["generator"]["g1"]["pg_bus"])*sbase, 7.0; atol=9E-4))

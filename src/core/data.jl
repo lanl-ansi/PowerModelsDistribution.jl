@@ -983,6 +983,7 @@ end
 
 "helper function to build bus shunt matrices for power balance constraints"
 function _build_bus_shunt_matrices(pm::AbstractUnbalancedPowerModel, nw::Int, terminals::Vector{Int}, bus_shunts::Vector{<:Tuple{Int,Vector{Int}}})::Tuple{Matrix{<:Real},Matrix{<:Real}}
+    #secondary place to put off-diag shunt matrix element code
     ncnds = length(terminals)
     Gs = fill(0.0, ncnds, ncnds)
     Bs = fill(0.0, ncnds, ncnds)
