@@ -52,7 +52,7 @@ include("test_cases.jl")
 
     include("transformer.jl")
 
-    # include("capacitor.jl")
+    include("capacitor.jl")
 
     include("loadmodels.jl")
 
