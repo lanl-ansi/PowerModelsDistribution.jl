@@ -33,7 +33,7 @@
         # loads
         @test isapprox(pd(result, "1"), (1/1000)*[400], atol=1e-1)
         @test isapprox(qd(result, "1"), (1/1000)*[300], atol=1e-1)
-        @test_broken isapprox(pd(result, "2"), (1/1000)*[332], atol=1e-1)
+        @test isapprox(pd(result, "2"), (1/1000)*[332], atol=1e-1)
         @test isapprox(qd(result, "2"), (1/1000)*[249], atol=1e-1)
         @test isapprox(pd(result, "5"), (1/1000)*[110.8, 132.9, 134.1], atol=1e-1)
         @test isapprox(qd(result, "5"), (1/1000)*[ 83.1,  99.7, 100.6], atol=1e-1)
@@ -49,7 +49,7 @@
         # loads
         @test isapprox(pd(result, "1"), (1/1000)*[400], atol=1e-1)
         @test isapprox(qd(result, "1"), (1/1000)*[300], atol=1e-1)
-        @test_broken isapprox(pd(result, "2"), (1/1000)*[332], atol=1e-1)
+        @test isapprox(pd(result, "2"), (1/1000)*[332], atol=1e-1)
         @test isapprox(qd(result, "2"), (1/1000)*[249], atol=1e-1)
         @test isapprox(pd(result, "5"), (1/1000)*[110.8, 132.9, 134.1], atol=1e-1)
         @test isapprox(qd(result, "5"), (1/1000)*[083.1,  99.7, 100.6], atol=1e-1)
@@ -65,7 +65,7 @@
         # loads
         @test isapprox(pd(result, "1"), (1/1000)*[400], atol=1e-1)
         @test isapprox(qd(result, "1"), (1/1000)*[300], atol=1e-1)
-        @test_broken isapprox(pd(result, "2"), (1/1000)*[332], atol=1e-1)
+        @test isapprox(pd(result, "2"), (1/1000)*[332], atol=1e-1)
         @test isapprox(qd(result, "2"), (1/1000)*[240], atol=1e-1)
         @test isapprox(pd(result, "5"), (1/1000)*[110.8, 132.9, 134.1], atol=1e-1)
         @test isapprox(qd(result, "5"), (1/1000)*[ 83.1,  99.7, 100.6], atol=1e-1)

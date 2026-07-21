@@ -53,9 +53,9 @@
 
     r = solve_mc_pf(eng, ACRUPowerModel, ipopt_solver; make_si=false, solution_processors=[sol_data_model!])
 
-    @test_broken all(isapprox.(r["solution"]["bus"]["652"]["vm"], [0.974806]; atol=1e-4))
-    @test_broken all(isapprox.(r["solution"]["bus"]["652"]["va"], [-5.35]; atol=1e-0))
+    @test all(isapprox.(r["solution"]["bus"]["652"]["vm"], [0.974806]; atol=1e-4))
+    @test all(isapprox.(r["solution"]["bus"]["652"]["va"], [-5.35]; atol=1e-0))
 
-    @test_broken all(isapprox.(r["solution"]["bus"]["675"]["vm"], [0.975987, 1.04705, 0.984996]; atol=1e-4))
-    @test_broken all(isapprox.(r["solution"]["bus"]["675"]["va"], [-5.52, -121.71, 116.03]; atol=1e-0))
+    @test all(isapprox.(r["solution"]["bus"]["675"]["vm"], [0.975987, 1.04705, 0.984996]; atol=1e-4))
+    @test all(isapprox.(r["solution"]["bus"]["675"]["va"], [-5.52, -121.71, 116.03]; atol=1e-0))
 end

@@ -445,9 +445,6 @@ function calculate_tm_scale(
 )
     # check that tm_nom is not being set to 1.0pu during PU conversion
     # this would explain the erroneous 8.3333 constraint issue
-    @info("===============TM NOM=============")
-    @info(trans["tm_nom"])
-    @info("===============TM NOM=============")
     tm_nom = trans["tm_nom"]
 
     f_vbase = haskey(bus_fr, "vbase") ? bus_fr["vbase"] : error("from bus is missing vbase")
@@ -464,7 +461,8 @@ function calculate_tm_scale(
         error("Zig-zag not yet supported.")
     end
 
-    return tm_scale #not returning tm_nom
+    return tm_nom
+    # return tm_scale #not returning tm_nom
 end
 
 

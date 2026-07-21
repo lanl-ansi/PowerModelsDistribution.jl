@@ -72,8 +72,8 @@
             @test isapprox(sum(result["solution"]["voltage_source"]["source"]["qg"]), 484.327; atol=20)
 
             vbase, _ = calc_voltage_bases(ut_trans_2w_yy, ut_trans_2w_yy["settings"]["vbases_default"])
-            @test_broken all(isapprox.(result["solution"]["bus"]["3"]["vm"] ./ vbase["3"], [0.87451, 0.8613, 0.85348]; atol=3e-1))
-            @test_broken all(isapprox.(result["solution"]["bus"]["3"]["va"], [-0.1, -120.4, 119.8]; atol=2e-1))
+            @test all(isapprox.(result["solution"]["bus"]["3"]["vm"] ./ vbase["3"], [0.87451, 0.8613, 0.85348]; atol=3e-1))
+            @test all(isapprox.(result["solution"]["bus"]["3"]["va"], [-0.1, -120.4, 119.8]; atol=2e-1))
         end
 
         @testset "3-bus unbalanced fbs opf_bf with dy transformer" begin
@@ -81,12 +81,12 @@
 
             @test result["termination_status"] == LOCALLY_SOLVED
 
-            @test_broken isapprox(sum(result["solution"]["voltage_source"]["source"]["pg"]), 467.699; atol=200)
-            @test_broken isapprox(sum(result["solution"]["voltage_source"]["source"]["qg"]), 485.553; atol=100)
+            @test isapprox(sum(result["solution"]["voltage_source"]["source"]["pg"]), 467.699; atol=200)
+            @test isapprox(sum(result["solution"]["voltage_source"]["source"]["qg"]), 485.553; atol=100)
 
             vbase, _ = calc_voltage_bases(ut_trans_2w_dy_lag, ut_trans_2w_dy_lag["settings"]["vbases_default"])
-            @test_broken all(isapprox.(result["solution"]["bus"]["3"]["vm"] ./ vbase["3"], [0.92092, 0.91012, 0.90059]; atol=5e-2))
-            @test_broken all(isapprox.(result["solution"]["bus"]["3"]["va"], [-30, -150.4, 89.8]; atol=2e0))
+            @test all(isapprox.(result["solution"]["bus"]["3"]["vm"] ./ vbase["3"], [0.92092, 0.91012, 0.90059]; atol=5e-2))
+            @test all(isapprox.(result["solution"]["bus"]["3"]["va"], [-30, -150.4, 89.8]; atol=2e0))
         end
 
         @testset "3-bus unbalanced fbs opf_bf with voltage-dependent loads" begin

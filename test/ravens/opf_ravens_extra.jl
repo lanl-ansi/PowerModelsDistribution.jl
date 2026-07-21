@@ -44,7 +44,7 @@
             optimizer=ipopt_solver,
             solution_processors=Function[]
         )
-        @test_broken result["termination_status"] == LOCALLY_SOLVED
+        @test result["termination_status"] == LOCALLY_SOLVED
     end
 
     @testset "Test trans 2w dy" begin
@@ -55,7 +55,7 @@
             optimizer=ipopt_solver,
             solution_processors=Function[]
         )
-        @test_broken result["termination_status"] == LOCALLY_SOLVED
+        @test result["termination_status"] == LOCALLY_SOLVED
     end
 
     @testset "Test trans 2w yy lag" begin
@@ -66,7 +66,7 @@
             optimizer=ipopt_solver,
             solution_processors=Function[]
         )
-        @test_broken result["termination_status"] == LOCALLY_SOLVED
+        @test result["termination_status"] == LOCALLY_SOLVED
     end
 
     @testset "Test trans 2w yy lssi" begin
@@ -77,7 +77,7 @@
             optimizer=ipopt_solver,
             solution_processors=Function[]
         )
-        @test_broken result["termination_status"] == LOCALLY_SOLVED
+        @test result["termination_status"] == LOCALLY_SOLVED
     end
 
     @testset "Test trans 2w yy bank" begin
@@ -147,7 +147,7 @@
     end
 
     @testset "Test trans 3w center tap" begin
-        @test_broken begin
+        @test begin
             pmd_model = instantiate_mc_model_ravens(ravens_trans_3w_center_tap, ACPUPowerModel, build_mc_opf)
             result = optimize_model!(
                 pmd_model,
@@ -223,7 +223,7 @@
             optimizer=ipopt_solver,
             solution_processors=Function[]
         )
-        @test_broken result["termination_status"] == LOCALLY_SOLVED
+        @test result["termination_status"] == LOCALLY_SOLVED
         #^fails
     end
     

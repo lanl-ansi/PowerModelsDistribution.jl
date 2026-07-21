@@ -13,14 +13,14 @@ and more thoughtful analysis is required to prevent these tests from failing. Th
 
         @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
 
-        @test_broken isapprox(sum(result["solution"]["gen"]["1"]["pg"]), [405.556,405.556,405.556]; atol=5) #405 == -1.8
-        @test_broken isapprox(sum(result["solution"]["gen"]["1"]["qg"]), [-527.15,-527.15,-527.15]; atol=200) #-7 == 527
+        @test isapprox(sum(result["solution"]["gen"]["1"]["pg"]), [405.556,405.556,405.556]; atol=5) #405 == -1.8
+        @test isapprox(sum(result["solution"]["gen"]["1"]["qg"]), [-527.15,-527.15,-527.15]; atol=200) #-7 == 527
 
         sourcebus_id = math["bus_lookup"]["646"]
         vbase = math["bus"][string(sourcebus_id)]["vbase"]
 
-        @test_broken all(isapprox.(result["solution"]["bus"]["13"]["vm"] ./ vbase, [1.03533, 1.06987, 0]; atol=2e-1))
-        @test_broken all(isapprox.(result["solution"]["bus"]["13"]["va"], [-90.1768, 148.498, 0]; atol=3e-1))
+        @test all(isapprox.(result["solution"]["bus"]["13"]["vm"] ./ vbase, [1.03533, 1.06987, 0]; atol=2e-1))
+        @test all(isapprox.(result["solution"]["bus"]["13"]["va"], [-90.1768, 148.498, 0]; atol=3e-1))
 
         # @test all(isapprox.(result["shunt"]["c1"]["cap_state"], [1.0]; atol=2e-1))
     end
@@ -31,14 +31,14 @@ and more thoughtful analysis is required to prevent these tests from failing. Th
 
         @test result["termination_status"] == ALMOST_LOCALLY_SOLVED || result["termination_status"] == LOCALLY_SOLVED
 
-        @test_broken isapprox(sum(result["solution"]["gen"]["1"]["pg"]), [405.556,405.556,405.556]; atol=5)
-        @test_broken isapprox(sum(result["solution"]["gen"]["1"]["qg"]), [-527.15,-527.15,-527.15]; atol=300)
+        @test isapprox(sum(result["solution"]["gen"]["1"]["pg"]), [405.556,405.556,405.556]; atol=5)
+        @test isapprox(sum(result["solution"]["gen"]["1"]["qg"]), [-527.15,-527.15,-527.15]; atol=300)
 
         sourcebus_id = math["bus_lookup"]["646"]
         vbase = math["bus"][string(sourcebus_id)]["vbase"]
 
-        @test_broken all(isapprox.(result["solution"]["bus"]["13"]["vm"] ./ vbase, [1.03533, 1.06987, 0]; atol=2e-1))
-        @test_broken all(isapprox.(result["solution"]["bus"]["13"]["va"], [-90.1768, 148.498, 0]; atol=3e-1))
+        @test all(isapprox.(result["solution"]["bus"]["13"]["vm"] ./ vbase, [1.03533, 1.06987, 0]; atol=2e-1))
+        @test all(isapprox.(result["solution"]["bus"]["13"]["va"], [-90.1768, 148.498, 0]; atol=3e-1))
 
         # @test all(isapprox.(result["shunt"]["c1"]["cap_state"], [1.0]; atol=2e-1))
     end
@@ -49,14 +49,14 @@ and more thoughtful analysis is required to prevent these tests from failing. Th
 
         @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
 
-        @test_broken isapprox(sum(result["solution"]["gen"]["1"]["pg"]), [405.556,405.556,405.556]; atol=5)
-        @test_broken isapprox(sum(result["solution"]["gen"]["1"]["qg"]), [-527.15,-527.15,-527.15]; atol=300)
+        @test isapprox(sum(result["solution"]["gen"]["1"]["pg"]), [405.556,405.556,405.556]; atol=5)
+        @test isapprox(sum(result["solution"]["gen"]["1"]["qg"]), [-527.15,-527.15,-527.15]; atol=300)
 
         sourcebus_id = math["bus_lookup"]["646"]
         vbase = math["bus"][string(sourcebus_id)]["vbase"]
 
-        @test_broken all(isapprox.(result["solution"]["bus"]["13"]["vm"] ./ vbase, [1.03533, 1.06987, 0]; atol=2e-1))
-        @test_broken all(isapprox.(result["solution"]["bus"]["13"]["va"], [-90.1768, 148.498, 0]; atol=3e-1))
+        @test all(isapprox.(result["solution"]["bus"]["13"]["vm"] ./ vbase, [1.03533, 1.06987, 0]; atol=2e-1))
+        @test all(isapprox.(result["solution"]["bus"]["13"]["va"], [-90.1768, 148.498, 0]; atol=3e-1))
 
         # @test all(isapprox.(result["shunt"]["c1"]["cap_state"], [1.0]; atol=2e-1))
     end
@@ -67,14 +67,14 @@ and more thoughtful analysis is required to prevent these tests from failing. Th
 
         @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
 
-        @test_broken isapprox(sum(result["solution"]["gen"]["1"]["pg"]), [404.784, 404.784, 404.784]; atol=5)
-        @test_broken isapprox(sum(result["solution"]["gen"]["1"]["qg"]), [-328.146,-328.146,-328.146]; atol=300)
+        @test isapprox(sum(result["solution"]["gen"]["1"]["pg"]), [404.784, 404.784, 404.784]; atol=5)
+        @test isapprox(sum(result["solution"]["gen"]["1"]["qg"]), [-328.146,-328.146,-328.146]; atol=300)
 
         sourcebus_id = math["bus_lookup"]["646"]
         vbase = math["bus"][string(sourcebus_id)]["vbase"]
 
-        @test_broken all(isapprox.(result["solution"]["bus"]["13"]["vm"] ./ vbase, [1.03928, 1.05688, 0]; atol=2e-1))
-        @test_broken all(isapprox.(result["solution"]["bus"]["13"]["va"], [-89.997, 148.711, 0]; atol=8e-1))
+        @test all(isapprox.(result["solution"]["bus"]["13"]["vm"] ./ vbase, [1.03928, 1.05688, 0]; atol=2e-1))
+        @test all(isapprox.(result["solution"]["bus"]["13"]["va"], [-89.997, 148.711, 0]; atol=8e-1))
 
         # @test all(isapprox.(result["shunt"]["c1"]["cap_state"], [1.0]; atol=6e-1))
     end
@@ -83,15 +83,15 @@ and more thoughtful analysis is required to prevent these tests from failing. Th
         math = transform_data_model(ravens_IEEE13_CapControl)
         result = solve_mc_opf_capc(math, LPUBFDiagPowerModel, ipopt_solver; solution_processors=[sol_data_model!])
 
-        @test_broken result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
+        @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
 
-        @test_broken isapprox(sum(result["solution"]["gen"]["1"]["pg"]), [404.784, 404.784, 404.784]; atol=5)
-        @test_broken isapprox(sum(result["solution"]["gen"]["1"]["qg"]), [-328.146,-328.146,-328.146]; atol=900)
+        @test isapprox(sum(result["solution"]["gen"]["1"]["pg"]), [404.784, 404.784, 404.784]; atol=5)
+        @test isapprox(sum(result["solution"]["gen"]["1"]["qg"]), [-328.146,-328.146,-328.146]; atol=900)
 
         sourcebus_id = math["bus_lookup"]["646"]
         vbase = math["bus"][string(sourcebus_id)]["vbase"]
 
-        @test_broken all(isapprox.(result["solution"]["bus"]["13"]["vm"] ./ vbase, [1.03928, 1.05688, 0]; atol=2e-1))
+        @test all(isapprox.(result["solution"]["bus"]["13"]["vm"] ./ vbase, [1.03928, 1.05688, 0]; atol=2e-1))
 
         # @test all(isapprox.(result["shunt"]["c1"]["cap_state"], [1.0]; atol=6e-1))
     end
@@ -102,14 +102,14 @@ and more thoughtful analysis is required to prevent these tests from failing. Th
 
         @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
 
-        @test_broken isapprox(sum(result["solution"]["gen"]["1"]["pg"]), [404.784, 404.784, 404.784]; atol=5)
-        @test_broken isapprox(sum(result["solution"]["gen"]["1"]["qg"]), [-328.146,-328.146,-328.146]; atol=400)
+        @test isapprox(sum(result["solution"]["gen"]["1"]["pg"]), [404.784, 404.784, 404.784]; atol=5)
+        @test isapprox(sum(result["solution"]["gen"]["1"]["qg"]), [-328.146,-328.146,-328.146]; atol=400)
     
         sourcebus_id = math["bus_lookup"]["646"]
         vbase = math["bus"][string(sourcebus_id)]["vbase"]
 
-        @test_broken all(isapprox.(result["solution"]["bus"]["13"]["vm"] ./ vbase, [1.03928, 1.05688, 0]; atol=2e-1))
-        @test_broken all(isapprox.(result["solution"]["bus"]["13"]["va"], [-89.997, 148.711, 0]; atol=1e0))
+        @test all(isapprox.(result["solution"]["bus"]["13"]["vm"] ./ vbase, [1.03928, 1.05688, 0]; atol=2e-1))
+        @test all(isapprox.(result["solution"]["bus"]["13"]["va"], [-89.997, 148.711, 0]; atol=1e0))
 
         # @test all(isapprox.(result["shunt"]["c1"]["cap_state"], [1.0]; atol=6e-1))
     end
@@ -121,16 +121,16 @@ and more thoughtful analysis is required to prevent these tests from failing. Th
         @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
         
         @debug result["solution"]
-        @test_broken isapprox(sum(result["solution"]["gen"]["1"]["pg"]), [404.784, 404.784, 404.784]; atol=5)
-        @test_broken isapprox(sum(result["solution"]["gen"]["1"]["qg"]), [-328.146,-328.146,-328.146]; atol=400)
+        @test isapprox(sum(result["solution"]["gen"]["1"]["pg"]), [404.784, 404.784, 404.784]; atol=5)
+        @test isapprox(sum(result["solution"]["gen"]["1"]["qg"]), [-328.146,-328.146,-328.146]; atol=400)
 
         sourcebus_id = math["bus_lookup"]["646"]
 
         
         vbase = math["bus"][string(sourcebus_id)]["vbase"]
 
-        @test_broken all(isapprox.(result["solution"]["bus"]["13"]["vm"] ./ vbase, [1.03928, 1.05688, 0]; atol=2e-1))
-        @test_broken all(isapprox.(result["solution"]["bus"]["13"]["va"], [-89.997, 148.711, 0]; atol=1e0))
+        @test all(isapprox.(result["solution"]["bus"]["13"]["vm"] ./ vbase, [1.03928, 1.05688, 0]; atol=2e-1))
+        @test all(isapprox.(result["solution"]["bus"]["13"]["va"], [-89.997, 148.711, 0]; atol=1e0))
 
         # @test all(isapprox.(result["shunt"]["c1"]["cap_state"], [1.0]; atol=6e-1))
     end

@@ -13,7 +13,7 @@
         vbase = math["bus"][string(sourcebus_id)]["vbase"]
 
         @test all(isapprox.(result["bus"]["primary"]["vm"] ./ vbase, 0.991111; atol=1e-2))
-        @test_broken isapprox(sum(result["storage"]["s1"]["ps"]), -5.0; atol=0.1) #evaluated 5==5.05 should work but doesn't
+        @test isapprox(sum(result["storage"]["s1"]["ps"]), -5.0; atol=0.1) #evaluated 5==5.05 should work but doesn't
     end
 
     @testset "3-bus balanced battery acp opf - time_elapsed::Int" begin
@@ -31,7 +31,7 @@
         vbase = math["bus"][string(sourcebus_id)]["vbase"]
 
         @test all(isapprox.(result["bus"]["primary"]["vm"] ./ vbase, 0.991111; atol=1e-2))
-        @test_broken isapprox(sum(result["storage"]["s1"]["ps"]), -5.0; atol=0.1) #evaluated 5==5.05 should work but doesn't
+        @test isapprox(sum(result["storage"]["s1"]["ps"]), -5.0; atol=0.1) #evaluated 5==5.05 should work but doesn't
     end
 
     @testset "3-bus balanced battery acr opf" begin
@@ -61,7 +61,7 @@
         vbase = math["bus"][string(sourcebus_id)]["vbase"]
 
         @test all(isapprox.(result["bus"]["primary"]["vm"] ./ vbase, 0.991111; atol=1e-2))
-        @test_broken isapprox(sum(result["storage"]["s1"]["ps"]), -5.0; atol=0.1) #evaluated 7.5 = 5
+        @test isapprox(sum(result["storage"]["s1"]["ps"]), -5.0; atol=0.1) #evaluated 7.5 = 5
     end
 
     @testset "3-bus balanced battery nfa opf" begin
@@ -71,7 +71,7 @@
         @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
 
         result = transform_solution(result["solution"], math, make_si=true)
-        @test_broken isapprox(sum(result["storage"]["s1"]["ps"]), -5.0; atol=1e-1) #4.98 == 5 should work but doesn't
+        @test isapprox(sum(result["storage"]["s1"]["ps"]), -5.0; atol=1e-1) #4.98 == 5 should work but doesn't
     end
 end
 
@@ -88,8 +88,8 @@ end
         vbase = math["bus"][string(sourcebus_id)]["vbase"]
 
         @test all(isapprox.(result["bus"]["primary"]["vm"] ./ vbase, 0.991111; atol=1e-2))
-        @test_broken all(isapprox.(result["bus"]["primary"]["va"], [0.03, -119.97, 120.03]; atol=1e-2)) #TODO: see if this can be fixed with relaxed tolerance
-        @test_broken isapprox(sum(result["storage"]["s1"]["ps"]), -5.0; atol=1e-4) #6.8==5
+        @test all(isapprox.(result["bus"]["primary"]["va"], [0.03, -119.97, 120.03]; atol=1e-2)) #TODO: see if this can be fixed with relaxed tolerance
+        @test isapprox(sum(result["storage"]["s1"]["ps"]), -5.0; atol=1e-4) #6.8==5
     end
 
     @testset "3-bus balanced battery acr pf" begin
@@ -105,7 +105,7 @@ end
         vbase = math["bus"][string(sourcebus_id)]["vbase"]
 
         @test all(isapprox.(result["bus"]["primary"]["vm"] ./ vbase, 0.991111; atol=1e-2))
-        @test_broken all(isapprox.(result["bus"]["primary"]["va"], [0.03, -119.97, 120.03]; atol=1e-2)) #TODO: see if this can be fixed with relaxed tolerance
-        @test_broken isapprox(sum(result["storage"]["s1"]["ps"]), -5.0; atol=1e-4) #evaluates 5.76==5
+        @test all(isapprox.(result["bus"]["primary"]["va"], [0.03, -119.97, 120.03]; atol=1e-2)) #TODO: see if this can be fixed with relaxed tolerance
+        @test isapprox(sum(result["storage"]["s1"]["ps"]), -5.0; atol=1e-4) #evaluates 5.76==5
     end
 end

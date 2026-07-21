@@ -27,8 +27,8 @@
             vbases, _ = calc_voltage_bases(mn_math.data["nw"]["1"], mn_math.data["nw"]["1"]["settings"]["vbases_default"])
             
             #TODO: figure out what is actually broken here
-            @test_broken all(all(isapprox.(bus["vmax"][filter(x->bus["grounded"][x] == 0,bus["terminals"])]/vbases[id], 1.1; atol=1e-6)) for (id,bus) in filter(x->x.second["name"]!="sourcebus",nw["bus"])) #TODO: vm == 1.1 but vbases != 1 thus the test fails
-            @test_broken all(all(isapprox.(bus["vmin"][filter(x->bus["grounded"][x] == 0,bus["terminals"])]/vbases[id], 0.9; atol=1e-6)) for (id,bus) in filter(x->x.second["name"]!="sourcebus",nw["bus"])) #TODO: vm ~= 0.9 but vbases != 1 thus the test fails  
+            @test all(all(isapprox.(bus["vmax"][filter(x->bus["grounded"][x] == 0,bus["terminals"])]/vbases[id], 1.1; atol=1e-6)) for (id,bus) in filter(x->x.second["name"]!="sourcebus",nw["bus"])) #TODO: vm == 1.1 but vbases != 1 thus the test fails
+            @test all(all(isapprox.(bus["vmin"][filter(x->bus["grounded"][x] == 0,bus["terminals"])]/vbases[id], 0.9; atol=1e-6)) for (id,bus) in filter(x->x.second["name"]!="sourcebus",nw["bus"])) #TODO: vm ~= 0.9 but vbases != 1 thus the test fails  
         end
     end
     

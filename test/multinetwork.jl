@@ -29,14 +29,14 @@
 
     @testset "solve_mc_opf_oltc" begin
         result_mn = PowerModelsDistribution.solve_mn_mc_opf_oltc(IEEE13_Feeder_engr, ACPUPowerModel, ipopt_solver)
-        @test_broken result_mn["termination_status"] == LOCALLY_SOLVED
+        @test result_mn["termination_status"] == LOCALLY_SOLVED
 
-        @test_broken all(isapprox.(result_mn["solution"]["nw"]["1"]["voltage_source"]["source"]["pg"], [801.20930, 879.72877, 836.72584]; atol=1e-5))
-        @test_broken all(isapprox.(result_mn["solution"]["nw"]["1"]["voltage_source"]["source"]["qg"], [245.06930, 249.39157, 315.23029]; atol=1e-5))
-        @test_broken all(isapprox.(result_mn["solution"]["nw"]["8"]["voltage_source"]["source"]["pg"], [913.33608, 993.26820, 975.66572]; atol=1e-5))
-        @test_broken all(isapprox.(result_mn["solution"]["nw"]["8"]["voltage_source"]["source"]["qg"], [299.18697, 273.36373, 355.49860]; atol=1e-5))
+        @test all(isapprox.(result_mn["solution"]["nw"]["1"]["voltage_source"]["source"]["pg"], [801.20930, 879.72877, 836.72584]; atol=1e-5))
+        @test all(isapprox.(result_mn["solution"]["nw"]["1"]["voltage_source"]["source"]["qg"], [245.06930, 249.39157, 315.23029]; atol=1e-5))
+        @test all(isapprox.(result_mn["solution"]["nw"]["8"]["voltage_source"]["source"]["pg"], [913.33608, 993.26820, 975.66572]; atol=1e-5))
+        @test all(isapprox.(result_mn["solution"]["nw"]["8"]["voltage_source"]["source"]["qg"], [299.18697, 273.36373, 355.49860]; atol=1e-5))
 
-        @test_broken all(isapprox.(result_mn["solution"]["nw"]["1"]["transformer"]["reg1"]["tap"][2], [1.02382, 1.01974, 1.02601]; atol=1e-5))
-        @test_broken all(isapprox.(result_mn["solution"]["nw"]["8"]["transformer"]["reg1"]["tap"][2], [1.02821, 1.02227, 1.02931]; atol=1e-5))
+        @test all(isapprox.(result_mn["solution"]["nw"]["1"]["transformer"]["reg1"]["tap"][2], [1.02382, 1.01974, 1.02601]; atol=1e-5))
+        @test all(isapprox.(result_mn["solution"]["nw"]["8"]["transformer"]["reg1"]["tap"][2], [1.02821, 1.02227, 1.02931]; atol=1e-5))
     end
 end
