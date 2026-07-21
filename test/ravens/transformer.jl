@@ -339,7 +339,7 @@ end
 
             @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
 
-            @test_broken isapprox(sum(result["solution"]["gen"]["1"]["pg"]), 10; atol=10)
+            @test isapprox(sum(result["solution"]["gen"]["1"]["pg"]), 10; atol=10)
             @test isapprox(sum(result["solution"]["gen"]["1"]["qg"]), -5; atol=10)
 
             sourcebus_id = math["bus_lookup"]["sourcebus"]

@@ -80,7 +80,7 @@ end
         math = transform_data_model(ravens_case3_balanced_battery)
         result = solve_mc_pf(math, ACPUPowerModel, ipopt_solver)
 
-        @test_broken result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED #evaluates to false
+        @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED #evaluates to false
 
         result = transform_solution(result["solution"], math, make_si=true)
 
@@ -96,7 +96,7 @@ end
         math = transform_data_model(ravens_case3_balanced_battery)
         result = solve_mc_pf(math, ACRUPowerModel, ipopt_solver; solution_processors=[sol_data_model!])
 
-        @test_broken result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
+        @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
 
         result = transform_solution(result["solution"], math, make_si=true)
 

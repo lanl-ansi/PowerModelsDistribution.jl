@@ -112,6 +112,7 @@
         end
 
         @testset "3w transformer ac pf center-tap" begin
+            #case = add_solution_hints!(trans_3w_center_tap, "solution_file")
             result = solve_mc_pf(trans_3w_center_tap, ACPUPowerModel, ipopt_solver; make_si=false)
             sbase = trans_3w_center_tap["settings"]["sbase_default"]
             #problematic
