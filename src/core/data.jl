@@ -443,6 +443,11 @@ function calculate_tm_scale(
     bus_fr::Dict{String,Any},
     bus_to::Dict{String,Any},
 )
+    # check that tm_nom is not being set to 1.0pu during PU conversion
+    # this would explain the erroneous 8.3333 constraint issue
+    @info("===============TM NOM=============")
+    @info(trans["tm_nom"])
+    @info("===============TM NOM=============")
     tm_nom = trans["tm_nom"]
 
     f_vbase = haskey(bus_fr, "vbase") ? bus_fr["vbase"] : error("from bus is missing vbase")
