@@ -1,0 +1,38 @@
+! This case is designed to test a Dy transformer where the neutral is not grounded
+
+Clear
+
+New Circuit.Test phases=3 basekv=11 baseMVA=0.2 bus1=B1 MVASC1=1e8 MVASC3=1e8
+
+New Linecode.Zabcn units=km nphases=4
+~ rmatrix=(0.227217624 0.059217624 0.059217624 0.059217624 |0.059217624 0.227217624 0.059217624 0.059217624 |0.059217624 0.059217624 0.227217624 0.059217624 |0.059217624 0.059217624 0.059217624 0.227217624)
+~ xmatrix=(0.879326005 0.541069709 0.475545802 0.449141163 |0.541069709 0.879326005 0.516533439 0.475545802 |0.475545802 0.516533439 0.879326005 0.541069709 |0.449141163 0.475545802 0.541069709 0.879326005)
+~ cmatrix=(0 | 0 0 | 0 0 0 | 0 0 0 0)
+~ Rg = 0
+~ Xg = 0
+
+New Line.Line1 bus1=B1.1.2.3.0 bus2=X1.1.2.3.4 linecode=Zabcn length=30 units=km
+
+New Transformer.Transformer1 windings=2 phases=3 Buses=[X1.1.2.3 X2.1.2.3.0]
+~ Conns=[Wye Wye]
+~ kVs=[11 0.4]
+~ kVAs=[500 500]
+~ %Rs=[1 2]
+~ xhl=5
+~ %noloadloss=5
+~ %imag=11
+~ leadlag=lag
+~ taps=[1.02 0.97]
+
+New Reactor.Grounding phases=1 bus1=X2.4 bus2=X2.0 R=0 X=0.1
+
+New Line.Line2 bus1=X2.1.2.3.4 bus2=B2.1.2.3.4 linecode=Zabcn length=0.5 units=km
+
+! creates unbalance at B2:
+! vm_b2 = [0.964, 1.01, 1.00, 0.05] without other devices active
+New Load.Load1  phases=1 bus1=B2.1.4  kv=0.23  model=1 conn=wye kVA=10  pf=0.9 vminpu=0.1 vmaxpu=2
+
+Set voltagebases=[11 0.4]
+Calcvoltagebases
+
+Solve

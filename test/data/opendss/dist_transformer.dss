@@ -1,0 +1,67 @@
+clear
+
+! Base Frequency
+Set DefaultBaseFrequency=60
+
+! New Circuit
+New circuit.ut_trans
+~ BasekV=11 BaseMVA=0.1 pu=1.0  ISC3=9999999999 ISC1=9999999999 
+
+! Line Codes
+New LineCode.OH_3p nphases= 3 Units= mi
+ ~ Rmatrix= (1.191602 | 0.234849 1.191602 | 0.234849 0.234849 1.191602 ) 
+ ~ Xmatrix= (1.209452 | 0.489263 1.209452 | 0.489263 0.489263 1.209452 ) 
+New LineCode.OH_1p nphases= 1 Units= mi
+ ~ Rmatrix= (1.194260 ) 
+ ~ Xmatrix= (1.205420 ) 
+New LineCode.UG_3p nphases= 3 Units= mi
+ ~ Rmatrix= (1.009423 | 0.409732 1.009423 | 0.409732 0.409732 1.009423 ) 
+ ~ Xmatrix= (0.493164 | 0.100849 0.493164 | 0.100849 0.100849 0.493164 ) 
+ ~ Cmatrix= (286.101593 | 0.000000 286.101593 | 0.000000 0.000000 286.101593 )     
+
+! Lines
+New Line.LINE1 Bus1=SourceBus Bus2=1 phases=3 
+~ length=10 units=Mi LineCode=OH_3p
+New Line.LINE2 Bus1=1 Bus2=2 phases=3 
+~ length=5 units=Mi LineCode=UG_3p
+New Line.LINE3 Bus1=1 Bus2=3 phases=3 
+~ length=6 units=Mi LineCode=OH_3p
+New Line.LINE4 Bus1=3.1.0 Bus2=4.1.0 phases=1
+~ length=4 units=Mi LineCode=OH_1p
+New Line.LINE5 Bus1=3.2.0 Bus2=5.2.0 phases=1
+~ length=6 units=Mi Rmatrix= (1.194260 ) Xmatrix= (1.205420 ) 
+New Line.LINE6 Bus1=1 Bus2=6 phases=3
+~ length=5 units=Mi LineCode=OH_3p
+
+! Transformers 
+New Transformer.T1 Phases=1 Windings=3 XHL=2.256  XHT=2.256  XLT=1.504
+~ wdg=1 bus=4.1.0     conn=wye kV=6.35085    kva=25 %R=0.665
+~ wdg=2 bus=4_L.1.0 conn=wye kV=0.120     kva=25 %R=1.33 
+~ wdg=3 bus=4_L.0.2 conn=wye kV=0.120     kva=25 %R=1.33 
+New Transformer.T2 Phases=1 Windings=3 XHL=2.256  XHT=2.256  XLT=1.504
+~ wdg=1 bus=5.2.0     conn=wye kV=6.35085    kva=25 %R=0.665
+~ wdg=2 bus=5_L.1.0 conn=wye kV=0.120     kva=25 %R=1.33 
+~ wdg=3 bus=5_L.0.2 conn=wye kV=0.120     kva=25 %R=1.33
+New Transformer.T3 Phases=3 Windings=2 XHL=1.91
+~ wdg=1 bus=2.1.2.3.0     conn=wye kV=11  kva=75 %R=1.135
+~ wdg=2 bus=2_L.1.2.3.0 conn=wye kV=0.208 kva=75 %R=1.135
+New Transformer.T4 Phases=2 Windings=2 XHL=2.1
+~ wdg=1 bus=6.1.2     conn=delta kV=11  kva=75 %R=0.5
+~ wdg=2 bus=6_L.1.2 conn=delta kV=0.208 kva=75 %R=0.5
+
+! Load
+New  Load.L_6  phases=1  conn=delta  bus1=6_L.1.2  kV=0.208  kW=5.040000000000000    Kvar=2.296291839688011
+New  Load.L_2  phases=3  conn=wye  bus1=2_L.1.2.3.0  kV=0.208  kW=14.096000000000000    Kvar=6.422327335762342
+New  Load.L_4  phases=2  conn=wye  bus1=4_L.1.2  kV=0.208  kW=3.125000000000000    Kvar=1.027137828683947
+New  Load.L_5  phases=2  conn=wye  bus1=5_L.1.2  kV=0.208  kW=4.458000000000000    Kvar=1.195107182990382
+
+
+
+
+! Set Voltage Bases
+Set voltagebases=[11  .208]
+Calcvoltagebases
+
+! Solve network
+solve
+

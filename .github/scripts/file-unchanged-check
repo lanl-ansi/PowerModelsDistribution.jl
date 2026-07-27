@@ -1,0 +1,13 @@
+#!/bin/sh
+
+echo "file changes between head_ref and base_ref"
+git log --name-only --oneline --pretty="format:" "origin/$1"..."origin/$2"
+
+if git log --name-only --oneline --pretty="format:" "origin/$1"..."origin/$2" | grep -qsP "$3"
+then
+    echo "files matching pattern $3 have been changed!"
+    exit 1
+else
+    echo "files matching pattern $3 remain unchanged"
+    exit 0
+fi

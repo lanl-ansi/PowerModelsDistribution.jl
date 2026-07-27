@@ -1,0 +1,34 @@
+! This case is designed to test a switch
+
+Clear
+
+New Circuit.Test phases=3 basekv=0.4 bus1=B1 MVASC1=1e8 MVASC3=1e8
+
+New Linecode.Zabc units=km nphases=3
+~ rmatrix=(0.227217624 0.059217624 0.059217624 | 0.059217624 0.227217624 0.059217624 | 0.059217624 0.059217624 0.227217624)
+~ xmatrix=(0.879326005 0.541069709 0.475545802 | 0.541069709 0.879326005 0.516533439 | 0.475545802 0.516533439 0.879326005)
+~ cmatrix=(0 | 0 0 | 0 0 0)
+~ Rg = 0
+~ Xg = 0
+
+New Linecode.goab_disswitch_3_8_3_5 units=km nphases=3 Faultrate=0.1 Rmatrix=(0.001 0.0 0.0 | 0.0 0.001 0.0 | 0.0 0.0 0.001 ) Xmatrix=(0.001 0.0 0.0 | 0.0 0.001 0.0 | 0.0 0.0 0.001 ) Cmatrix=(3.499563 -0.1093613 -0.1093613 | -0.1093613 3.499563 -0.1093613 | -0.1093613 -0.1093613 3.499563 ) normamps=325.0
+
+
+New Line.Line1 bus1=B1.1.2.3 bus2=X1.1.2.3 linecode=Zabc length=0.5 units=km
+// New Line.Switch bus1=B1.1.2.3 bus2=X2.1.2.3 length=1E-3 switch=y linecode=Zabc units=km
+New Line.Line2 bus1=X2.1.2.3 bus2=B2.1.2.3 linecode=Zabc length=0.5 units=km
+
+New Line.Switch Units=km Length=0.001 bus1=B1.1.2.3 bus2=X2.1.2.3 Linecode=goab_disswitch_3_8_3_5 switch=y phases=3
+
+
+! creates unbalance at B2:
+! vm_b2 = [0.964, 1.01, 1.00, 0.05] without other devices active
+New Load.Load1  phases=1 bus1=B2.1  kv=0.23  model=1 conn=wye kVA=5  pf=0.9 vminpu=0.1 vmaxpu=2
+
+Set voltagebases=[0.4]
+Calcvoltagebases
+
+// Export YPrims
+
+
+Solve

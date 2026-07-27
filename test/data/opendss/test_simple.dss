@@ -1,0 +1,11 @@
+! Simple 1 gen, 2 bus, 1 load circuit
+
+
+new circuit.Simple
+~ mVAsc3=1900
+
+new line.branch1 bus1=sourcebus bus2=2
+
+new generator.gen1 bus1=2
+
+new load.load1 bus1=2

@@ -1,0 +1,61 @@
+! **** Simplified PNNL Taxonomy Feeder - R1-12.47-3 ****
+clear
+
+Set Defaultbasefreq=60
+
+New Circuit.cktr112473
+~ basekv=230 pu=1.05 MVAsc3=20000 MVAsc1=21000
+! Substation Transformer
+New Transformer.SubXF phases=3 Windings=2 Xhl=0.01
+~ wdg=1 bus=sourcebus conn=wye kv=230   kva=10000    %r=0.0005
+~ wdg=2 bus=node_53 conn=wye kv=12.47  kva=10000   %r=0.0005  
+
+!Linecodes
+New Linecode.3P_Code2 units=km nphases=3 rmatrix=(1e-01 0.0 0.0 | 0.0 1e-01 0.0 | 0.0 0.0 1e-01 ) xmatrix=(1e-01 0.0 0.0 | 0.0 1e-01 0.0 | 0.0 0.0 1e-01 )
+New Linecode.2P_Code15 units=km nphases=2 rmatrix=(0.004336714723264791 0.002642057593084469 | 0.002642057593084469 0.004336714723264791 ) xmatrix=(-0.21047894251496715 -0.11963899234960682 | -0.11963899234960682 -0.21047894251496715 )
+
+!Lines
+New Line.switch_1 Units=km Length=0.001 bus1=node_52.1.2.3 bus2=node_1.1.2.3 switch=y enabled=y phases=3 Linecode=3P_Code2
+New Line.tl_1 Units=km Length=0.009144000000000001 bus1=tn_1.1.2 bus2=tn_4.1.2 switch=n enabled=y phases=2 Linecode=2P_Code15
+New Line.tl_2 Units=km Length=0.009144000000000001 bus1=tn_2.1.2 bus2=tn_5.1.2 switch=n enabled=y phases=2 Linecode=2P_Code15
+New Line.tl_3 Units=km Length=0.009144000000000001 bus1=tn_3.1.2 bus2=tn_6.1.2 switch=n enabled=y phases=2 Linecode=2P_Code15
+New Line.tl_4 Units=km Length=0.009144000000000001 bus1=tn_4.1.2 bus2=tm_1.1.2 switch=n enabled=y phases=2 Linecode=2P_Code15
+New Line.tl_5 Units=km Length=0.009144000000000001 bus1=tn_5.1.2 bus2=tm_2.1.2 switch=n enabled=y phases=2 Linecode=2P_Code15
+New Line.tl_6 Units=km Length=0.009144000000000001 bus1=tn_6.1.2 bus2=tm_3.1.2 switch=n enabled=y phases=2 Linecode=2P_Code15
+
+!Transformers
+New Transformer.trans_reg_1 phases=3 windings=2 buses=(node_53.1.2.3.0, node_52.1.2.3.0) conns=(wye, wye) kvs=(7.2, 7.2) kvas=(10000,10000)
+New Transformer.xfmr_1 phases=1 windings=3 wdg=1 bus=node_1.1 kv=7.2 kva=200.0 %r=0.6 wdg=2 bus=tn_1.1.0 kv=0.12 kva=25.0 %r=1.2 wdg=3 bus=tn_1.0.2 kv=0.12 kva=25.0 %r=1.2 XHL=2.04 XLT=1.36 XHT=2.04 %noloadloss=.2
+New Transformer.xfmr_2 phases=1 windings=3 wdg=1 bus=node_1.2 kv=7.2 kva=100.0 %r=0.6 wdg=2 bus=tn_2.1.0 kv=0.12 kva=25.0 %r=1.2 wdg=3 bus=tn_2.0.2 kv=0.12 kva=25.0 %r=1.2 XHL=2.04 XLT=1.36 XHT=2.04 %noloadloss=.2
+New Transformer.xfmr_3 phases=1 windings=3 wdg=1 bus=node_1.3 kv=7.2 kva=100.0 %r=0.6 wdg=2 bus=tn_3.1.0 kv=0.12 kva=25.0 %r=1.2 wdg=3 bus=tn_3.0.2 kv=0.12 kva=25.0 %r=1.2 XHL=2.04 XLT=1.36 XHT=2.04 %noloadloss=.2
+!New Transformer.xfmr_1 phases=1 windings=3 
+!~ XHL=0.17600000000000002 XLT=8.800000000000001e-02 XHT=8.800000000000001e-02   
+!~ wdg=1 bus=node_1.2 kv=7.2 kva=50.0 %r=0.000165 
+!~ wdg=2 bus=tn_1.1.0 kv=0.12 kva=25.0 %r=0.00033 
+!~ wdg=3 bus=tn_1.0.2 kv=0.12 kva=25.0 %r=0.00033 
+
+! Regulators
+New RegControl.reg_1 transformer=trans_reg_1 winding=2 delay=30.0 band=144.0 vreg=7500.0
+
+! 240V devices across terminals .1 to .2
+New Load.L1 bus1=tm_1.1.2 model=1 kW=20 phases=1 kV=0.24 pf=1 
+New Generator.G1 bus1=tm_1.1.2 kVA=7 phases=1 kV=0.24 pf=1 model=1
+New PVSystem.PV1 bus1=tm_1.1.2 kVA=3 phases=1 kV=0.24 pf=1 
+
+! 120V devices as separate elements
+New Load.L2a bus1=tm_2.1 model=1 kW=12 phases=1 kV=0.12 pf=1
+New PVSystem.PV2a bus1=tm_2.1 kVA=6 phases=1 kV=0.12 pf=1
+
+New Load.L2b bus1=tm_2.2 model=1 kW=8 phases=1 kV=0.12 pf=1
+New PVSystem.PV2b bus1=tm_2.2 kVA=4 phases=1 kV=0.12 pf=1
+
+! 120V devices as single element
+New Load.L3  bus1=tm_3.1.2 model=1 kva=20 phases=2 kV=0.208 pf=1
+New PVSystem.PV3 bus1=tm_3.1.2 kva=10 phases=2 kV=0.208 pf=1
+
+set voltagebases=[230, 12.47, 0.208] 
+calcvoltagebases
+Set Controlmode=OFF
+
+solve
+

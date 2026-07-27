@@ -1,0 +1,12 @@
+clear
+new circuit.loadshape_test
+
+New Loadshape.1 npts=10 minterval=1 mult=(file=load_profile.csv) useactual=true
+New loadshape.2 npts=10 sinterval=1 mult=(0.005,0.010,0.015,0.020,0.025,0.030,0.035,0.040,0.045,0.050) useactual=false
+new loadshape.3 npts=3 minterval=1 pmult=(1, 2, 3) qmult=(4, 5, 6)
+new loadshape.4 npts=10 interval=0 csvfile=load_profile_interval.csv
+new loadshape.5 npts=10 interval=0 dblfile=load_profile_interval.dbl
+new loadshape.6 npts=10 interval=1 sngfile=load_profile.sng
+new loadshape.7 npts=10 interval=0 pqcsvfile=load_profile_pq.csv
+new loadshape.8 npts=10 interval=1 pqcsvfile=load_profile_pq.csv
+new loadshape.9 npts=10 interval=1 pmult=(sngfile=load_profile.sng)
