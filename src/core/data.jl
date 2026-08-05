@@ -440,29 +440,12 @@ end
 "Calculates the tap scale factor for the non-dimensionalized equations."
 function calculate_tm_scale(
     trans::Dict{String,Any},
-    bus_fr::Dict{String,Any},
-    bus_to::Dict{String,Any},
 )
-    # check that tm_nom is not being set to 1.0pu during PU conversion
-    # this would explain the erroneous 8.3333 constraint issue
     tm_nom = trans["tm_nom"]
 
-    f_vbase = haskey(bus_fr, "vbase") ? bus_fr["vbase"] : error("from bus is missing vbase")
-    t_vbase = haskey(bus_to, "vbase") ? bus_to["vbase"] : error("to bus is missing vbase")
-    config = trans["configuration"]
-
-    tm_scale = tm_nom * (t_vbase / f_vbase)
-
-    if config == DELTA
-        # TODO: confirm whether delta-side voltage bases are line-to-line or line-to-neutral
-        #this is for kron reduce, line to line
-        tm_scale *= sqrt(3)
-    elseif config == "zig-zag"
-        error("Zig-zag not yet supported.")
-    end
-
+    #SR 7/22/26. _rebase_pu_transformer_2w_ideal! converted the physical transformer ratio into per unit, and calculate_tm_scale mistakenly converted it a second time    
+    #returning tm_nom is correct here
     return tm_nom
-    # return tm_scale #not returning tm_nom
 end
 
 

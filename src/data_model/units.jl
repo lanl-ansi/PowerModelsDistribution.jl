@@ -561,6 +561,7 @@ function _rebase_pu_transformer_2w_ideal!(transformer::Dict{String,<:Any}, f_vba
     t_vbase_scale = t_vbase_old/t_vbase_new
     sbase_scale = sbase_old/sbase_new
 
+    #note 7/22/26: this is the scaling applied to tm_nom, and therefore tm_nom should NOT be scaled in calculate_tm_scale
     _scale(transformer, "tm_nom", f_vbase_scale/t_vbase_scale)
     _scale(transformer, "sm_ub", sbase_scale)
 

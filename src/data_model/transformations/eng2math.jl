@@ -432,17 +432,6 @@ function _map_eng2math_transformer!(data_math::MathematicalModel{NetworkModel}, 
 
         _apply_xfmrcode!(eng_obj, data_eng)
         
-
-        # map eng2math xfmr is not where tm_nom becomes 1.0
-        # probably occurs during PU conversion
-        # @show name
-        # @show eng_obj["bus"]
-        # @show eng_obj["connections"]
-        # @show eng_obj["configuration"]
-        # @show eng_obj["vm_nom"]
-        # @show eng_obj["tm_set"]
-        # @show eng_obj["source_id"]
-
         if haskey(eng_obj, "f_bus") && haskey(eng_obj, "t_bus")
             @assert all(haskey(eng_obj, k) for k in ["f_bus", "t_bus", "f_connections", "t_connections"]) "Incomplete definition of AL2W tranformer $name, aborting eng2math conversion"
 

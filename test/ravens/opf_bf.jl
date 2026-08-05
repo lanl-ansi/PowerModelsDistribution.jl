@@ -134,7 +134,13 @@
 
         @testset "3-bus unbalanced fbs opf_bf with voltage-dependent loads" begin
             math = transform_data_model(ravens_case3_unbalanced_delta_loads)
+            math["load"]["1"]["pd_start"] = [0.006]
+            math["load"]["1"]["qd_start"] = [0.003]
+            math["load"]["5"]["pd_start"] = [0.006]
+            math["load"]["5"]["qd_start"] = [0.003]
+
             result = solve_mc_opf(math, FBSUBFPowerModel, ipopt_solver; solution_processors=[sol_data_model!])
+            #sr note, this case completely breaks MA57 for some reason 
 
             @test result["termination_status"] == LOCALLY_SOLVED #LOCALLY_INFEASIBLE
 

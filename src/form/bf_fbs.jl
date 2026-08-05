@@ -1,6 +1,7 @@
 # The branch flow model is linearized around an initial operating point using a single iteration
 # of  the forward-backward sweep (FBS) method
 
+#look for "mc_load" something and check pd/qd start var creation for constant I loads
 
 """
     variable_mc_load_power_delta_aux(pm::FBSUBFPowerModel, load_ids::Vector{Int}; nw::Int=nw_id_default, eps::Real=0.1, bounded::Bool=true, report::Bool=true)
@@ -18,6 +19,9 @@ end
 No loads require a current variable. Delta loads are zero-order approximations and
 wye loads are first-order approximations around the initial operating point.
 """
+# check here for mc_load constant current implementation?
+# note: some of these variable implementations that are either blank or missing are not important. 
+# for some of the vars, actual values are filled in during the constraint stage
 function variable_mc_load_current(pm::FBSUBFPowerModel, load_ids::Vector{Int}; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 end
 
@@ -550,6 +554,7 @@ function constraint_mc_load_power(pm::FBSUBFPowerModel, load_id::Int; nw::Int=nw
                 push!(qd_bus, b[idx]*(-vm0 + 2*vr[c]*vr0[idx] + 2*vi[c]*vi0[idx]))
             end
         else
+            #no current constraints, only voltage. means voltage constraints could be too tight
             vr = var(pm, nw, :vr, bus_id)
             vi = var(pm, nw, :vi, bus_id)
             vr0 = [var(pm, nw, :vr0, bus_id)[findfirst(isequal(c), terminals)] for c in connections]

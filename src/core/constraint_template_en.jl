@@ -115,7 +115,7 @@ function constraint_mc_transformer_voltage(pm::ExplicitNeutralModels, i::Int; nw
     t_connections = transformer["t_connections"]
     tm_set = transformer["tm_set"]
     tm_fixed = fix_taps ? ones(Bool, length(tm_set)) : transformer["tm_fix"]
-    tm_scale = calculate_tm_scale(transformer, ref(pm, nw, :bus, f_bus), ref(pm, nw, :bus, t_bus))
+    tm_scale = calculate_tm_scale(transformer) #note: this just returns tm_nom. scaling is already done in _rebase_pu_transformer_2w_ideal!
 
     #TODO change data model
     #note SR 07/01: change which data model? make what change? more info needed
