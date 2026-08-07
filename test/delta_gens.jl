@@ -36,23 +36,58 @@
         end
 
         # check ACP and ACR
-        for form in [ACPUPowerModel, ACRUPowerModel, IVRUPowerModel]
-            sol_1 = solve_mc_opf(eng_1, form, ipopt_solver)
-            @test sol_1["termination_status"] == LOCALLY_SOLVED
+        form = ACPUPowerModel
+        sol_1 = solve_mc_opf(eng_1, form, ipopt_solver)
+        @test sol_1["termination_status"] == LOCALLY_SOLVED
 
-            sol_2 = solve_mc_opf(eng_2, form, ipopt_solver)
-            @test sol_2["termination_status"] == LOCALLY_SOLVED
+        sol_2 = solve_mc_opf(eng_2, form, ipopt_solver)
+        @test sol_2["termination_status"] == LOCALLY_SOLVED
 
-            # check that gens are equivalent to the loads
-            for (id,_) in eng_1["load"]
-                pd_bus = sol_1["solution"]["load"][id]["pd"]
-                qd_bus = sol_1["solution"]["load"][id]["qd"]
-                pg_bus = sol_2["solution"]["generator"][id]["pg"]
-                qg_bus = sol_2["solution"]["generator"][id]["qg"]
-                @test isapprox(pd_bus, -pg_bus, atol=1E-4)
-                @test isapprox(qd_bus, -qg_bus, atol=1E-4)
-            end
+        # check that gens are equivalent to the loads
+        for (id,_) in eng_1["load"]
+            pd_bus = sol_1["solution"]["load"][id]["pd"]
+            qd_bus = sol_1["solution"]["load"][id]["qd"]
+            pg_bus = sol_2["solution"]["generator"][id]["pg"]
+            qg_bus = sol_2["solution"]["generator"][id]["qg"]
+            @test isapprox(pd_bus, -pg_bus, atol=1E-4)
+            @test isapprox(qd_bus, -qg_bus, atol=1E-4)
         end
+
+        form = ACRUPowerModel
+        sol_1 = solve_mc_opf(eng_1, form, ipopt_solver)
+        @test sol_1["termination_status"] == LOCALLY_SOLVED
+
+        sol_2 = solve_mc_opf(eng_2, form, ipopt_solver)
+        @test sol_2["termination_status"] == LOCALLY_SOLVED
+
+        # check that gens are equivalent to the loads
+        for (id,_) in eng_1["load"]
+            pd_bus = sol_1["solution"]["load"][id]["pd"]
+            qd_bus = sol_1["solution"]["load"][id]["qd"]
+            pg_bus = sol_2["solution"]["generator"][id]["pg"]
+            qg_bus = sol_2["solution"]["generator"][id]["qg"]
+            @test isapprox(pd_bus, -pg_bus, atol=1E-4)
+            @test isapprox(qd_bus, -qg_bus, atol=1E-4)
+        end
+
+        form = IVRUPowerModel
+        #IVRU test fails
+        sol_1 = solve_mc_opf(eng_1, form, ipopt_solver)
+        @test sol_1["termination_status"] == LOCALLY_SOLVED
+
+        sol_2 = solve_mc_opf(eng_2, form, ipopt_solver)
+        @test sol_2["termination_status"] == LOCALLY_SOLVED
+
+        # check that gens are equivalent to the loads
+        for (id,_) in eng_1["load"]
+            pd_bus = sol_1["solution"]["load"][id]["pd"]
+            qd_bus = sol_1["solution"]["load"][id]["qd"]
+            pg_bus = sol_2["solution"]["generator"][id]["pg"]
+            qg_bus = sol_2["solution"]["generator"][id]["qg"]
+            @test isapprox(pd_bus, -pg_bus, atol=1E-4)
+            @test isapprox(qd_bus, -qg_bus, atol=1E-4)
+        end
+
     end
     # IVR cannot be tested this way; it does not have explicit power variables,
     # so setting the upper and lower bound for the power to the same variable

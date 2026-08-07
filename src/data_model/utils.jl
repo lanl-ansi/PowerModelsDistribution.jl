@@ -163,14 +163,14 @@ R. C. Dugan, “A perspective on transformer modeling for distribution system an
 in 2003 IEEE Power Engineering Society General Meeting (IEEE Cat. No.03CH37491), 2003, vol. 1, pp. 114-119 Vol. 1.
 """
 function _sc2br_impedance(Zsc::Dict{Tuple{Int,Int},Complex{Float64}})::Dict{Tuple{Int,Int},Complex}
-    N = maximum([maximum(k) for k in keys(Zsc)])
-    # check whether no keys are missing
+    N = maximum([maximum(k) for k in keys(Zsc)]) #get number of windings
     # Zsc should contain tupples for upper triangle of NxN
     for i in 1:N
         for j in i+1:N
             if !haskey(Zsc, (i,j))
                 if haskey(Zsc, (j,i))
                     # Zsc is symmetric; use value of lower triangle if defined
+                    # if (1,2) is missing but (2,1) is there, copy it
                     Zsc[(i,j)] =  Zsc[(j,i)]
                 else
                     error("Short-circuit impedance between winding $i and $j is missing.")
@@ -180,10 +180,13 @@ function _sc2br_impedance(Zsc::Dict{Tuple{Int,Int},Complex{Float64}})::Dict{Tupl
     end
 
     # if all zero, return all zeros
+    # Zsc and Zbr are electrically equivalent for special case of all zeros
     if all(values(Zsc).==0.0)
         return Zsc
     end
-
+    # extremely important note: this ONLY handles the case where ALL elements are zero. some problems can still occur with zeros in _certain places_
+    # what if Z12 = 0, Z13 = Z23 != 0. This still creates issues for pinv later
+    
     # make Zb
     Zb = zeros(Complex{Float64}, N-1,N-1)
     for i in 1:N-1
@@ -195,13 +198,14 @@ function _sc2br_impedance(Zsc::Dict{Tuple{Int,Int},Complex{Float64}})::Dict{Tupl
             Zb[j,i] = Zb[i,j]
         end
     end
-    # get Ybus
-    Y = LinearAlgebra.pinv(Zb)
-    Y = [-Y*ones(N-1) Y]
+
+    Y = LinearAlgebra.pinv(Zb) #if Zb is singular or nearly singular, pinv will still return something
+    #add tests here for bad Zb?
+    Y = [-Y*ones(N-1) Y] #add winding 1 back
     Y = [-ones(1,N-1)*Y; Y]
     # extract elements
     Zbr = Dict{Tuple{Int,Int},Complex}()
-    for k in keys(Zsc)
+    for k in keys(Zsc) #convert ybus off diagonals to branch Z
         Zbr[k] = (abs(Y[k...])==0) ? Inf : -1/Y[k...]
     end
     return Zbr
@@ -226,7 +230,9 @@ function _build_loss_model!(
     tr_t_bus = collect(1:N)
     buses = Set(1:2*N)
 
+    # @show zsc
     zbr = _sc2br_impedance(zsc)
+    # @show zbr
 
     edges = [[[i,i+N] for i in 1:N]..., [[i+N,j+N] for (i,j) in keys(zbr)]...]
     lines = Dict(enumerate(edges))

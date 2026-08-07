@@ -431,6 +431,8 @@ function _map_eng2math_transformer!(data_math::MathematicalModel{NetworkModel}, 
         to_map = data_math["map"][end]["to"]
 
         _apply_xfmrcode!(eng_obj, data_eng)
+        
+
 
         if haskey(eng_obj, "f_bus") && haskey(eng_obj, "t_bus")
             @assert all(haskey(eng_obj, k) for k in ["f_bus", "t_bus", "f_connections", "t_connections"]) "Incomplete definition of AL2W tranformer $name, aborting eng2math conversion"
