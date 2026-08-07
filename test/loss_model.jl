@@ -1,13 +1,5 @@
 @testset "_build_loss_model! transformer winding placement" begin
 
-    # ------------------------------------------------------------------
-    # Starting point:
-    #   data_eng should already be the parsed engineering model for TX1.
-    #
-    # Example:
-    #   data_eng = PMD.parse_opendss("path/to/ut_trans.dss")
-    #
-    # The transformer should have:
     #   vm_nom = [11.0, 4.0, 0.4]
     #   sm_nom = [500.0, 500.0, 500.0]
     #   xsc    = [0.04, 0.06, 0.08]

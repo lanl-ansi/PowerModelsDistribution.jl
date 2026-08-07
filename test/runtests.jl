@@ -26,7 +26,9 @@ include("test_cases.jl")
 
 @testset "PowerModelsDistribution" begin
     # include("sr_xfmr.jl")
-    include("loss_model.jl")
+    # include("loss_model.jl")
+    include("xfmr_topology.jl")
+    
     include("opf_ravens.jl")
 
     include("multinetwork.jl")
