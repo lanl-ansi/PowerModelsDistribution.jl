@@ -27,12 +27,18 @@ parse_dss(file::String)::OpenDssDataModel = transform_data_model(DssModel, parse
 parse_dss(path::FilePaths.AbstractPath)::OpenDssDataModel = transform_data_model(DssModel, parse_raw_dss(path))
 parse_dss(io::IO)::OpenDssDataModel = transform_data_model(DssModel, parse_raw_dss(io))
 
-
+switch_state_map = Dict{String,Any}("close" => CLOSED, "open" => OPEN)
+switch_state_keys = collect(keys(switch_state_map))
+    
 """
-"""
+""" 
 function Base.setproperty!(@nospecialize(dss_obj::DssObject), property_name::String, property_value::String, data_type::Type)
     property_value = data_type == Bool && property_value ∈ ["y", "n", "yes", "no", "true", "false"] ? startswith(property_value, "y") || startswith(property_value, "t") ? "true" : "false" : property_value
-    setproperty!(dss_obj, Symbol(property_name), _isa_rpn(property_value) ? _parse_rpn(data_type, property_value) : parse(data_type, property_value))
+    if property_value in switch_state_keys
+        setproperty!(dss_obj, Symbol(property_name), switch_state_map[property_value])
+    else
+        setproperty!(dss_obj, Symbol(property_name), _isa_rpn(property_value) ? _parse_rpn(data_type, property_value) : parse(data_type, property_value))       
+    end
 end
 
 

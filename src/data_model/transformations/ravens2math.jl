@@ -1,3 +1,55 @@
+# safe deepcopy
+
+
+"""
+Iterative deep copy using a queue instead of recursion.
+This won't hit stack overflow even with deep nesting.
+"""
+function iterative_deepcopy(root)
+    visited = IdDict{Any,Any}()
+    queue = [(root, nothing, nothing)]  # (object, parent, key/index)
+    
+    # First pass: create all containers
+    while !isempty(queue)
+        obj, parent, loc = popfirst!(queue)
+        
+        # Skip if primitive or already visited
+        if obj isa Number || obj isa String || obj isa Symbol || obj isa Nothing
+            continue
+        end
+        
+        if haskey(visited, obj)
+            continue
+        end
+        
+        # Create copy
+        if obj isa Dict
+            copy = Dict{keytype(obj), valtype(obj)}()
+            visited[obj] = copy
+            
+            for (k, v) in obj
+                push!(queue, (v, copy, k))
+            end
+            
+        elseif obj isa Array
+            copy = similar(obj, 0)
+            visited[obj] = copy
+            
+            for (i, item) in enumerate(obj)
+                push!(queue, (item, copy, i))
+            end
+            
+        else
+            # For structs, just reference for now
+            visited[obj] = obj
+        end
+    end
+    
+    # Return the copy of the root
+    return get(visited, root, root)
+end
+
+
 "cim-ravens to math object mapping"
 const _math_to_ravens = Dict{String,String}(
     "bus" => "connectivity_node",
@@ -39,6 +91,7 @@ function transform_data_model(
     make_pu::Bool=true,
     make_pu_extensions::Vector{<:Function}=Function[],
     correct_network_data::Bool=true,
+    depth=2
 )::MathematicalModel
     data_math = _map_ravens2math(
         data;
@@ -49,6 +102,7 @@ function transform_data_model(
         ravens2math_passthrough=ravens2math_passthrough,
         global_keys=global_keys,
     )
+
     correct_network_data && correct_network_data!(data_math; make_pu=make_pu, make_pu_extensions=make_pu_extensions)
 
     return data_math
@@ -70,7 +124,8 @@ function _map_ravens2math(
     # potential TODO: break this into functions for single network and multinetwork
     # not strictly necessary from the current implementation, but could be good for clarity
 
-    _data_ravens = deepcopy(data_ravens)
+    _data_ravens = iterative_deepcopy(data_ravens)
+
 
     add_base_voltages!(_data_ravens; overwrite=false)
 

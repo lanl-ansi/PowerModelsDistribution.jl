@@ -294,7 +294,9 @@ function _make_math_per_unit!(
         end
     end
 
+
     bus_vbase, line_vbase = calc_voltage_bases(nw, vbases)
+
     voltage_scale_factor = nw["settings"]["voltage_scale_factor"]
 
     for (id, bus) in nw["bus"]
