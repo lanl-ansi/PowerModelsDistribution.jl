@@ -625,12 +625,13 @@ function _map_ravens2math_power_transformer!(data_math::MathematicalModel{Networ
 
             for wdg_id in 1:nrw
 
+                # Get winding object and its CIM end number
+                wdg = wdgs[wdg_id]
+                wdg_endNumber = wdg["TransformerEnd.endNumber"]
+
                 # wdg phasecode & terminals
                 wdg_terminals = ravens_obj["ConductingEquipment.Terminals"][wdg_id]
                 wdg_phasecode = wdg_terminals["Terminal.phases"]
-
-                # wdg endNumber
-                wdg_endNumber = wdgs[wdg_id]["TransformerEnd.endNumber"]
 
                 # Connections (based on _phasecode_map)
                 if haskey(_phasecode_map, wdg_phasecode)

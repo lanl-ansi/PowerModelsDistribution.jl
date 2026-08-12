@@ -9,7 +9,10 @@ const _phasecode_map = Dict(
     "PhaseCode.C" => [3],
     "PhaseCode.AN" => [1],
     "PhaseCode.BN" => [2],
-    "PhaseCode.CN" => [3]
+    "PhaseCode.CN" => [3],
+
+    "PhaseCode.s1N" => [1],
+    "PhaseCode.s2N" => [2],
 )
 
 _phase_map = Dict(
@@ -261,10 +264,21 @@ function find_voltages(data::RavensModel)::Dict{String,Any}
             tr_end = tr["PowerTransformer.PowerTransformerEnd"][1]
         end 
         
-        voltage_ratios = ones(length(tr_end["ConductingEquipment.Terminals"]))
-        for wdg_id in 1:1:length(tr_end["ConductingEquipment.Terminals"])
-            conns = length(_phasecode_map[tr_end["ConductingEquipment.Terminals"][wdg_id]["Terminal.phases"]])
-            voltage_ratios[wdg_id] = conns >= 3 ? sqrt(3) : 1.0
+        terminals = tr_end["ConductingEquipment.Terminals"]
+        voltage_ratios = ones(length(terminals))
+
+        for (wdg_id, terminal) in enumerate(terminals)
+            phasecode = terminal["Terminal.phases"]
+
+            # Only true three-phase windings need the line-line -> line-neutral correction.
+            is_three_phase = phasecode in (
+                "PhaseCode.ABC",
+                "PhaseCode.ABCN",
+            )
+
+        phasecode = tr_end["ConductingEquipment.Terminals"][wdg_id]["Terminal.phases"]
+
+        voltage_ratios[wdg_id] = phasecode in ("PhaseCode.ABC", "PhaseCode.ABCN") ? sqrt(3) : 1.0
         end
 
         rated_u = merge(
