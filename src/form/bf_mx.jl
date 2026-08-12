@@ -690,6 +690,7 @@ function variable_mc_load_current(pm::AbstractUBFModels, load_ids::Vector{Int}; 
 
     connections = Dict{Int,Vector{Int}}(i => load["connections"] for (i,load) in ref(pm, nw, :load))
 
+    # @error "entered abstract UBF model load variable"
     # calculate bounds
     cmin = Dict{eltype(load_ids), Vector{Real}}()
     cmax = Dict{eltype(load_ids), Vector{Real}}()

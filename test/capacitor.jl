@@ -1,3 +1,4 @@
+
 @info "running capacitor control tests"
 
 @testset "capacitor control" begin
@@ -105,4 +106,3 @@
         @test all(isapprox.(result["solution"]["shunt"]["c1"]["cap_state"], [1.0]; atol=6e-1))
     end
 end
-

@@ -82,7 +82,7 @@ function calc_start_voltage(
             f_conns = tr["f_connections"]
             t_bus = tr["t_bus"]
             t_conns = tr["t_connections"]
-            tm_scale = calculate_tm_scale(tr, data_math["bus"]["$f_bus"], data_math["bus"]["$t_bus"])
+            tm_scale = calculate_tm_scale(tr)
             scale = (tm_scale * tr["polarity"]) .* tr["tm_set"]
             if tr["configuration"] == WYE || (tr["configuration"] == DELTA && length(tr["tm_set"]) == 1)
                 v_fr = Array{Union{Complex,Missing}}([v_start[(f_bus, t)] for t in f_conns])

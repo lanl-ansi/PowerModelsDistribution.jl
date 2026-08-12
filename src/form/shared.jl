@@ -60,26 +60,32 @@ function constraint_mc_power_balance_slack(pm::AbstractUnbalancedWModels, nw::In
 
     for (idx, t) in ungrounded_terminals
         cp = JuMP.@constraint(pm.model,
-              sum(p[a][t] for (a, conns) in bus_arcs if t in conns)
+            sum(p[a][t] for (a, conns) in bus_arcs if t in conns)
             + sum(psw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
             + sum(pt[a_trans][t] for (a_trans, conns) in bus_arcs_trans if t in conns)
             ==
             sum(pg[g][t] for (g, conns) in bus_gens if t in conns)
             - sum(ps[s][t] for (s, conns) in bus_storage if t in conns)
-            - sum(ref(pm, nw, :load, l, "pd")[findfirst(isequal(t), conns)] for (l, conns) in bus_loads if t in conns)
-            - sum(w[t] * LinearAlgebra.diag(Gt')[idx] for (sh, conns) in bus_shunts if t in conns)
+            - sum(
+                ref(pm, nw, :load, l, "pd")[findfirst(isequal(t), conns)]
+                for (l, conns) in bus_loads if t in conns
+            )
+            - w[t] * Gt[idx, idx] #fix double counting of aggregate matrix
             + p_slack[t]
         )
         push!(cstr_p, cp)
         cq = JuMP.@constraint(pm.model,
-              sum(q[a][t] for (a, conns) in bus_arcs if t in conns)
+            sum(q[a][t] for (a, conns) in bus_arcs if t in conns)
             + sum(qsw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
             + sum(qt[a_trans][t] for (a_trans, conns) in bus_arcs_trans if t in conns)
             ==
             sum(qg[g][t] for (g, conns) in bus_gens if t in conns)
             - sum(qs[s][t] for (s, conns) in bus_storage if t in conns)
-            - sum(ref(pm, nw, :load, l, "qd")[findfirst(isequal(t), conns)] for (l, conns) in bus_loads if t in conns)
-            - sum(-w[t] * LinearAlgebra.diag(Bt')[idx] for (sh, conns) in bus_shunts if t in conns)
+            - sum(
+                ref(pm, nw, :load, l, "qd")[findfirst(isequal(t), conns)]
+                for (l, conns) in bus_loads if t in conns
+            )
+            + w[t] * Bt[idx, idx]
             + q_slack[t]
         )
         push!(cstr_q, cq)

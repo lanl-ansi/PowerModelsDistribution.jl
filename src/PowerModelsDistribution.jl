@@ -133,6 +133,8 @@ module PowerModelsDistribution
     include("io/dss/parse.jl")
     include("io/json/json.jl")
     include("io/common.jl")
+    include("io/solution_hints.jl")
+    include("io/feasibility.jl")
 
     include("data_model/utils.jl")
     include("data_model/utils_ravens.jl")

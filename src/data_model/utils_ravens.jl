@@ -9,7 +9,10 @@ const _phasecode_map = Dict(
     "PhaseCode.C" => [3],
     "PhaseCode.AN" => [1],
     "PhaseCode.BN" => [2],
-    "PhaseCode.CN" => [3]
+    "PhaseCode.CN" => [3],
+
+    "PhaseCode.s1N" => [1],
+    "PhaseCode.s2N" => [2],
 )
 
 _phase_map = Dict(
@@ -80,6 +83,7 @@ end
 "converts impendance in Ohm/m in EnergySource"
 function _impedance_conversion_ravens_energy_source(data_eng::Dict{String,Any}, eng_obj::Dict{String,<:Any}, z1::Complex, z0::Complex)
     # TODO : Single-phase
+    #add conditional for single/3 
     a = 1*exp(120*im*π/180)
     A = [1 1 1; 1 a a^2; 1 a^2 a]
     Z_012 = [z0 0im 0im; 0im z1 0im; 0im 0im z1]
@@ -164,6 +168,8 @@ function apply_voltage_bounds_math!(data::Dict{String,<:Any}; vm_lb::Union{Real,
 end
 
 apply_voltage_bounds_math!(data::MathematicalModel; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1) = apply_voltage_bounds_math!(data.data; vm_lb=vm_lb, vm_ub=vm_ub)
+
+apply_voltage_bounds_math!(data::AbstractUnbalancedPowerModel; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1) = apply_voltage_bounds_math!(data.data; vm_lb=vm_lb, vm_ub=vm_ub)
 
 function build_base_voltage_graphs(data::Dict{String,<:Any})::Tuple{Dict{Int,String},Graphs.SimpleGraph}
     nodes = Dict(cn => n for (n, cn) in enumerate(keys(data["ConnectivityNode"])))
@@ -258,10 +264,21 @@ function find_voltages(data::RavensModel)::Dict{String,Any}
             tr_end = tr["PowerTransformer.PowerTransformerEnd"][1]
         end 
         
-        voltage_ratios = ones(length(tr_end["ConductingEquipment.Terminals"]))
-        for wdg_id in 1:1:length(tr_end["ConductingEquipment.Terminals"])
-            conns = length(_phasecode_map[tr_end["ConductingEquipment.Terminals"][wdg_id]["Terminal.phases"]])
-            voltage_ratios[wdg_id] = conns >= 3 ? sqrt(3) : 1.0
+        terminals = tr_end["ConductingEquipment.Terminals"]
+        voltage_ratios = ones(length(terminals))
+
+        for (wdg_id, terminal) in enumerate(terminals)
+            phasecode = terminal["Terminal.phases"]
+
+            # Only true three-phase windings need the line-line -> line-neutral correction.
+            is_three_phase = phasecode in (
+                "PhaseCode.ABC",
+                "PhaseCode.ABCN",
+            )
+
+        phasecode = tr_end["ConductingEquipment.Terminals"][wdg_id]["Terminal.phases"]
+
+        voltage_ratios[wdg_id] = phasecode in ("PhaseCode.ABC", "PhaseCode.ABCN") ? sqrt(3) : 1.0
         end
 
         rated_u = merge(

@@ -715,9 +715,10 @@ function constraint_mc_transformer_power(pm::AbstractUnbalancedPowerModel, i::In
     t_connections = transformer["t_connections"]
     tm_set = transformer["tm_set"]
     tm_fixed = fix_taps ? ones(Bool, length(tm_set)) : transformer["tm_fix"]
-    tm_scale = calculate_tm_scale(transformer, ref(pm, nw, :bus, f_bus), ref(pm, nw, :bus, t_bus))
+    tm_scale = calculate_tm_scale(transformer)
 
     #TODO change data model
+    #look at less redundant way to specify polarity
     # there is redundancy in specifying polarity seperately on from and to side
     #TODO change this once migrated to new data model
     pol = transformer["polarity"]

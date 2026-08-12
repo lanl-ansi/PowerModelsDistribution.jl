@@ -431,7 +431,7 @@ function _map_eng2math_transformer!(data_math::MathematicalModel{NetworkModel}, 
         to_map = data_math["map"][end]["to"]
 
         _apply_xfmrcode!(eng_obj, data_eng)
-
+        
         if haskey(eng_obj, "f_bus") && haskey(eng_obj, "t_bus")
             @assert all(haskey(eng_obj, k) for k in ["f_bus", "t_bus", "f_connections", "t_connections"]) "Incomplete definition of AL2W tranformer $name, aborting eng2math conversion"
 
@@ -657,16 +657,16 @@ end
 
 "converts engineering generic shunt components into mathematical shunt components"
 function _map_eng2math_shunt!(data_math::MathematicalModel{NetworkModel}, data_eng::EngineeringModel{NetworkModel}; pass_props::Vector{String}=String[])
+    #start here for allowing off diag matrix shunts
     for (name, eng_obj) in get(data_eng, "shunt", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("shunt", name, eng_obj, length(data_math["shunt"])+1; pass_props=pass_props)
 
-        # TODO change to new capacitor shunt calc logic
         math_obj["shunt_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
 
-        math_obj["gs"] = get(eng_obj, "gs", zeros(size(eng_obj["bs"])))
+        math_obj["gs"] = get(eng_obj, "gs", zeros(size(eng_obj["bs"]))) #fill missing g's with zero array shaped like bs
 
         data_math["shunt"]["$(math_obj["index"])"] = math_obj
-
+        
         # add capcontrol items to math model
         if haskey(eng_obj,"controls")
             math_obj["controls"] = deepcopy(eng_obj["controls"])

@@ -4,18 +4,21 @@
     @testset "test transformer acp pf" begin
         @testset "2w transformer acp pf yy" begin
             result = solve_mc_pf(ut_trans_2w_yy, ACPUPowerModel, ipopt_solver; solution_processors=[sol_data_model!], make_si=false)
+            @test result["termination_status"] == LOCALLY_SOLVED
             @test norm(result["solution"]["bus"]["3"]["vm"]-[0.87451, 0.8613, 0.85348], Inf) <= 1.5E-5
             @test norm(result["solution"]["bus"]["3"]["va"]-[-0.1, -120.4, 119.8], Inf) <= 0.1
         end
 
         @testset "2w transformer acp pf dy_lead" begin
             result = solve_mc_pf(ut_trans_2w_dy_lead, ACPUPowerModel, ipopt_solver; solution_processors=[sol_data_model!], make_si=false)
+            @test result["termination_status"] == LOCALLY_SOLVED
             @test norm(result["solution"]["bus"]["3"]["vm"]-[0.87391, 0.86055, 0.85486], Inf) <= 1.5E-5
             @test norm(result["solution"]["bus"]["3"]["va"]-[29.8, -90.4, 149.8], Inf) <= 0.1
         end
 
         @testset "2w transformer acp pf dy_lag" begin
             result = solve_mc_pf(ut_trans_2w_dy_lag, ACPUPowerModel, ipopt_solver; make_si=false)
+            @test result["termination_status"] == LOCALLY_SOLVED
             @test norm(result["solution"]["bus"]["3"]["vm"]-[0.92092, 0.91012, 0.90059], Inf) <= 1.5E-5
             @test norm(result["solution"]["bus"]["3"]["va"]-[-30.0, -150.4, 89.8], Inf) <= 0.1
         end
@@ -24,18 +27,21 @@
     @testset "test transformer ivr pf" begin
         @testset "2w transformer ivr pf yy" begin
             result = solve_mc_pf(ut_trans_2w_yy, IVRUPowerModel, ipopt_solver; solution_processors=[sol_data_model!], make_si=false)
+            @test result["termination_status"] == LOCALLY_SOLVED
             @test norm(result["solution"]["bus"]["3"]["vm"]-[0.87451, 0.8613, 0.85348], Inf) <= 1.5E-5
             @test norm(result["solution"]["bus"]["3"]["va"]-[-0.1, -120.4, 119.8], Inf) <= 0.1
         end
 
         @testset "2w transformer ivr pf dy_lead" begin
             result = solve_mc_pf(ut_trans_2w_dy_lead, IVRUPowerModel, ipopt_solver; solution_processors=[sol_data_model!], make_si=false)
+            @test result["termination_status"] == LOCALLY_SOLVED
             @test norm(result["solution"]["bus"]["3"]["vm"]-[0.87391, 0.86055, 0.85486], Inf) <= 1.5E-5
             @test norm(result["solution"]["bus"]["3"]["va"]-[29.8, -90.4, 149.8], Inf) <= 0.1
         end
 
         @testset "2w transformer ivr pf dy_lag" begin
             result = solve_mc_pf(ut_trans_2w_dy_lag, IVRUPowerModel, ipopt_solver; solution_processors=[sol_data_model!], make_si=false)
+            @test result["termination_status"] == LOCALLY_SOLVED
             @test norm(result["solution"]["bus"]["3"]["vm"]-[0.92092, 0.91012, 0.90059], Inf) <= 1.5E-5
             @test norm(result["solution"]["bus"]["3"]["va"]-[-30.0, -150.4, 89.8], Inf) <= 0.1
         end
@@ -44,18 +50,21 @@
     @testset "test transformer acr pf" begin
         @testset "2w transformer acr pf yy" begin
             result = solve_mc_pf(ut_trans_2w_yy, ACRUPowerModel, ipopt_solver; solution_processors=[sol_data_model!], make_si=false)
+            @test result["termination_status"] == LOCALLY_SOLVED
             @test norm(result["solution"]["bus"]["3"]["vm"]-[0.87451, 0.8613, 0.85348], Inf) <= 1.5E-5
             @test norm(result["solution"]["bus"]["3"]["va"]-[-0.1, -120.4, 119.8], Inf) <= 0.1
         end
 
         @testset "2w transformer acr pf dy_lead" begin
             result = solve_mc_pf(ut_trans_2w_dy_lead, ACRUPowerModel, ipopt_solver; solution_processors=[sol_data_model!], make_si=false)
+            @test result["termination_status"] == LOCALLY_SOLVED
             @test norm(result["solution"]["bus"]["3"]["vm"]-[0.87391, 0.86055, 0.85486], Inf) <= 1.5E-5
             @test norm(result["solution"]["bus"]["3"]["va"]-[29.8, -90.4, 149.8], Inf) <= 0.1
         end
 
         @testset "2w transformer acr pf dy_lag" begin
             result = solve_mc_pf(ut_trans_2w_dy_lag, ACRUPowerModel, ipopt_solver; solution_processors=[sol_data_model!], make_si=false)
+            @test result["termination_status"] == LOCALLY_SOLVED
             @test norm(result["solution"]["bus"]["3"]["vm"]-[0.92092, 0.91012, 0.90059], Inf) <= 1.5E-5
             @test norm(result["solution"]["bus"]["3"]["va"]-[-30.0, -150.4, 89.8], Inf) <= 0.1
         end
@@ -75,6 +84,7 @@
     @testset "three winding transformer pf" begin
         @testset "3w transformer ac pf dyy - all non-zero"  begin
             result = solve_mc_pf(ut_trans_3w_dyy_1, ACPUPowerModel, ipopt_solver; make_si=false)
+            @test result["termination_status"] == LOCALLY_SOLVED
             @test norm(result["solution"]["bus"]["3"]["vm"]-[0.9318, 0.88828, 0.88581], Inf) <= 1.5E-5
             @test norm(result["solution"]["bus"]["3"]["va"]-[30.1, -90.7, 151.2], Inf) <= 0.1
         end
@@ -82,25 +92,31 @@
         @testset "3w transformer ac pf dyy - some non-zero" begin
             result = solve_mc_pf(ut_trans_3w_dyy_2, ACPUPowerModel, ipopt_solver; make_si=false)
             #@test isapprox(vm(result, eng, "3"), [0.93876, 0.90227, 0.90454], atol=1E-4)
+            @test result["termination_status"] == LOCALLY_SOLVED
             @test norm(result["solution"]["bus"]["3"]["vm"]-[0.93876, 0.90227, 0.90454], Inf) <= 1.5E-5
             @test norm(result["solution"]["bus"]["3"]["va"]-[31.6, -88.8, 153.3], Inf) <= 0.1
         end
 
         @testset "3w transformer ac pf dyy - all zero" begin
             result = solve_mc_pf(ut_trans_3w_dyy_3, ACPUPowerModel, ipopt_solver; make_si=false)
+            @test result["termination_status"] == LOCALLY_SOLVED
             @test norm(result["solution"]["bus"]["3"]["vm"]-[0.97047, 0.93949, 0.946], Inf) <= 1.5E-5
             @test norm(result["solution"]["bus"]["3"]["va"]-[30.6, -90.0, 151.9], Inf) <= 0.1
         end
 
         @testset "3w transformer ac pf dyy - %loadloss=0" begin
             result = solve_mc_pf(ut_trans_3w_dyy_3_loadloss, ACPUPowerModel, ipopt_solver; make_si=false)
+            @test result["termination_status"] == LOCALLY_SOLVED
             @test norm(result["solution"]["bus"]["3"]["vm"]-[0.969531, 0.938369, 0.944748], Inf) <= 1.5E-5
             @test norm(result["solution"]["bus"]["3"]["va"]-[30.7, -90.0, 152.0], Inf) <= 0.1
         end
 
         @testset "3w transformer ac pf center-tap" begin
+            #case = add_solution_hints!(trans_3w_center_tap, "solution_file")
             result = solve_mc_pf(trans_3w_center_tap, ACPUPowerModel, ipopt_solver; make_si=false)
             sbase = trans_3w_center_tap["settings"]["sbase_default"]
+            #problematic
+            @test result["termination_status"] ∈ [LOCALLY_SOLVED, ALMOST_LOCALLY_SOLVED]
 
             @test all(isapprox.(sum(result["solution"]["load"]["l3"]["pd"])*sbase, 20.0; atol=1E-5))
             @test all(isapprox.(sum(result["solution"]["generator"]["g1"]["pg_bus"])*sbase, 7.0; atol=9E-4))
@@ -127,6 +143,7 @@
             # then check whether voltage is what OpenDSS expects for those values
             solution = transform_solution(result["solution"], math, make_si=false)
 
+            @test result["termination_status"] == LOCALLY_SOLVED
             @test norm(solution["bus"]["3"]["vm"]-[1.0352, 1.022, 1.0142], Inf) <= 1E-4
             @test norm(solution["bus"]["3"]["va"]-[-0.1, -120.4, 119.8], Inf) <= 0.1
         end
@@ -135,22 +152,28 @@
     @testset "linearized transformers" begin
         @testset "2w_dy_lead" begin
             result = solve_mc_opf(ut_trans_2w_dy_lead, LPUBFDiagPowerModel, ipopt_solver)
+            @test result["termination_status"] == LOCALLY_SOLVED
             @test norm(result["solution"]["bus"]["3"]["w"]-[0.76674, 0.74840, 0.73846], Inf) <= 1E-4
         end
 
         @testset "3w_dyy_1" begin
             result = solve_mc_opf(ut_trans_3w_dyy_1, LPUBFDiagPowerModel, ipopt_solver)
+            @test result["termination_status"] == LOCALLY_SOLVED
             @test norm(result["solution"]["bus"]["3"]["w"]-[0.86095, 0.81344, 0.80480], Inf) <= 1E-4
         end
 
         @testset "3w_dyy_2" begin
             result = solve_mc_opf(ut_trans_3w_dyy_2, LPUBFDiagPowerModel, ipopt_solver)
+            @test result["termination_status"] == LOCALLY_SOLVED
             @test norm(result["solution"]["bus"]["3"]["w"]-[0.87086, 0.83270, 0.83208], Inf) <= 1E-4
         end
 
         @testset "2w_dy_lead_small_series_impedance" begin
             result1 = solve_mc_opf(ut_trans_2w_dy_lead_small_series_impedance, LPUBFDiagPowerModel, ipopt_solver; solution_processors=[sol_data_model!])
             result2 = solve_mc_opf(ut_trans_2w_dy_lead_small_series_impedance, ACPUPowerModel, ipopt_solver)
+
+            @test result1["termination_status"] == LOCALLY_SOLVED
+            @test result2["termination_status"] == LOCALLY_SOLVED
 
             @test norm(result1["solution"]["bus"]["1"]["vm"]-result2["solution"]["bus"]["1"]["vm"], Inf) <= 1.2E-3
 
@@ -300,7 +323,14 @@
         end
 
         @testset "3w transformer fotp opf center-tap" begin
-            result = solve_mc_opf(trans_3w_center_tap, FOTPUPowerModel, ipopt_solver; make_si=false)
+            data_test = transform_data_model(trans_3w_center_tap)
+            @assert ismath(data_test) "conversion to math model failed transformer.jl 327"
+            data_test["bus"]["8"]["vm_start"] =
+                copy(data_test["bus"]["41"]["vm"])
+            data_test["bus"]["8"]["va_start"] =
+                copy(data_test["bus"]["41"]["va"])
+
+            result = solve_mc_opf(data_test, FOTPUPowerModel, ipopt_solver; make_si=false)
             @test result["termination_status"] == LOCALLY_SOLVED
 
             sbase = trans_3w_center_tap["settings"]["sbase_default"]
