@@ -95,6 +95,9 @@ function apply_voltage_bounds!(data::EngineeringModel; vm_lb::Union{Real,Missing
     apply_pmd!(_apply_voltage_bounds!, data; apply_to_subnetworks=true, vm_lb=vm_lb, vm_ub=vm_ub)
 end
 
+function apply_voltage_bounds!(data::Dict{String, Any}; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1, exclude::Vector{String}=!isempty(get(data, "voltage_source", Dict())) ? String[x.second["bus"] for x in data["voltage_source"]] : String[])
+    apply_pmd!(_apply_voltage_bounds!, data; apply_to_subnetworks=true, vm_lb=vm_lb, vm_ub=vm_ub)
+end
 
 
 """
@@ -103,6 +106,22 @@ end
 add voltage bounds to all buses based on per-unit upper (`vm_ub`) and lower (`vm_lb`), scaled by the bus's voltage based
 """
 function _apply_voltage_bounds!(data_eng::EngineeringModel{NetworkModel}; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1, exclude::Vector{String}=!isempty(get(data_eng, "voltage_source", Dict())) ? String[x.second["bus"] for x in data_eng["voltage_source"]] : String[])
+    (bus_vbases, _) = calc_voltage_bases(data_eng, data_eng["settings"]["vbases_default"])
+    for (id, bus) in filter(x->!(x.first in exclude), get(data_eng, "bus", Dict{String,Any}()))
+        vbase = bus_vbases[id]
+        if !ismissing(vm_lb) && !ismissing(vbase)
+            data_eng["bus"][id]["vm_lb"] = vbase .* fill(vm_lb, length(bus["terminals"]))
+            data_eng["bus"][id]["vm_lb"][any.(bus["grounded"] .== t for t in bus["terminals"])] .= 0.0
+        end
+
+        if !ismissing(vm_ub) && !ismissing(vbase)
+            data_eng["bus"][id]["vm_ub"] = vbase .* fill(vm_ub, length(bus["terminals"]))
+            data_eng["bus"][id]["vm_ub"][any.(bus["grounded"] .== t for t in bus["terminals"])] .= Inf
+        end
+    end
+end
+
+function _apply_voltage_bounds!(data_eng::Dict{String, Any}; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1, exclude::Vector{String}=!isempty(get(data_eng, "voltage_source", Dict())) ? String[x.second["bus"] for x in data_eng["voltage_source"]] : String[])
     (bus_vbases, _) = calc_voltage_bases(data_eng, data_eng["settings"]["vbases_default"])
     for (id, bus) in filter(x->!(x.first in exclude), get(data_eng, "bus", Dict{String,Any}()))
         vbase = bus_vbases[id]
@@ -168,13 +187,16 @@ function adjust_line_limits!(data::EngineeringModel, mult::Real)
     apply_pmd!(_adjust_line_limits!, data, mult; apply_to_subnetworks=true)
 end
 
+function adjust_line_limits!(data::Dict{String, Any}, mult::Real)
+    apply_pmd!(_adjust_line_limits!, data, mult; apply_to_subnetworks=true)
+end
 
 """
     _adjust_line_limits!(data_eng::EngineeringModel{NetworkModel}, mult::Real)
 
 Multiplies limits (`sm_ub` and/or `cm_ub`) on line objects (`line`, `linecode`, `switch`) by a multiplier `mult`
 """
-function _adjust_line_limits!(data_eng::EngineeringModel{NetworkModel}, mult::Real)
+function _adjust_line_limits!(data_eng::Dict{String, Any}, mult::Real)
     for type in ["linecode", "line", "switch"]
         if haskey(data_eng, type)
             for (_,obj) in data_eng[type]
@@ -226,6 +248,9 @@ function adjust_transformer_limits!(data::EngineeringModel, mult::Real)
     apply_pmd!(_adjust_transformer_limits!, data, mult; apply_to_subnetworks=true)
 end
 
+function adjust_transformer_limits!(data::Dict{String, Any}, mult::Real)
+    apply_pmd!(_adjust_transformer_limits!, data, mult; apply_to_subnetworks=true)
+end
 
 """
     _adjust_transformer_limits!(data_eng::EngineeringModel{NetworkModel}, mult::Real)
@@ -245,6 +270,18 @@ function _adjust_transformer_limits!(data_eng::EngineeringModel{NetworkModel}, m
     end
 end
 
+function _adjust_transformer_limits!(data_eng::Dict{String, Any}, mult::Real)
+    if haskey(data_eng, "transformer")
+        for (_,obj) in data_eng["transformer"]
+            if haskey(obj, "cm_ub")
+                obj["cm_ub"] *= mult
+            end
+            if haskey(obj, "sm_ub")
+                obj["sm_ub"] *= mult
+            end
+        end
+    end
+end
 
 """
     remove_transformer_limits!(data::EngineeringModel)
@@ -282,6 +319,9 @@ function apply_voltage_angle_difference_bounds!(data::EngineeringModel, vad::Rea
     apply_pmd!(_apply_voltage_angle_difference_bounds!, data, vad; apply_to_subnetworks=true)
 end
 
+function apply_voltage_angle_difference_bounds!(data::Dict{String, Any}, vad::Real=5.0)
+    apply_pmd!(_apply_voltage_angle_difference_bounds!, data, vad; apply_to_subnetworks=true)
+end
 
 """
     _apply_voltage_angle_difference_bounds!(eng::Dict{String,<:Any}, vad::Real=5.0)

@@ -1018,6 +1018,7 @@ end
 computes load blocks based on switch locations
 """
 identify_load_blocks(data::DistributionModel{NetworkModel})::Set{Set} = calc_connected_components(data; type="load_blocks")
+identify_load_blocks(data::Dict{String, Any})::Set{Set} = calc_connected_components(data; type="load_blocks")
 
 
 """
@@ -1042,7 +1043,7 @@ identify_islands(data::DistributionModel{NetworkModel})::Set{Set} = calc_connect
 computes the connected components of the network graph
 returns a set of sets of bus ids, each set is a connected component
 """
-function calc_connected_components(data::DistributionModel{NetworkModel}; edges::Union{Missing, Vector{String}}=missing, type::Union{Missing,String}=missing, check_enabled::Bool=true)::Set{Set}
+function calc_connected_components(data::Union{Dict{String, Any}, DistributionModel{NetworkModel}}; edges::Union{Missing, Vector{String}}=missing, type::Union{Missing,String}=missing, check_enabled::Bool=true)::Set{Set}
     pmd_data = get_pmd_data(data)
 
     if data isa EngineeringModel
@@ -1050,8 +1051,64 @@ function calc_connected_components(data::DistributionModel{NetworkModel}; edges:
     elseif data isa MathematicalModel
         return _calc_connected_components_math(pmd_data; edges=ismissing(edges) ? _math_edge_elements : edges, type=type, check_enabled=check_enabled)
     else
-        error("data_model `$(get(pmd_data, "data_model", MATHEMATICAL))` is unrecongized")
+        return _calc_connected_components_eng(pmd_data; edges=ismissing(edges) ? _eng_edge_elements : edges, type=type, check_enabled=check_enabled)
     end
+end
+
+
+"""
+computes the connected components of the network graph
+returns a set of sets of bus ids, each set is a connected component
+"""
+function _calc_connected_components_eng(data::Dict{String, Any}; edges::Vector{<:String}=_eng_edge_elements, type::Union{Missing,String}=missing, check_enabled::Bool=true)::Set{Set{String}}
+    active_bus = Dict{String,Dict{String,Any}}(x for x in data["bus"] if x.second["status"] == ENABLED || !check_enabled)
+    active_bus_ids = Set{String}([i for (i,bus) in active_bus])
+
+    neighbors = Dict{String,Vector{String}}(i => [] for i in active_bus_ids)
+    for edge_type in edges
+        for (id, edge_obj) in get(data, edge_type, Dict{Any,Dict{String,Any}}())
+            if edge_obj["status"] == ENABLED || !check_enabled
+                if edge_type == "transformer" && haskey(edge_obj, "bus")
+                    for f_bus in edge_obj["bus"]
+                        for t_bus in edge_obj["bus"]
+                            if f_bus != t_bus
+                                push!(neighbors[f_bus], t_bus)
+                                push!(neighbors[t_bus], f_bus)
+                            end
+                        end
+                    end
+                else
+                    if edge_type == "switch" && !ismissing(type)
+                        if type == "load_blocks"
+                            if edge_obj["dispatchable"] == NO && edge_obj["state"] == CLOSED
+                                push!(neighbors[edge_obj["f_bus"]], edge_obj["t_bus"])
+                                push!(neighbors[edge_obj["t_bus"]], edge_obj["f_bus"])
+                            end
+                        elseif type == "blocks"
+                            if edge_obj["state"] == CLOSED
+                                push!(neighbors[edge_obj["f_bus"]], edge_obj["t_bus"])
+                                push!(neighbors[edge_obj["t_bus"]], edge_obj["f_bus"])
+                            end
+                        end
+                    else
+                        push!(neighbors[edge_obj["f_bus"]], edge_obj["t_bus"])
+                        push!(neighbors[edge_obj["t_bus"]], edge_obj["f_bus"])
+                    end
+                end
+            end
+        end
+    end
+
+    component_lookup = Dict(i => Set{String}([i]) for i in active_bus_ids)
+    touched = Set{String}()
+
+    for i in active_bus_ids
+        if !(i in touched)
+            _cc_dfs(i, neighbors, component_lookup, touched)
+        end
+    end
+
+    return Set{Set{String}}(values(component_lookup))
 end
 
 
