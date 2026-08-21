@@ -56,6 +56,79 @@ function _solve_mc_model(
     return MathematicalSolution(result)
 end
 
+function solve_mc_model(
+    data_dict::Dict{String, Any},
+    model_type::Type,
+    optimizer,
+    build_mc::Function;
+    ref_extensions::Vector{<:Function}=Function[],
+    multinetwork::Bool=false,
+    global_keys::Set{String}=Set{String}(),
+    eng2math_extensions::Vector{<:Function}=Function[],
+    eng2math_passthrough::Dict{String,<:Vector{<:String}}=Dict{String,Vector{String}}(),
+    make_pu_extensions::Vector{<:Function}=Function[],
+    map_math2eng_extensions::Dict{String,<:Function}=Dict{String,Function}(),
+    make_si::Bool=!get(data_dict, "per_unit", false),
+    make_si_extensions::Vector{<:Function}=Function[],
+    dimensionalize_math_extensions::Dict{String,Dict{String,Vector{String}}}=Dict{String,Dict{String,Vector{String}}}(),
+    kwargs...
+    )::Union{MathematicalSolution,EngineeringSolution,RavensModel}
+
+    data = EngineeringModel(data_dict)
+
+    if iseng(data)
+        data_math = transform_data_model(
+            data;
+            multinetwork=multinetwork,
+            eng2math_extensions=eng2math_extensions,
+            eng2math_passthrough=eng2math_passthrough,
+            make_pu_extensions=make_pu_extensions,
+            global_keys=global_keys,
+        )
+
+        result = _solve_mc_model(
+            data_math,
+            model_type,
+            optimizer,
+            build_mc;
+            ref_extensions=ref_extensions,
+            multinetwork=multinetwork,
+            global_keys=global_keys,
+            kwargs...
+        )
+
+        result["solution"] = transform_solution(
+            MathematicalModel(result["solution"]; multinetwork=multinetwork),
+            data_math;
+            map_math2eng_extensions=map_math2eng_extensions,
+            make_si=make_si,
+            make_si_extensions=make_si_extensions,
+            dimensionalize_math_extensions=dimensionalize_math_extensions,
+        )
+    elseif ismath(data)
+        result = _solve_mc_model(
+            data,
+            model_type,
+            optimizer,
+            build_mc;
+            ref_extensions=ref_extensions,
+            multinetwork=multinetwork,
+            eng2math_extensions=eng2math_extensions,
+            eng2math_passthrough=eng2math_passthrough,
+            global_keys=global_keys,
+            kwargs...
+        )
+
+        result["solution"] = MathematicalModel(
+            result["solution"];
+            multinetwork=multinetwork,
+        )
+    else
+        error("unrecognized data model format '$(get(data, "data_model", missing))'")
+    end
+
+    return result
+end
 
 """
     instantiate_mc_model(
@@ -128,6 +201,47 @@ function instantiate_mc_model(
         kwargs...
     )
 end
+
+function instantiate_mc_model(
+    data_eng::Dict{String, Any},
+    model_type::Type,
+    build_method::Function;
+    ref_extensions::Vector{<:Function}=Function[],
+    multinetwork::Bool=ismultinetwork(data),
+    global_keys::Set{String}=Set{String}(),
+    eng2math_extensions::Vector{<:Function}=Function[],
+    eng2math_passthrough::Dict{String,<:Vector{<:String}}=Dict{String,Vector{String}}(),
+    make_pu_extensions::Vector{<:Function}=Function[],
+    kwargs...
+    )
+
+    data = EngineeringModel(data_eng)
+
+    if data isa EngineeringModel || data isa RavensModel
+        @info "Converting data model to MATHEMATICAL first to build JuMP model"
+        data = transform_data_model(
+            data;
+            multinetwork=multinetwork,
+            global_keys=global_keys,
+            eng2math_extensions=eng2math_extensions,
+            eng2math_passthrough=eng2math_passthrough,
+            make_pu_extensions=make_pu_extensions,
+        )
+    end
+
+    @assert data isa MathematicalModel "instantiate_mc_model expected MathematicalModel before calling InfrastructureModels, got $(typeof(data))"
+    return _IM.instantiate_model(
+        data.data,
+        model_type,
+        build_method,
+        ref_add_core!,
+        union(_pmd_math_global_keys, global_keys),
+        pmd_it_sym;
+        ref_extensions=ref_extensions,
+        kwargs...
+    )
+end
+
 
 
 function instantiate_mc_model_ravens(

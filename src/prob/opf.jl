@@ -8,7 +8,7 @@
 
 Solve Optimal Power Flow
 """
-function solve_mc_opf(data::Union{DistributionModel,String}, model_type::Type, solver; kwargs...)
+function solve_mc_opf(data::Union{DistributionModel,String,Dict{String, Any}}, model_type::Type, solver; kwargs...)
     return solve_mc_model(data, model_type, solver, build_mc_opf; kwargs...)
 end
 

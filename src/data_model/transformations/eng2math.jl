@@ -159,6 +159,43 @@ function transform_data_model(
     return data_math
 end
 
+function transform_data_model(
+    data::Dict{String,Any};
+    kron_reduce::Bool=true,
+    phase_project::Bool=false,
+    multinetwork::Bool=false,
+    global_keys::Set{String}=Set{String}(),
+    eng2math_passthrough::Dict{String,<:Vector{<:String}}=Dict{String,Vector{String}}(),
+    eng2math_extensions::Vector{<:Function}=Function[],
+    make_pu::Bool=true,
+    make_pu_extensions::Vector{<:Function}=Function[],
+    correct_network_data::Bool=true,
+    )
+
+    data_eng = EngineeringModel(data)
+
+    if multinetwork && !ismultinetwork(data_eng)
+        data_eng = make_multinetwork(data_eng; global_keys=global_keys)
+    end
+
+    data_math = _map_eng2math(
+        data_eng;
+        kron_reduce=kron_reduce,
+        phase_project=phase_project,
+        eng2math_extensions=eng2math_extensions,
+        eng2math_passthrough=eng2math_passthrough,
+        global_keys=global_keys,
+    )
+
+    correct_network_data && correct_network_data!(
+        data_math;
+        make_pu=make_pu,
+        make_pu_extensions=make_pu_extensions,
+    )
+
+    return data_math
+end
+
 function transform_data_model(data::InfrastructureModel; kwargs...)::InfrastructureModel
     @info "Data model '$(typeof(data))' is not recognized, no model type transformation performed"
     return data
