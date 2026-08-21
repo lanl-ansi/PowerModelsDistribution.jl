@@ -3,17 +3,16 @@
 
 Replaces impedances (rs, xs) on lines, linecodes, and switches lower than `min_impedance_val` with `replace_impedance_val`.
 """
-function adjust_small_line_impedances!(data::EngineeringModel; min_impedance_val::Real=1e-2, replace_impedance_val::Real=0.0)
+function adjust_small_line_impedances!(data::Union{EngineeringModel, Dict{String, Any}}; min_impedance_val::Real=1e-2, replace_impedance_val::Real=0.0)
     apply_pmd!(_adjust_small_line_impedances!, data; apply_to_subnetworks=true, min_impedance_val=min_impedance_val, replace_impedance_val=replace_impedance_val)
 end
-
 
 """
     _adjust_small_line_impedances!(data_eng::EngineeringModel{NetworkModel}; min_impedance_val::Real=1e-2, replace_impedance_val::Real=0.0)
 
 Replaces impedances (rs, xs) on lines, linecodes, and switches lower than `min_impedance_val` with `replace_impedance_val`.
 """
-function _adjust_small_line_impedances!(data_eng::EngineeringModel{NetworkModel}; min_impedance_val::Real=1e-2, replace_impedance_val::Real=0.0)
+function _adjust_small_line_impedances!(data_eng::Union{EngineeringModel{NetworkModel}, Dict{String, Any}}; min_impedance_val::Real=1e-2, replace_impedance_val::Real=0.0)
     for type in ["line", "linecode", "switch"]
         if haskey(data_eng, type)
             for (id,obj) in data_eng[type]
@@ -33,7 +32,7 @@ end
 
 Replaces admittances (g_fr, g_to, b_fr, b_to) on lines, linecodes, and switches lower than `min_admittance_val` with `replace_admittance_val`.
 """
-function adjust_small_line_admittances!(data::EngineeringModel; min_admittance_val::Real=1e-2, replace_admittance_val::Real=0.0)
+function adjust_small_line_admittances!(data::Union{EngineeringModel, Dict{String, Any}}; min_admittance_val::Real=1e-2, replace_admittance_val::Real=0.0)
     apply_pmd!(_adjust_small_line_admittances!, data; apply_to_subnetworks=true, min_admittance_val=min_admittance_val, replace_admittance_val=replace_admittance_val)
 end
 
@@ -43,7 +42,7 @@ end
 
 Replaces admittances (g_fr, g_to, b_fr, b_to) on lines, linecodes, and switches lower than `min_admittance_val` with `replace_admittance_val`.
 """
-function _adjust_small_line_admittances!(data_eng::EngineeringModel{NetworkModel}; min_admittance_val::Real=1e-2, replace_admittance_val::Real=0.0)
+function _adjust_small_line_admittances!(data_eng::Union{EngineeringModel{NetworkModel}, Dict{String, Any}}; min_admittance_val::Real=1e-2, replace_admittance_val::Real=0.0)
     for type in ["line", "linecode", "switch"]
         if haskey(data_eng, type)
             for (id,obj) in data_eng[type]

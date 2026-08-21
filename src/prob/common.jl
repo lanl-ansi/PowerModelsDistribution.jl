@@ -25,7 +25,7 @@ function _solve_mc_model(
     solution_processors::Vector{<:Function}=Function[],
     relax_integrality::Bool=false,
     kwargs...
-    )::MathematicalSolution
+    )::Union{MathematicalSolution, Dict{String, Any}}
 
     if multinetwork != ismultinetwork(data)
         model_requirement = multinetwork ? "multi-network" : "single-network"
@@ -53,7 +53,8 @@ function _solve_mc_model(
     )
     @debug "pm model solve and solution time: $(time() - start_time)"
 
-    return MathematicalSolution(result)
+    # return MathematicalSolution(result)
+    return result
 end
 
 function solve_mc_model(
@@ -72,7 +73,7 @@ function solve_mc_model(
     make_si_extensions::Vector{<:Function}=Function[],
     dimensionalize_math_extensions::Dict{String,Dict{String,Vector{String}}}=Dict{String,Dict{String,Vector{String}}}(),
     kwargs...
-    )::Union{MathematicalSolution,EngineeringSolution,RavensModel}
+    )::Union{MathematicalSolution,EngineeringSolution,RavensModel,Dict{String, Any}}
 
     data = EngineeringModel(data_dict)
 
@@ -331,7 +332,7 @@ function solve_mc_model(
     make_si_extensions::Vector{<:Function}=Function[],
     dimensionalize_math_extensions::Dict{String,Dict{String,Vector{String}}}=Dict{String,Dict{String,Vector{String}}}(),
     kwargs...
-    )::Union{MathematicalSolution,EngineeringSolution,RavensModel}
+    )::Union{MathematicalSolution,EngineeringSolution,RavensModel,Dict{String, Any}}
 
 
     if iseng(data)
