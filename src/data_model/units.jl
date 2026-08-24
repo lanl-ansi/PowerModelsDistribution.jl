@@ -291,7 +291,7 @@ function _calc_voltage_bases(data_model::DistributionModel, vbase_sources::Dict{
 
             if haskey(transformer, "f_bus")
                 f_zone = bus_to_zone["$(transformer["f_bus"])"]
-                t_zone = bus_to_zone["$(transformer["f_bus"])"]
+                t_zone = bus_to_zone["$(transformer["t_bus"])"]
                 tm_nom = transformer["configuration"] == DELTA ? transformer["tm_nom"]/sqrt(3) : transformer["tm_nom"]
                 push!(zone_edges[f_zone], (t_zone, 1/tm_nom))
                 push!(zone_edges[t_zone], (f_zone,   tm_nom))
@@ -408,7 +408,7 @@ function _calc_voltage_bases(
                 for w in 2:nrw
                     t_zone = bus_to_zone[string(transformer["bus"][w])]
 
-                    t_vnom = transformer["configuration"][w] == DELTA ?
+                    t_vnom = transformer["configuration"][1] == DELTA ?
                         transformer["vm_nom"][w] / sqrt(3) :
                         transformer["vm_nom"][w]
 

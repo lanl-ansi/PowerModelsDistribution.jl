@@ -62,7 +62,7 @@ end
 
 Replaces length on lines, switches lower than `min_length_val` with `replace_length_val`.
 """
-function adjust_small_line_lengths!(data::EngineeringModel; min_length_val::Real=25.0, replace_length_val::Real=0.0)
+function adjust_small_line_lengths!(data::Union{EngineeringModel, Dict{String, Any}}; min_length_val::Real=25.0, replace_length_val::Real=0.0)
     apply_pmd!(_adjust_small_line_lengths!, data; apply_to_subnetworks=true, min_length_val=min_length_val, replace_length_val=replace_length_val)
 end
 
@@ -72,7 +72,7 @@ end
 
 Replaces length on lines, switches lower than `min_length_val` with `replace_length_val`.
 """
-function _adjust_small_line_lengths!(data_eng::EngineeringModel{NetworkModel}; min_length_val::Real=25.0, replace_length_val::Real=0.0)
+function _adjust_small_line_lengths!(data_eng::Union{EngineeringModel{NetworkModel}, Dict{String, Any}}; min_length_val::Real=25.0, replace_length_val::Real=0.0)
     for type in ["line", "switch"]
         if haskey(data_eng, type)
             for (id,obj) in data_eng[type]

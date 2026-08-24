@@ -6,7 +6,7 @@ _missing2false(a::Union{Missing,Bool}) = ismissing(a) ? false : a
 
 Helper function to check is data is ENGINEERING model
 """
-iseng(data::Dict{String,<:Any}) = _missing2false(get(data, "data_model", missing) == ENGINEERING)
+iseng(data::Dict{String,<:Any}) = _missing2false(get(data, "data_model", missing) == ENGINEERING) || get(data, "iseng", false)
 iseng(data::InfrastructureModel) = false
 iseng(data::EngineeringModel) = true
 iseng(data::DistributionModel) = false
@@ -16,7 +16,7 @@ iseng(data::DistributionModel) = false
 
 Helper function to check if data is MATHEMATICAL model
 """
-ismath(data::Dict{String,<:Any}) = _missing2false(get(data, "data_model", missing) == MATHEMATICAL)
+ismath(data::Dict{String,<:Any}) = _missing2false(get(data, "data_model", missing) == MATHEMATICAL) || get(data, "ismath", false)
 ismath(data::InfrastructureModel) = false
 ismath(data::MathematicalModel) = true
 ismath(data::DistributionModel) = false

@@ -228,6 +228,49 @@ mutable struct EngineeringSolution{T<:Union{NetworkModel,MultinetworkModel}} <: 
     end
 end
 
+"""
+    solution_to_dict(solution)::Dict{String,Any}
+
+Recursively converts a PMD `MathematicalSolution` or `EngineeringSolution`
+to a `Dict{String,Any}`.
+
+Nested solution objects, such as subnetworks under `"nw"`, are also
+converted to dictionaries.
+"""
+function solution_to_dict(
+    solution::Union{
+        MathematicalSolution,
+        EngineeringSolution,
+    },
+)::Dict{String,Any}
+    return _solution_to_dict(solution.data)
+end
+
+
+function _solution_to_dict(data::AbstractDict)::Dict{String,Any}
+    return Dict{String,Any}(
+        string(k) => _solution_to_dict(v)
+        for (k, v) in data
+    )
+end
+
+
+function _solution_to_dict(
+    solution::Union{
+        MathematicalSolution,
+        EngineeringSolution,
+    },
+)
+    return _solution_to_dict(solution.data)
+end
+
+
+function _solution_to_dict(data::AbstractVector)
+    return [_solution_to_dict(v) for v in data]
+end
+
+
+_solution_to_dict(x) = deepcopy(x)
 StandardDataModels = Union{EngineeringModel,MathematicalModel,MathematicalSolution,EngineeringSolution}
 
 Base.getindex(rd::T, key::String) where T<:(StandardDataModels) = rd.data[key]
