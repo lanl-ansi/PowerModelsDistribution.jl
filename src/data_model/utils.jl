@@ -7,9 +7,10 @@ _missing2false(a::Union{Missing,Bool}) = ismissing(a) ? false : a
 Helper function to check is data is ENGINEERING model
 """
 iseng(data::Dict{String,<:Any}) = _missing2false(get(data, "data_model", missing) == ENGINEERING) || get(data, "iseng", false)
-iseng(data::InfrastructureModel) = false
-iseng(data::EngineeringModel) = true
-iseng(data::DistributionModel) = false
+iseng(::InfrastructureModel) = false
+iseng(::EngineeringModel) = true
+iseng(::DistributionModel) = false
+iseng(::InfrastructureObject) = false
 
 """
     ismath(data::Dict{String,Any})
@@ -17,9 +18,10 @@ iseng(data::DistributionModel) = false
 Helper function to check if data is MATHEMATICAL model
 """
 ismath(data::Dict{String,<:Any}) = _missing2false(get(data, "data_model", missing) == MATHEMATICAL) || get(data, "ismath", false)
-ismath(data::InfrastructureModel) = false
-ismath(data::MathematicalModel) = true
-ismath(data::DistributionModel) = false
+ismath(::InfrastructureModel) = false
+ismath(::MathematicalModel) = true
+ismath(::DistributionModel) = false
+ismath(::InfrastructureObject) = false
 
 
 """
@@ -186,7 +188,7 @@ function _sc2br_impedance(Zsc::Dict{Tuple{Int,Int},Complex{Float64}})::Dict{Tupl
     end
     # extremely important note: this ONLY handles the case where ALL elements are zero. some problems can still occur with zeros in _certain places_
     # what if Z12 = 0, Z13 = Z23 != 0. This still creates issues for pinv later
-    
+
     # make Zb
     Zb = zeros(Complex{Float64}, N-1,N-1)
     for i in 1:N-1
