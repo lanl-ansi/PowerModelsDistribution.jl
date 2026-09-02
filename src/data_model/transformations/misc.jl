@@ -70,6 +70,10 @@ function _apply_phase_projection!(data_eng::EngineeringModel{NetworkModel})
     @assert get(data_eng, "is_kron_reduced", false)
 
     all_conductors = _get_complete_conductor_set(data_eng)
+    
+    if isnothing(all_conductors)
+        error("Invalid case: missing bus data")
+    end
 
     if haskey(data_eng, "bus")
         for (_, eng_obj) in data_eng["bus"]

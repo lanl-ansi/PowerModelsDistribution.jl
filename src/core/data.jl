@@ -1043,15 +1043,29 @@ identify_islands(data::DistributionModel{NetworkModel})::Set{Set} = calc_connect
 computes the connected components of the network graph
 returns a set of sets of bus ids, each set is a connected component
 """
-function calc_connected_components(data::Union{Dict{String, Any}, DistributionModel{NetworkModel}}; edges::Union{Missing, Vector{String}}=missing, type::Union{Missing,String}=missing, check_enabled::Bool=true)::Set{Set}
+function calc_connected_components(
+    data::Union{Dict{String,Any},DistributionModel{NetworkModel}};
+    edges::Union{Missing,Vector{String}}=missing,
+    type::Union{Missing,String}=missing,
+    check_enabled::Bool=true,
+)::Set{Set}
     pmd_data = get_pmd_data(data)
 
-    if data isa EngineeringModel
-        return _calc_connected_components_eng(pmd_data; edges=ismissing(edges) ? _eng_edge_elements : edges, type=type, check_enabled=check_enabled)
-    elseif data isa MathematicalModel
-        return _calc_connected_components_math(pmd_data; edges=ismissing(edges) ? _math_edge_elements : edges, type=type, check_enabled=check_enabled)
+    if data isa MathematicalModel ||
+       get(pmd_data, "data_model", missing) == MATHEMATICAL
+        return _calc_connected_components_math(
+            pmd_data;
+            edges=ismissing(edges) ? _math_edge_elements : edges,
+            type=type,
+            check_enabled=check_enabled,
+        )
     else
-        return _calc_connected_components_eng(pmd_data; edges=ismissing(edges) ? _eng_edge_elements : edges, type=type, check_enabled=check_enabled)
+        return _calc_connected_components_eng(
+            pmd_data;
+            edges=ismissing(edges) ? _eng_edge_elements : edges,
+            type=type,
+            check_enabled=check_enabled,
+        )
     end
 end
 

@@ -709,6 +709,7 @@ end
 
 "finds maximal set of ungrounded phases"
 function _get_complete_conductor_set(data::EngineeringModel{NetworkModel})
+    haskey(data, "bus") || return nothing
     conductors = Set([])
     for (_, obj) in data["bus"]
         for t in obj["terminals"]
