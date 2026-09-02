@@ -14,6 +14,9 @@ import JSON
 using Test
 using LinearAlgebra
 
+using Logging
+# global_logger(ConsoleLogger(stderr, Logging.Debug))
+
 
 pmd_path = joinpath(dirname(pathof(PowerModelsDistribution)), "..")
 
@@ -70,4 +73,36 @@ include("test_cases.jl")
     include("en_pf_native_validation.jl")
 
     include("line_constants.jl")
+
+    # NEW TESTS
+
+    include("ravens/data.jl")
+
+    include("ravens/pf.jl")
+
+    include("ravens/pf_bf.jl")
+
+    include("ravens/opf.jl")
+
+    include("ravens/opf_bf.jl")
+
+    include("ravens/opf_iv.jl")
+
+    include("ravens/storage.jl")
+
+    include("ravens/debug.jl")
+
+    include("ravens/multinetwork.jl")
+
+    include("ravens/transformer.jl")
+
+    include("ravens/capacitor.jl")
+
+    include("ravens/loadmodels.jl")
+
+    include("ravens/shunt.jl")
+
+    include("ravens/mld.jl")
+
+    include("ravens/opf_ravens_extra.jl")
 end

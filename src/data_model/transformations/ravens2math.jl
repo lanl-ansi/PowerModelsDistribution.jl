@@ -71,7 +71,6 @@ function _map_ravens2math(
 
     add_base_voltages!(_data_ravens; overwrite=false)
 
-    # TODO: Add settings (defaults)
     basemva = 1
     _settings = Dict("sbase_default" => basemva * 1e3,
         "voltage_scale_factor" => 1e3,
@@ -131,6 +130,7 @@ function _map_ravens2math(
                                 "per_unit" => get(_data_ravens, "per_unit", false),
                                 "is_projected" => get(_data_ravens, "is_projected", false),
                                 "is_kron_reduced" => get(_data_ravens, "is_kron_reduced", true), # TODO: Kron reduction?
+                                #clarify? 
                                 "settings" => deepcopy(_settings),
                                 "time_elapsed" => get(_data_ravens, "time_elapsed", 1.0),
                                 "switch_close_actions_ub" => switch_close_actions_ub,
@@ -165,7 +165,6 @@ function _map_ravens2math(
                 "switch_close_actions_ub" => switch_close_actions_ub,
             )
         )
-        #TODO: how come apply_pmd does not get to `_map_ravens2math_nw!` much less the outermost else inside?
         apply_pmd!(_map_ravens2math_nw!, data_math, _data_ravens; ravens2math_passthrough=ravens2math_passthrough, ravens2math_extensions=ravens2math_extensions)
     end
 
@@ -341,7 +340,8 @@ function _map_ravens2math_conductor!(data_math::MathematicalModel{NetworkModel},
 
             # Get WireSpacingInfo
             spacinginfo_name = _extract_name(ravens_obj["ACLineSegment.WireSpacingInfo"])
-            spacinginfo_data = data_ravens["AssetInfo"]["WireSpacingInfo"][spacinginfo_name]
+            WSI = safe_get_container(data_ravens,["AssetInfo","WireSpacingInfo"])
+            spacinginfo_data = WSI[spacinginfo_name]
             wire_positions = spacinginfo_data["WireSpacingInfo.WirePositions"]
             num_of_wires = length(wire_positions)
 
@@ -392,7 +392,8 @@ function _map_ravens2math_conductor!(data_math::MathematicalModel{NetworkModel},
             for i in 1:1:nconds
 
                 wireinfo_name = _extract_name(segmentphase_data[i]["PowerSystemResource.AssetDatasheet"])
-                wireinfo_data = data_ravens["AssetInfo"]["WireInfo"][wireinfo_name]
+                WI = safe_get_container(data_ravens,["AssetInfo","WireInfo"])
+                wireinfo_data = WI[wireinfo_name]
 
                 radius[i] = get(wireinfo_data, "WireInfo.radius", NaN)
                 @assert radius[i] != NaN "WireInfo radius not found! using NaN. Revise data."
@@ -549,6 +550,30 @@ function _map_ravens2math_conductor!(data_math::MathematicalModel{NetworkModel},
     end
 end
 
+function _validate_transformer_tanks(name, tanks)
+    @assert !isempty(tanks) "PowerTransformer $name has no TransformerTank entries"
+
+    expected_nrw = length(tanks[1]["TransformerTank.TransformerTankEnd"])
+    expected_end_numbers = collect(1:expected_nrw)
+
+    for tank_id in eachindex(tanks)
+        tank_ends = tanks[tank_id]["TransformerTank.TransformerTankEnd"]
+        end_numbers = [wdg["TransformerEnd.endNumber"] for wdg in tank_ends]
+
+        @assert length(tank_ends) == expected_nrw """
+        PowerTransformer $name has inconsistent TransformerTankEnd counts:
+        tank 1 has $expected_nrw, tank $tank_id has $(length(tank_ends)).
+        """
+
+        @assert sort(end_numbers) == expected_end_numbers """
+        PowerTransformer $name tank $tank_id has invalid TransformerEnd.endNumber values:
+        expected $expected_end_numbers, got $(sort(end_numbers)).
+        """
+    end
+
+    return expected_nrw
+end
+
 
 "converts ravens n-winding transformers into mathematical ideal 2-winding lossless transformer branches and impedance branches to represent the loss model"
 function _map_ravens2math_power_transformer!(data_math::MathematicalModel{NetworkModel}, data_ravens::RavensModel; pass_props::Vector{String}=String[], nw::Int=nw_id_default)
@@ -579,7 +604,7 @@ function _map_ravens2math_power_transformer!(data_math::MathematicalModel{Networ
             wdgs_confs = Vector{ConnConfig}(undef, nrw)
 
             # RegulatorControls flag
-            reg_controls = [false for _ in 1:nrw]
+            reg_controls = falses(nrw)
             reg_obj = [Dict() for _ in 1:nrw]
 
             # Transformer data for each winding
@@ -668,7 +693,7 @@ function _map_ravens2math_power_transformer!(data_math::MathematicalModel{Networ
 
                 # reactance
                 x_sc[wdg_endNumber] = get(xfmr_mesh_impedance, "TransformerMeshImpedance.x",
-                    get(xfmr_star_impedance, "TransformerStarImpedance.x", 0.0))
+                    get(xfmr_star_impedance, "TransformerStarImpedance.x", 0.0)) ./ (zbase[wdg_endNumber]) #TODO: Validate that this is a correct change
 
                 # admittance
                 transf_core_impedance = get(wdgs[wdg_endNumber], "TransformerEnd.CoreAdmittance", Dict())
@@ -791,7 +816,7 @@ function _map_ravens2math_power_transformer!(data_math::MathematicalModel{Networ
                 # Transformer Object
                 transformer_2wa_obj = Dict{String,Any}(
                     "name" => "_virtual_transformer.$name.$wdg_id",
-                    "source_id" => "_virtual_transformer.PowerTransformer.$name.$wdg_id",
+                    "source_id" => "_virtual_transformer.transformer.$name.$wdg_id",
                     "f_bus" => data_math["bus_lookup"][f_node_wdgterm],
                     "t_bus" => transformer_t_bus_w[wdg_id],
                     "tm_nom" => tm_nom,
@@ -836,14 +861,16 @@ function _map_ravens2math_power_transformer!(data_math::MathematicalModel{Networ
             ntanks = length(tanks)
 
             # TODO: IMPORTANT ASSUMPTIONS
-            # 1) assume there is at least 1 tank and that all tanks have the same number of windings (i.e., TransformerTankEnds)
-            # 2) assume the number of phases is equal to the number of tanks - DEPRECATED
+            # 1) DONE assume there is at least 1 tank and that all tanks have the same number of windings (i.e., TransformerTankEnds)
+            # 2) DONE assume the number of phases is equal to the number of tanks - DEPRECATED
             # 3) assumes number of phases are indicated correctly in terminal # 1
             phasecode = ravens_obj["ConductingEquipment.Terminals"][1]["Terminal.phases"] # terminal 1 phasecode
             nphases = length(_phasecode_map[phasecode])
             # nphases = length(tanks) # assume nphases == ntanks
 
-            nrw = length(tanks[1]["TransformerTank.TransformerTankEnd"])
+            @assert length(tanks) >= 1 "No tanks found!"
+            #check that number of windings is the same across tanks
+            nrw = _validate_transformer_tanks(name, tanks)
 
             # init connections vector for combined transformer windings
             connections = [zeros(Int64, nphases) for _ in 1:nrw]
@@ -946,9 +973,11 @@ function _map_ravens2math_power_transformer!(data_math::MathematicalModel{Networ
 
                     # -- alternative computation of xsc using sc tests
                     if haskey(transf_end_info[wdg_endNumber], "TransformerEndInfo.EnergisedEndShortCircuitTests")
-                        leak_impedance_wdg = transf_end_info[wdg_endNumber]["TransformerEndInfo.EnergisedEndShortCircuitTests"][1]["ShortCircuitTest.leakageImpedance"]
-                        rs_pct = (r_s[wdg_endNumber][tank_id] / zbase[wdg_endNumber]) * 100.0
-                        x_sc[wdg_endNumber][tank_id] = (sqrt((leak_impedance_wdg / zbase[wdg_endNumber])^2 - (rs_pct + rs_pct)^2) / 100) * zbase[wdg_endNumber]
+                        leak_impedance_wdg = transf_end_info[wdg_endNumber]["TransformerEndInfo.EnergisedEndShortCircuitTests"][1]["ShortCircuitTest.leakageImpedance"] #safe to assume this is SI units
+                        rs_pct = (r_s[wdg_endNumber][tank_id] / zbase[wdg_endNumber]) #rename this to just rs?
+                        # assuming both windings contribute equally to the series leakage reactance: this is not a big contributor to error
+                        # leakage_z/zbase gives a per unit value, rs_pct is in percent NOTE I changed this - SR
+                        x_sc[wdg_endNumber][tank_id] = (sqrt((leak_impedance_wdg / zbase[wdg_endNumber])^2 - (rs_pct + rs_pct)^2))
                     end
 
                     # RS and XSC computation based on ratios
@@ -1089,8 +1118,11 @@ function _map_ravens2math_power_transformer!(data_math::MathematicalModel{Networ
             end
 
             # wdg i, tank 1  - assumes tank 1 always exists
+            #calculate resistance per winding AND per tank, then throw out all but tank 1
+            #this is a problem if the tanks are different
             r_s = [r_s[i][1] for i in 1:nrw]
-            x_sc = [x_sc[i][1] for i in 1:nrw] # sum the x_sc for all tanks per wdg
+            # leakage reactance
+            @assert nrw==2 "xfmr tank x_sc conversion currently only supports 2 winding transformers"
             x_sc = [x_sc[1][1]]      # get x_sc wrt to wdg 1
             g_sh = g_sh[1]      # wrt to wdg 1
             b_sh = b_sh[1]      # wrt to wdg 1
@@ -1139,7 +1171,7 @@ function _map_ravens2math_power_transformer!(data_math::MathematicalModel{Networ
                 # Transformer Object
                 transformer_2wa_obj = Dict{String,Any}(
                     "name" => "_virtual_transformer.$name.$wdg_id",
-                    "source_id" => "_virtual_transformer.PowerTransformer.$name.$wdg_id",
+                    "source_id" => "_virtual_transformer.transformer.$name.$wdg_id",
                     "f_bus" => data_math["bus_lookup"][nodes[wdg_id]],
                     "t_bus" => transformer_t_bus_w[wdg_id],
                     "tm_nom" => tm_nom,
@@ -1149,7 +1181,7 @@ function _map_ravens2math_power_transformer!(data_math::MathematicalModel{Networ
                     "polarity" => polarity[wdg_id],
                     "tm_set" => tm_set[wdg_id],
                     "tm_fix" => tm_fix[wdg_id],
-                    "sm_ub" => sm_ub[wdg_id] / power_scale_factor,
+                    "sm_ub" => sm_ub[wdg_id], # TODO: this may also need scaling
                     "cm_ub" => cm_ub[wdg_id], # TODO: this may need scaling
                     "status" => status,
                     "index" => length(data_math["transformer"]) + 1
@@ -1197,22 +1229,23 @@ function _map_ravens2math_energy_consumer!(data_math::MathematicalModel{NetworkM
         math_obj["load_bus"] = data_math["bus_lookup"][connectivity_node]
 
         # TODO: Handle Load Response Characteristics by properties, not name
-        load_response_characts = _extract_name(ravens_obj["EnergyConsumer.LoadResponse"])
-        if load_response_characts == "Constant Z"
+        load_response_characts = get(ravens_obj,"EnergyConsumer.LoadResponse",Dict{Any,Dict{String,Any}}())
+        lrc_name = get(load_response_characts,"IdentifiedObject.name","")
+        if lrc_name == "Constant Z"
             math_obj["model"] = IMPEDANCE
-        elseif load_response_characts == "Motor"
+        elseif lrc_name == "Motor"
             @error("Load model not supported yet!")
         elseif load_response_characts == "Mix Motor/Res"
             @error("Load model not supported yet!")
-        elseif load_response_characts == "Constant I"
+        elseif lrc_name == "Constant I"
             math_obj["model"] = CURRENT
-        elseif load_response_characts == "Variable P, Fixed Q"
+        elseif lrc_name == "Variable P, Fixed Q"
             @error("Load model not supported yet!")
-        elseif load_response_characts == "Variable P, Fixed X"
+        elseif lrc_name == "Variable P, Fixed X"
             @error("Load model not supported yet!")
         else
-            if load_response_characts != "Constant kVA"
-                @warn("Load model (response characteristic) for $(name) not supported! Defaulting to 'Constant kVA'")
+            if lrc_name != "Constant kVA"
+                @warn("Load model (response characteristic) $(lrc_name) for $(name) not supported! Defaulting to 'Constant kVA'")
             end
             # Set default model and consumption values
             math_obj["model"] = POWER
@@ -1255,10 +1288,12 @@ function _map_ravens2math_energy_consumer!(data_math::MathematicalModel{NetworkM
             connections = Vector{Int64}()
             for phase_info in ravens_obj["EnergyConsumer.EnergyConsumerPhase"]
                 phase = _phase_map[phase_info["EnergyConsumerPhase.phase"]]
-                phase_index = findfirst(==(phase), bus_conn["terminals"])
-                bus_conn["vmax"][phase_index] = op_limit_max
-                bus_conn["vmin"][phase_index] = op_limit_min
-                push!(connections, phase)
+                if phase != 4
+                    phase_index = findfirst(==(phase), bus_conn["terminals"])
+                    bus_conn["vmax"][phase_index] = op_limit_max
+                    bus_conn["vmin"][phase_index] = op_limit_min
+                    push!(connections, phase)
+                end
             end
             math_obj["connections"] = connections
             nphases = length(math_obj["connections"])

@@ -34,7 +34,34 @@ function _IM.build_solution_values(var::LinearAlgebra.Symmetric{JuMP.VariableRef
     return JuMP.value.(var.data)
 end
 
+function _order_phase_angles_abc(va::AbstractVector{<:Real})::Vector{Float64}
+    @assert length(va) == 3
 
+    # a near 0, b near -120 degrees, c near +120 degrees
+    refs = [0.0, -2*pi/3, 2*pi/3]
+
+    perms = (
+        (1, 2, 3),
+        (1, 3, 2),
+        (2, 1, 3),
+        (2, 3, 1),
+        (3, 1, 2),
+        (3, 2, 1),
+    )
+
+    best_perm = perms[1]
+    best_cost = Inf
+
+    for p in perms
+        cost = sum(abs2(_wrap_to_pi(va[p[k]] - refs[k])) for k in 1:3)
+        if cost < best_cost
+            best_cost = cost
+            best_perm = p
+        end
+    end
+
+    return [_wrap_to_pi(va[best_perm[k]]) for k in 1:3]
+end
 "converts w models voltages to standard voltage magnitude (sqrt)"
 function _sol_data_model_w!(solution::Dict{String,<:Any})
     if haskey(solution, "nw")
@@ -67,9 +94,8 @@ function _sol_data_model_w!(solution::Dict{String,<:Any})
                             va = LinearAlgebra.pinv(t)*[atan(bus["Wi"][2,1], bus["Wr"][2,1]);
                                                         atan(bus["Wi"][3,1], bus["Wr"][3,1]);
                                                         atan(bus["Wi"][3,2], bus["Wr"][3,2])]
-                            bus["va"] = [va[findmin(abs.(va .- 0))[2]],
-                                         va[findmin(abs.(va .+ 2*pi/3))[2]],
-                                         va[findmin(abs.(va .- 2*pi/3))[2]]] # TODO: better way to get angles in order
+
+                            bus["va"] = _order_phase_angles_abc(va)
                         end
                     end
                     delete!(bus, "Wr")

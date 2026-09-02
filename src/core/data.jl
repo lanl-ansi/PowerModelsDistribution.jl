@@ -213,8 +213,12 @@ end
 
 
 "wraps angles in radians to pi"
-function _wrap_to_pi(radians)
-    return radians - 2*pi*floor.((radians .+ pi)/(2*pi))
+function _wrap_to_pi(x)
+    return mod(x + pi, 2*pi) - pi
+end
+
+function _wrap_to_pi(x::AbstractVector{<:Real})
+    return mod.(x .+ pi, 2*pi) .- pi
 end
 
 
@@ -434,22 +438,28 @@ end
 
 
 "Calculates the tap scale factor for the non-dimensionalized equations."
-function calculate_tm_scale(trans::Dict{String,Any}, bus_fr::Dict{String,Any}, bus_to::Dict{String,Any})
+function calculate_tm_scale(
+    trans::Dict{String,Any},
+    bus_fr::Dict{String,Any},
+    bus_to::Dict{String,Any},
+)
     tm_nom = trans["tm_nom"]
 
-    f_vbase = haskey(bus_fr, "vbase") ? bus_fr["vbase"] : bus_fr["base_kv"]
-    t_vbase = haskey(bus_to, "vbase") ? bus_to["vbase"] : bus_to["base_kv"]
+    f_vbase = haskey(bus_fr, "vbase") ? bus_fr["vbase"] : error("from bus is missing vbase")
+    t_vbase = haskey(bus_to, "vbase") ? bus_to["vbase"] : error("to bus is missing vbase")
     config = trans["configuration"]
 
-    tm_scale = tm_nom*(t_vbase/f_vbase)
+    tm_scale = tm_nom * (t_vbase / f_vbase)
+
     if config == DELTA
-        #TODO is this still needed?
+        # TODO: confirm whether delta-side voltage bases are line-to-line or line-to-neutral
+        #this is for kron reduce, line to line
         tm_scale *= sqrt(3)
     elseif config == "zig-zag"
         error("Zig-zag not yet supported.")
     end
 
-    return tm_nom
+    return tm_scale #not returning tm_nom
 end
 
 
@@ -800,90 +810,80 @@ function _mat2ltrivec!(m::Union{Matrix{T}, LinearAlgebra.Symmetric{T}}) where T
 end
 
 
-"makes a hermitian matrix variable from diagonal, and lower and upper triangular vectors"
-function _make_hermitian_matrix_variable(diag, lowertrianglereal, lowertriangleimag)
-    #TODO clean up
-    matrixreal = []
-    if length(diag) == 3
-        matrixreal = [
-        diag[1]                 lowertrianglereal[1]    lowertrianglereal[2];
-        lowertrianglereal[1]    diag[2]                 lowertrianglereal[3];
-        lowertrianglereal[2]    lowertrianglereal[3]    diag[3]
-        ]
-    elseif length(diag) == 4
-        matrixreal = [
-        diag[1]                 lowertrianglereal[1]    lowertrianglereal[2]    lowertrianglereal[4];
-        lowertrianglereal[1]    diag[2]                 lowertrianglereal[3]    lowertrianglereal[5];
-        lowertrianglereal[2]    lowertrianglereal[3]    diag[3]                 lowertrianglereal[6];
-        lowertrianglereal[4]    lowertrianglereal[5]    lowertrianglereal[6]    diag[4]
-        ]
-    elseif length(diag) == 5
-        matrixreal = [
-        diag[1]                 lowertrianglereal[1]    lowertrianglereal[2]    lowertrianglereal[4]    lowertrianglereal[7];
-        lowertrianglereal[1]    diag[2]                 lowertrianglereal[3]    lowertrianglereal[5]    lowertrianglereal[8];
-        lowertrianglereal[2]    lowertrianglereal[3]    diag[3]                 lowertrianglereal[6]    lowertrianglereal[9];
-        lowertrianglereal[4]    lowertrianglereal[5]    lowertrianglereal[6]    diag[4]                 lowertrianglereal[10];
-        lowertrianglereal[7]    lowertrianglereal[8]    lowertrianglereal[9]    lowertrianglereal[10]    diag[5]
-        ]
+"""
+Makes a Hermitian matrix variable from a diagonal and lower-triangular real/imaginary vectors.
+
+Vector ordering is assumed to be:
+(2,1), (3,1), (3,2), (4,1), (4,2), (4,3), ...
+"""
+function _make_hermitian_matrix_variable(
+    diag::AbstractVector{Tdiag},
+    lowertrianglereal::AbstractVector{Treal},
+    lowertriangleimag::AbstractVector{Timag},
+) where {Tdiag, Treal, Timag}
+
+    n = length(diag)
+    expected = n * (n - 1) ÷ 2
+
+    @assert length(lowertrianglereal) == expected
+    @assert length(lowertriangleimag) == expected
+
+    Trealout = promote_type(Tdiag, Treal)
+
+    matrixreal = LinearAlgebra.diagm(Trealout.(diag))
+    matriximag = fill(zero(Timag), n, n)
+
+    k = 1
+    for i in 2:n
+        for j in 1:i-1
+            matrixreal[i, j] = lowertrianglereal[k]
+            matrixreal[j, i] = lowertrianglereal[k]
+
+            matriximag[i, j] = lowertriangleimag[k]
+            matriximag[j, i] = -lowertriangleimag[k]
+
+            k += 1
+        end
     end
 
-    matriximag = []
-    if length(diag) == 3
-        matriximag = [
-        0                       -lowertriangleimag[1]   -lowertriangleimag[2];
-        lowertriangleimag[1]    0                       -lowertriangleimag[3];
-        lowertriangleimag[2]    lowertriangleimag[3]    0
-        ]
-    elseif length(diag) == 4
-        matriximag = [
-        0                       -lowertriangleimag[1]   -lowertriangleimag[2]   -lowertriangleimag[4];
-        lowertriangleimag[1]    0                       -lowertriangleimag[3]   -lowertriangleimag[5];
-        lowertriangleimag[2]    lowertriangleimag[3]    0                       -lowertriangleimag[6];
-        lowertriangleimag[4]    lowertriangleimag[5]    lowertriangleimag[6]    0
-        ]
-    elseif length(diag) == 5
-        matriximag = [
-        0                       -lowertriangleimag[1]   -lowertriangleimag[2]   -lowertriangleimag[4]   -lowertriangleimag[7];
-        lowertriangleimag[1]    0                       -lowertriangleimag[3]   -lowertriangleimag[5]   -lowertriangleimag[8];
-        lowertriangleimag[2]    lowertriangleimag[3]    0                       -lowertriangleimag[6]   -lowertriangleimag[9];
-        lowertriangleimag[4]    lowertriangleimag[5]    lowertriangleimag[6]    0                       -lowertriangleimag[10];
-        lowertriangleimag[7]    lowertriangleimag[8]    lowertriangleimag[9]    lowertriangleimag[10]    0
-        ]
-    end
     return matrixreal, matriximag
 end
 
+"""
+Makes a full matrix variable from a diagonal, lower-triangular vector,
+and upper-triangular vector.
 
-"makes a full matrix variable from a diagonal, and lower and upper triangular vectors"
-function _make_full_matrix_variable(diag::Vector{T}, lowertriangle::Vector{T}, uppertriangle::Vector{T}) where T
-    #TODO clean up
-    matrix = []
-    if length(diag) == 3
-        matrix = [
-        diag[1]             uppertriangle[1]    uppertriangle[2];
-        lowertriangle[1]    diag[2]             uppertriangle[3];
-        lowertriangle[2]    lowertriangle[3]    diag[3]
-        ]
-    elseif length(diag) == 4
-        matrix = [
-        diag[1]             uppertriangle[1]    uppertriangle[2]    uppertriangle[4];
-        lowertriangle[1]    diag[2]             uppertriangle[3]    uppertriangle[5];
-        lowertriangle[2]    lowertriangle[3]    diag[3]             uppertriangle[6];
-        lowertriangle[4]    lowertriangle[5]    lowertriangle[6]    diag[4]
-        ]
-    elseif length(diag) == 5
-        matrix = [
-        diag[1]             uppertriangle[1]    uppertriangle[2]    uppertriangle[4]    uppertriangle[7];
-        lowertriangle[1]    diag[2]             uppertriangle[3]    uppertriangle[5]    uppertriangle[8];
-        lowertriangle[2]    lowertriangle[3]    diag[3]             uppertriangle[6]    uppertriangle[9];
-        lowertriangle[4]    lowertriangle[5]    lowertriangle[6]    diag[4]             uppertriangle[10]
-        lowertriangle[7]    lowertriangle[8]    lowertriangle[9]    lowertriangle[10]    diag[5]
-        ]
+Vector ordering is assumed to be:
+(2,1), (3,1), (3,2), (4,1), (4,2), (4,3), ...
+"""
+function _make_full_matrix_variable(
+    diag::AbstractVector{Tdiag},
+    lowertriangle::AbstractVector{Tlower},
+    uppertriangle::AbstractVector{Tupper},
+) where {Tdiag, Tlower, Tupper}
+
+    n = length(diag)
+    expected = n * (n - 1) ÷ 2
+
+    @assert length(lowertriangle) == expected
+    @assert length(uppertriangle) == expected
+
+    Tout = promote_type(Tdiag, Tlower, Tupper) #general type that can hold these elements
+    matrix = Matrix{Tout}(undef, n, n)
+
+    matrix = LinearAlgebra.diagm(Tout.(diag)) #cast "diag" to this type, use as diagonal
+
+    k = 1
+    for i in 2:n
+        for j in 1:i-1
+            matrix[i, j] = lowertriangle[k]
+            matrix[j, i] = uppertriangle[k]
+            k += 1
+        end
     end
-    # matrix = LinearAlgebra.diagm(0 => diag) + _vec2ltri!(lowertriangle) + _vec2utri!(uppertriangle)
+
     return matrix
 end
-
 
 """
     correct_mc_voltage_angle_differences!(data::Dict{String,<:Any}, default_pad::Real=deg2rad(10.0))
@@ -983,6 +983,7 @@ end
 
 "helper function to build bus shunt matrices for power balance constraints"
 function _build_bus_shunt_matrices(pm::AbstractUnbalancedPowerModel, nw::Int, terminals::Vector{Int}, bus_shunts::Vector{<:Tuple{Int,Vector{Int}}})::Tuple{Matrix{<:Real},Matrix{<:Real}}
+    #secondary place to put off-diag shunt matrix element code
     ncnds = length(terminals)
     Gs = fill(0.0, ncnds, ncnds)
     Bs = fill(0.0, ncnds, ncnds)
@@ -1429,7 +1430,7 @@ end
 function _check_branch_loops(data_math::MathematicalModel{NetworkModel})
     for (i, branch) in data_math["branch"]
         if branch["f_bus"] == branch["t_bus"]
-            error("both sides of branch $(i) connect to bus $(branch["f_bus"])")
+            error("both sides of branch $(i) connect to bus $(branch["f_bus"])\n include `transformations = [transform_loops!]` in the `parse_file` call")
         end
     end
 end
@@ -1986,7 +1987,7 @@ end
 
 
 "infer the internal dimension of a winding, load or generator based on the connections and the configuration"
-function _infer_int_dim(connections::Vector, configuration::ConnConfig, kron_reduced)
+function _infer_int_dim(connections::Vector, configuration::ConnConfig, kron_reduced::Bool=false)
     if configuration==WYE
         if kron_reduced
             return length(connections)

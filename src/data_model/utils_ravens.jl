@@ -80,6 +80,7 @@ end
 "converts impendance in Ohm/m in EnergySource"
 function _impedance_conversion_ravens_energy_source(data_eng::Dict{String,Any}, eng_obj::Dict{String,<:Any}, z1::Complex, z0::Complex)
     # TODO : Single-phase
+    #add conditional for single/3 
     a = 1*exp(120*im*π/180)
     A = [1 1 1; 1 a a^2; 1 a^2 a]
     Z_012 = [z0 0im 0im; 0im z1 0im; 0im 0im z1]
@@ -164,6 +165,8 @@ function apply_voltage_bounds_math!(data::Dict{String,<:Any}; vm_lb::Union{Real,
 end
 
 apply_voltage_bounds_math!(data::MathematicalModel; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1) = apply_voltage_bounds_math!(data.data; vm_lb=vm_lb, vm_ub=vm_ub)
+
+apply_voltage_bounds_math!(data::AbstractUnbalancedPowerModel; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1) = apply_voltage_bounds_math!(data.data; vm_lb=vm_lb, vm_ub=vm_ub)
 
 function build_base_voltage_graphs(data::Dict{String,<:Any})::Tuple{Dict{Int,String},Graphs.SimpleGraph}
     nodes = Dict(cn => n for (n, cn) in enumerate(keys(data["ConnectivityNode"])))

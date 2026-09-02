@@ -514,10 +514,25 @@ function _check_transformer(data_eng::Dict{String,<:Any}, name::Any)
         conf = transformer["configuration"][w]
         conns = transformer["connections"][w]
         nph = conf==WYE ? length(conns)-1 : length(conns)
+        context = "transformer $name winding $w"
         @assert all(nph.==nphs) "transformer $name: winding $w has a different number of phases than the previous ones."
 
+        @assert length(transformer["rw"][w]) == nph "$context: rw length must match number of phases"
+        @assert length(transformer["tm_fix"][w]) == nph "$context: tm_fix length must match number of phases"
+        @assert length(transformer["tm_set"][w]) == nph "$context: tm_set length must match number of phases"
+        @assert length(transformer["tm_lb"][w]) == nph "$context: tm_lb length must match number of phases"
+        @assert length(transformer["tm_ub"][w]) == nph "$context: tm_ub length must match number of phases"
+        @assert length(transformer["tm_step"][w]) == nph "$context: tm_step length must match number of phases"
+        
+        @assert all(transformer["rw"][w] .>= 0.0) "$context: rw must be nonnegative"
+        @assert all(transformer["tm_lb"][w] .<= transformer["tm_set"][w]) "$context: tm_lb must be <= tm_set"
+        @assert all(transformer["tm_set"][w] .<= transformer["tm_ub"][w]) "$context: tm_set must be <= tm_ub"
+        @assert all(transformer["tm_step"][w] .> 0.0) "$context: tm_step must be positive"
+
+        @assert transformer["vm_nom"][w] > 0.0 "$context: vm_nom must be positive"
+        @assert transformer["sm_nom"][w] > 0.0 "$context: sm_nom must be positive"
+
         push!(nphs, nph)
-        #TODO check length other properties
     end
 
     _check_connectivity(data_eng, transformer; context="transformer_nw $name")

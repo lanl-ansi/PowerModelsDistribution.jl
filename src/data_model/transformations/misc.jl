@@ -449,7 +449,8 @@ function _merge_terminals!(data_eng::EngineeringModel{NetworkModel}, bus_id::Str
         end
     end
 
-    #TODO take care of other bounds in the bus data model
+    #future task: take care of other bounds in the bus data model
+    #originally a rahmat comment from 3 years ago
 
     # update connection properties to reflect the merge
     for type in setdiff(intersect(pmd_eng_asset_types, keys(data_eng)), ["bus"])
@@ -489,7 +490,7 @@ Transform line loops (connected to a single bus), which are not allowed in the m
 Lossy line loops are converted to equivalent shunts, and lossless ones (i.e. short-circuits) are represented by merging the short-circuited terminals.
 The argument 'zero_series_impedance_threshold' controls the threshold below which the series impedance is considered to be a short-ciruit.
 This is useful because OpenDSS modelers have to insert tiny impedances to represent short-circuit reactors.
-The addmittance to ground should be zero to trigger the short-circuit handling.
+The admittance to ground should be zero to trigger the short-circuit handling.
 """
 function transform_loops!(
     data::EngineeringModel{T};
@@ -594,7 +595,6 @@ function _remove_unconnected_terminals!(data_eng::EngineeringModel{NetworkModel}
             keep_gr_order = (!).(bus["grounded"] .== t)
             _apply_filter!(bus, ["grounded", "rg", "xg"], keep_gr_order)
         end
-        #TODO other bounds
     end
 
     return data_eng

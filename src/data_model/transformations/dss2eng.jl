@@ -75,6 +75,7 @@ function _dss2eng_load!(data_eng::EngineeringModel{NetworkModel}, data_dss::Open
         nphases = dss_obj["phases"]
         bus = _parse_bus_id(dss_obj["bus1"])[1]
         conf = nphases==1 && dss_obj["kv"]==0.24 ? DELTA : dss_obj["conn"] # check if load is connected between split-phase terminals of triplex node (nominal line-line voltage=240V), TODO: better generalization
+        #^logic for center tap xfmr?
 
         if conf==DELTA
             @assert(nphases in [1, 3], "$id: only 1 and 3-phase delta loads are supported!")
@@ -544,6 +545,7 @@ function _dss2eng_xfmrcode!(data_eng::EngineeringModel{NetworkModel}, data_dss::
         nphases = dss_obj["phases"]
         nrw = dss_obj["windings"]
 
+        #maybe assert n windings not greater than 3?
         eng_obj = Dict{String,Any}(
             "tm_set" => Vector{Vector{Float64}}([fill(tap, nphases) for tap in dss_obj["taps"]]),
             "tm_lb" => Vector{Vector{Float64}}(fill(fill(dss_obj["mintap"], nphases), nrw)),
@@ -557,7 +559,8 @@ function _dss2eng_xfmrcode!(data_eng::EngineeringModel{NetworkModel}, data_dss::
             "rw" => Vector{Float64}(dss_obj["%rs"] ./ 100),
             "noloadloss" => dss_obj["%noloadloss"] / 100,
             "cmag" => dss_obj["%imag"] / 100,
-            "xsc" => nrw == 2 ? [dss_obj["xhl"] / 100] : [dss_obj["xhl"], dss_obj["xht"], dss_obj["xlt"]] ./ 100,
+            #what if there are more than 3 windings?
+            "xsc" => nrw == 2 ? [dss_obj["xhl"] / 100] : [dss_obj["xhl"], dss_obj["xht"], dss_obj["xlt"]] ./ 100, #units will be SI
             "source_id" => "xfmrcode.$id",
         )
 
