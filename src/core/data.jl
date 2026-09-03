@@ -1051,7 +1051,8 @@ function calc_connected_components(
 )::Set{Set}
     pmd_data = get_pmd_data(data)
 
-    if data isa MathematicalModel ||
+    if data isa MathematicalModel || (data isa Dict && get(data, "data_model", missing) === MATHEMATICAL)
+
        get(pmd_data, "data_model", missing) == MATHEMATICAL
         return _calc_connected_components_math(
             pmd_data;
@@ -1194,7 +1195,6 @@ function _calc_connected_components_math(
     check_enabled::Bool=true,
 )::Set{Set{Int}}
 
-    println(collect(keys(data)))
     active_bus = Dict{String,Dict{String,Any}}(x for x in data["bus"] if x.second[pmd_math_component_status["bus"]] != pmd_math_component_status_inactive["bus"] || !check_enabled)
     active_bus_ids = Set{Int}([parse(Int,i) for (i,bus) in active_bus])
 

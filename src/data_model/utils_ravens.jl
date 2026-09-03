@@ -211,6 +211,9 @@ function find_voltages(data::Dict{String,<:Any})::Dict{String,Any}
         info_name = match(Regex("TransformerTankInfo::'(.*)'"), get(get(tr, "PowerTransformer.TransformerTank", [Dict()])[1], "PowerSystemResource.AssetDatasheet", "TransformerTankInfo::''")).captures[1]
         trinfos = _recursive_dict_get(data, ["AssetInfo", "PowerTransformerInfo", info_name, "PowerTransformerInfo.TransformerTankInfos", info_name, "TransformerTankInfo.TransformerEndInfos"], [])
 
+        if length(tr["ConductingEquipment.Terminals"]) > 0 && length(trinfos) > 0 #jose recommended adding this from old code written by juan
+            trinfos = trinfos[1:length(tr["ConductingEquipment.Terminals"])]
+        end
         # Corrects voltage ratios for TransformerTanks with Single-phase Tanks datasheets
         if "PowerTransformer.TransformerTank" ∈ keys(tr) 
             tr_end = tr["PowerTransformer.TransformerTank"][1]["TransformerTank.TransformerTankEnd"][1] 

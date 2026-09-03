@@ -172,6 +172,10 @@ function transform_data_model(
     correct_network_data::Bool=true,
     )
 
+    if get(data, "data_model", missing) === MATHEMATICAL
+        return MathematicalModel(data)
+    end
+    
     data_eng = EngineeringModel(data)
 
     if multinetwork && !ismultinetwork(data_eng)
@@ -238,7 +242,7 @@ function _map_eng2math(
                         "per_unit" => get(_data_eng, "per_unit", false),
                         "is_projected" => get(nw, "is_projected", false),
                         "is_kron_reduced" => get(nw, "is_kron_reduced", false),
-                        "settings" => deepcopy(nw["settings"]),
+                        "settings" => get(nw, "settings", Dict()),  #formerly deepcopy. potential issues if this is actually just an empty dict
                         "time_elapsed" => get(nw, "time_elapsed", 1.0),
                     ) for (n,nw) in _data_eng["nw"]
                 ),
@@ -254,7 +258,7 @@ function _map_eng2math(
                 "data_model" => MATHEMATICAL,
                 "is_projected" => get(_data_eng, "is_projected", false),
                 "is_kron_reduced" => get(_data_eng, "is_kron_reduced", false),
-                "settings" => deepcopy(_data_eng["settings"]),
+                "settings" => get(_data_eng, "settings", Dict()),  #formerly deepcopy. potential issues if this is actually just an empty dict
                 "time_elapsed" => get(_data_eng, "time_elapsed", 1.0),
             )
         )

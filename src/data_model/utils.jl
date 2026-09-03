@@ -141,7 +141,7 @@ end
 
 
 "initializes the base components that are expected by powermodelsdistribution in the mathematical model"
-function _init_base_components!(data_math::MathematicalModel{NetworkModel})
+function _init_base_components!(data_math)
     for key in pmd_math_asset_types
         if !haskey(data_math, key)
             data_math[key] = Dict{String,Any}()
