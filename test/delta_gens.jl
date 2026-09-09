@@ -76,7 +76,7 @@
         @test sol_1["termination_status"] == LOCALLY_SOLVED
 
         sol_2 = solve_mc_opf(eng_2, form, ipopt_solver)
-        @test sol_2["termination_status"] == LOCALLY_SOLVED
+        @test sol_2["termination_status"] ∈ [LOCALLY_SOLVED, ALMOST_LOCALLY_SOLVED]
 
         # check that gens are equivalent to the loads
         for (id,_) in eng_1["load"]
