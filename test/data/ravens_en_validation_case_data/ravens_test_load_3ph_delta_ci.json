@@ -1,0 +1,508 @@
+{
+  "PerLengthLineParameter": {
+    "PerLengthImpedance": {
+      "PerLengthPhaseImpedance": {
+        "zabcn": {
+          "Ravens.cimObjectType": "PerLengthPhaseImpedance",
+          "IdentifiedObject.mRID": "dbeaa20a-9010-476a-b06c-9688aef9123f",
+          "IdentifiedObject.name": "zabcn",
+          "PerLengthPhaseImpedance.conductorCount": 4,
+          "PerLengthPhaseImpedance.PhaseImpedanceData": [
+            {
+              "Ravens.cimObjectType": "PhaseImpedanceData",
+              "PhaseImpedanceData.row": 2,
+              "PhaseImpedanceData.column": 1,
+              "PhaseImpedanceData.sequenceNumber": "9",
+              "PhaseImpedanceData.r": 5.9217624000000006e-05,
+              "PhaseImpedanceData.x": 0.000541069709,
+              "PhaseImpedanceData.b": 0.0
+            },
+            {
+              "Ravens.cimObjectType": "PhaseImpedanceData",
+              "PhaseImpedanceData.row": 3,
+              "PhaseImpedanceData.column": 2,
+              "PhaseImpedanceData.sequenceNumber": "14",
+              "PhaseImpedanceData.r": 5.9217624000000006e-05,
+              "PhaseImpedanceData.x": 0.0005165334390000001,
+              "PhaseImpedanceData.b": 0.0
+            },
+            {
+              "Ravens.cimObjectType": "PhaseImpedanceData",
+              "PhaseImpedanceData.row": 3,
+              "PhaseImpedanceData.column": 1,
+              "PhaseImpedanceData.sequenceNumber": "13",
+              "PhaseImpedanceData.r": 5.9217624000000006e-05,
+              "PhaseImpedanceData.x": 0.000475545802,
+              "PhaseImpedanceData.b": 0.0
+            },
+            {
+              "Ravens.cimObjectType": "PhaseImpedanceData",
+              "PhaseImpedanceData.row": 4,
+              "PhaseImpedanceData.column": 2,
+              "PhaseImpedanceData.sequenceNumber": "18",
+              "PhaseImpedanceData.r": 5.9217624000000006e-05,
+              "PhaseImpedanceData.x": 0.000475545802,
+              "PhaseImpedanceData.b": 0.0
+            },
+            {
+              "Ravens.cimObjectType": "PhaseImpedanceData",
+              "PhaseImpedanceData.row": 2,
+              "PhaseImpedanceData.column": 2,
+              "PhaseImpedanceData.sequenceNumber": "10",
+              "PhaseImpedanceData.r": 0.00022721762400000002,
+              "PhaseImpedanceData.x": 0.000879326005,
+              "PhaseImpedanceData.b": 0.0
+            },
+            {
+              "Ravens.cimObjectType": "PhaseImpedanceData",
+              "PhaseImpedanceData.row": 4,
+              "PhaseImpedanceData.column": 1,
+              "PhaseImpedanceData.sequenceNumber": "17",
+              "PhaseImpedanceData.r": 5.9217624000000006e-05,
+              "PhaseImpedanceData.x": 0.000449141163,
+              "PhaseImpedanceData.b": 0.0
+            },
+            {
+              "Ravens.cimObjectType": "PhaseImpedanceData",
+              "PhaseImpedanceData.row": 3,
+              "PhaseImpedanceData.column": 3,
+              "PhaseImpedanceData.sequenceNumber": "15",
+              "PhaseImpedanceData.r": 0.00022721762400000002,
+              "PhaseImpedanceData.x": 0.000879326005,
+              "PhaseImpedanceData.b": 0.0
+            },
+            {
+              "Ravens.cimObjectType": "PhaseImpedanceData",
+              "PhaseImpedanceData.row": 4,
+              "PhaseImpedanceData.column": 3,
+              "PhaseImpedanceData.sequenceNumber": "19",
+              "PhaseImpedanceData.r": 5.9217624000000006e-05,
+              "PhaseImpedanceData.x": 0.000541069709,
+              "PhaseImpedanceData.b": 0.0
+            },
+            {
+              "Ravens.cimObjectType": "PhaseImpedanceData",
+              "PhaseImpedanceData.row": 1,
+              "PhaseImpedanceData.column": 1,
+              "PhaseImpedanceData.sequenceNumber": "5",
+              "PhaseImpedanceData.r": 0.00022721762400000002,
+              "PhaseImpedanceData.x": 0.000879326005,
+              "PhaseImpedanceData.b": 0.0
+            },
+            {
+              "Ravens.cimObjectType": "PhaseImpedanceData",
+              "PhaseImpedanceData.row": 4,
+              "PhaseImpedanceData.column": 4,
+              "PhaseImpedanceData.sequenceNumber": "20",
+              "PhaseImpedanceData.r": 0.00022721762400000002,
+              "PhaseImpedanceData.x": 0.000879326005,
+              "PhaseImpedanceData.b": 0.0
+            }
+          ]
+        }
+      }
+    }
+  },
+  "OperationalLimitSet": {
+    "OpLimI_400.0_600.0": {
+      "Ravens.cimObjectType": "OperationalLimitSet",
+      "IdentifiedObject.mRID": "bd0b5ea2-9c91-4680-baad-81f9125c15c1",
+      "IdentifiedObject.name": "OpLimI_400.0_600.0",
+      "OperationalLimitSet.OperationalLimitValue": [
+        {
+          "Ravens.cimObjectType": "CurrentLimit",
+          "IdentifiedObject.mRID": "b3986b61-ce39-4021-89e2-8eb598b14608",
+          "IdentifiedObject.name": "OpLimI_400.0_600.0_Emerg",
+          "CurrentLimit.value": 600.0,
+          "CurrentLimit.normalValue": 400.0,
+          "OperationalLimit.OperationalLimitType": "OperationalLimitType::'absoluteValueType_86400.0s'"
+        },
+        {
+          "Ravens.cimObjectType": "CurrentLimit",
+          "IdentifiedObject.mRID": "a349c2d6-0e49-496e-8399-c4ee10ecc732",
+          "IdentifiedObject.name": "OpLimI_400.0_600.0_Norm",
+          "CurrentLimit.value": 400.0,
+          "CurrentLimit.normalValue": 400.0,
+          "OperationalLimit.OperationalLimitType": "OperationalLimitType::'absoluteValueType_5000000000.0s'"
+        }
+      ]
+    },
+    "OpLimV_40.00000000000001-800.0": {
+      "Ravens.cimObjectType": "OperationalLimitSet",
+      "IdentifiedObject.mRID": "84fdf939-6cf3-4e18-b88e-9d24de2dd675",
+      "IdentifiedObject.name": "OpLimV_40.00000000000001-800.0",
+      "OperationalLimitSet.OperationalLimitValue": [
+        {
+          "Ravens.cimObjectType": "VoltageLimit",
+          "IdentifiedObject.mRID": "4509060c-86ab-44dc-91bb-5653e026e1be",
+          "IdentifiedObject.name": "OpLimV_40.00000000000001-800.0_RangeAhigh",
+          "VoltageLimit.value": 800.0,
+          "VoltageLimit.normalValue": 400.0,
+          "OperationalLimit.OperationalLimitType": "OperationalLimitType::'highType_5000000000.0s'"
+        },
+        {
+          "Ravens.cimObjectType": "VoltageLimit",
+          "IdentifiedObject.mRID": "aeb7e6ab-c984-43ac-828c-fa7f2c71a905",
+          "IdentifiedObject.name": "OpLimV_40.00000000000001-800.0_RangeAlow",
+          "VoltageLimit.value": 40.00000000000001,
+          "VoltageLimit.normalValue": 400.0,
+          "OperationalLimit.OperationalLimitType": "OperationalLimitType::'lowType_5000000000.0s'"
+        }
+      ]
+    }
+  },
+  "Group": {
+    "ConnectivityNodeContainer": {
+      "test": {
+        "Ravens.cimObjectType": "Line",
+        "IdentifiedObject.mRID": "d75b18cc-e31b-49c4-a9bb-e22bb3b0f151",
+        "IdentifiedObject.name": "test"
+      },
+      "57597b26-d33e-4b48-9193-fdb519a6434a": {
+        "Ravens.cimObjectType": "ConnectivityNodeContainer",
+        "IdentifiedObject.mRID": "57597b26-d33e-4b48-9193-fdb519a6434a",
+        "PowerSystemResource.Location": "Location::'b2_Location'"
+      },
+      "f11edf72-2ae4-4368-9df8-54f2333eb42a": {
+        "Ravens.cimObjectType": "ConnectivityNodeContainer",
+        "IdentifiedObject.mRID": "f11edf72-2ae4-4368-9df8-54f2333eb42a",
+        "PowerSystemResource.Location": "Location::'b1_Location'"
+      }
+    }
+  },
+  "PowerSystemResource": {
+    "Equipment": {
+      "ConductingEquipment": {
+        "EnergyConnection": {
+          "EnergyConsumer": {
+            "load1": {
+              "Ravens.cimObjectType": "EnergyConsumer",
+              "IdentifiedObject.mRID": "3c69738f-bcd9-4630-9c6b-4d26b879dd86",
+              "IdentifiedObject.name": "load1",
+              "EnergyConsumer.p": 4500.0,
+              "EnergyConsumer.q": 2179.4494717703365,
+              "EnergyConsumer.customerCount": 1,
+              "EnergyConsumer.grounded": false,
+              "Equipment.inService": true,
+              "PowerSystemResource.Location": "Location::'Energysource.load1_Location_Location'",
+              "ConductingEquipment.BaseVoltage": "BaseVoltage::'BaseV_0.4'",
+              "EnergyConsumer.phaseConnection": "PhaseShuntConnectionKind.Y",
+              "EnergyConsumer.LoadResponse": "LoadResponseCharacteristic::'Constant kVA'",
+              "ConductingEquipment.Terminals": [
+                {
+                  "Ravens.cimObjectType": "Terminal",
+                  "IdentifiedObject.mRID": "ec26b66f-9de5-47f6-b43a-c2f60d2477eb",
+                  "IdentifiedObject.name": "load1_T1",
+                  "ACDCTerminal.sequenceNumber": 1,
+                  "Terminal.phases": "PhaseCode.AN",
+                  "Terminal.ConnectivityNode": "ConnectivityNode::'b2'",
+                  "ACDCTerminal.OperationalLimitSet": "OperationalLimitSet::'OpLimV_40.00000000000001-800.0'"
+                }
+              ],
+              "EnergyConsumer.EnergyConsumerPhase": [
+                {
+                  "Ravens.cimObjectType": "EnergyConsumerPhase",
+                  "IdentifiedObject.mRID": "3caa13be-ab78-4591-b0d8-31ee634bc3aa",
+                  "IdentifiedObject.name": "load1_N",
+                  "EnergyConsumerPhase.p": 4500.0,
+                  "EnergyConsumerPhase.q": 2179.4494717703365,
+                  "EnergyConsumerPhase.phase": "SinglePhaseKind.N"
+                },
+                {
+                  "Ravens.cimObjectType": "EnergyConsumerPhase",
+                  "IdentifiedObject.mRID": "c9d608f9-c22c-4d16-bd3d-1babb9f9e9af",
+                  "IdentifiedObject.name": "load1_A",
+                  "EnergyConsumerPhase.p": 4500.0,
+                  "EnergyConsumerPhase.q": 2179.4494717703365,
+                  "EnergyConsumerPhase.phase": "SinglePhaseKind.A"
+                }
+              ]
+            },
+            "load2": {
+              "Ravens.cimObjectType": "EnergyConsumer",
+              "IdentifiedObject.mRID": "3c6854a9-5c0b-468c-866a-a965d72fafe6",
+              "IdentifiedObject.name": "load2",
+              "EnergyConsumer.p": 9000.0,
+              "EnergyConsumer.q": 4358.898943540673,
+              "EnergyConsumer.customerCount": 1,
+              "EnergyConsumer.grounded": false,
+              "Equipment.inService": true,
+              "PowerSystemResource.Location": "Location::'Energysource.load2_Location_Location'",
+              "ConductingEquipment.BaseVoltage": "BaseVoltage::'BaseV_0.4'",
+              "EnergyConsumer.phaseConnection": "PhaseShuntConnectionKind.D",
+              "EnergyConsumer.LoadResponse": "LoadResponseCharacteristic::'Constant I'",
+              "ConductingEquipment.Terminals": [
+                {
+                  "Ravens.cimObjectType": "Terminal",
+                  "IdentifiedObject.mRID": "da8c58ea-af9d-46a4-bfc2-8af9e3917c88",
+                  "IdentifiedObject.name": "load2_T1",
+                  "ACDCTerminal.sequenceNumber": 1,
+                  "Terminal.phases": "PhaseCode.ABC",
+                  "Terminal.ConnectivityNode": "ConnectivityNode::'b2'",
+                  "ACDCTerminal.OperationalLimitSet": "OperationalLimitSet::'OpLimV_40.00000000000001-800.0'"
+                }
+              ]
+            }
+          },
+          "EnergySource": {
+            "source": {
+              "Ravens.cimObjectType": "EnergySource",
+              "IdentifiedObject.mRID": "276c2964-4bf5-4768-9ab7-cbc4852d084c",
+              "IdentifiedObject.name": "source",
+              "EnergySource.nominalVoltage": 400.0,
+              "EnergySource.voltageMagnitude": 400.0,
+              "EnergySource.voltageAngle": 0.0,
+              "EnergySource.r": 3.8805700005813283e-10,
+              "EnergySource.x": 1.5522280002325313e-09,
+              "EnergySource.r0": 5.069596039676397e-10,
+              "EnergySource.x0": 1.5208788119029192e-09,
+              "Equipment.inService": true,
+              "PowerSystemResource.Location": "Location::'Energysource.source_Location_Location'",
+              "ConductingEquipment.BaseVoltage": "BaseVoltage::'BaseV_0.4'",
+              "ConductingEquipment.Terminals": [
+                {
+                  "Ravens.cimObjectType": "Terminal",
+                  "IdentifiedObject.mRID": "0f08af7a-4a6e-4e57-be94-7bb5c0e9523e",
+                  "IdentifiedObject.name": "source_T1",
+                  "ACDCTerminal.sequenceNumber": 1,
+                  "Terminal.phases": "PhaseCode.ABC",
+                  "Terminal.ConnectivityNode": "ConnectivityNode::'b1'"
+                }
+              ]
+            }
+          }
+        },
+        "Conductor": {
+          "ACLineSegment": {
+            "line1": {
+              "Ravens.cimObjectType": "ACLineSegment",
+              "IdentifiedObject.mRID": "738ff1d7-88b1-44d3-8852-3ad3a9908a5a",
+              "IdentifiedObject.name": "line1",
+              "Equipment.inService": true,
+              "PowerSystemResource.Location": "Location::'line1_Location'",
+              "ConductingEquipment.BaseVoltage": "BaseVoltage::'BaseV_0.4'",
+              "Conductor.length": 1000.0,
+              "ACLineSegment.PerLengthImpedance": "PerLengthPhaseImpedance::'zabcn'",
+              "ConductingEquipment.Terminals": [
+                {
+                  "Ravens.cimObjectType": "Terminal",
+                  "IdentifiedObject.mRID": "52b7382f-b1b1-4384-8929-57d82c3b1b4a",
+                  "IdentifiedObject.name": "line1_T1",
+                  "ACDCTerminal.sequenceNumber": 1,
+                  "Terminal.phases": "PhaseCode.ABC",
+                  "Terminal.ConnectivityNode": "ConnectivityNode::'b1'",
+                  "ACDCTerminal.OperationalLimitSet": "OperationalLimitSet::'OpLimI_400.0_600.0'"
+                },
+                {
+                  "Ravens.cimObjectType": "Terminal",
+                  "IdentifiedObject.mRID": "24f669fc-be5c-4fad-ba62-da0be1e1ddc8",
+                  "IdentifiedObject.name": "line1_T2",
+                  "ACDCTerminal.sequenceNumber": 2,
+                  "Terminal.phases": "PhaseCode.ABCN",
+                  "Terminal.ConnectivityNode": "ConnectivityNode::'b2'",
+                  "ACDCTerminal.OperationalLimitSet": "OperationalLimitSet::'OpLimI_400.0_600.0'"
+                }
+              ],
+              "ACLineSegment.ACLineSegmentPhase": [
+                {
+                  "Ravens.cimObjectType": "ACLineSegmentPhase",
+                  "IdentifiedObject.mRID": "2f0305ee-61eb-42db-889e-317c2b7e2234",
+                  "IdentifiedObject.name": "line1_A",
+                  "ACLineSegmentPhase.phase": "SinglePhaseKind.A",
+                  "ACLineSegmentPhase.sequenceNumber": 1
+                },
+                {
+                  "Ravens.cimObjectType": "ACLineSegmentPhase",
+                  "IdentifiedObject.mRID": "d0c274d7-cba9-40c4-8227-ce4f3e9eaa66",
+                  "IdentifiedObject.name": "line1_B",
+                  "ACLineSegmentPhase.phase": "SinglePhaseKind.B",
+                  "ACLineSegmentPhase.sequenceNumber": 2
+                },
+                {
+                  "Ravens.cimObjectType": "ACLineSegmentPhase",
+                  "IdentifiedObject.mRID": "80926a88-ca02-405a-90fe-76c8ec7b1b6c",
+                  "IdentifiedObject.name": "line1_C",
+                  "ACLineSegmentPhase.phase": "SinglePhaseKind.C",
+                  "ACLineSegmentPhase.sequenceNumber": 3
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
+  "EnergyConnectionProfile": {
+    "Load::::::defaultload": {
+      "Ravens.cimObjectType": "EnergyConnectionProfile",
+      "IdentifiedObject.mRID": "44b569e6-3a30-4943-9d77-7fbc49116161",
+      "IdentifiedObject.name": "Load::::::defaultload",
+      "EnergyConnectionProfile.dssSpectrum": "defaultload"
+    }
+  },
+  "Location": {
+    "line1_Location": {
+      "Ravens.cimObjectType": "Location",
+      "IdentifiedObject.mRID": "1a040109-cc20-4fe2-a417-7a362916ec00",
+      "IdentifiedObject.name": "line1_Location",
+      "Location.PositionPoints": [
+        {
+          "Ravens.cimObjectType": "PositionPoint",
+          "PositionPoint.sequenceNumber": 0,
+          "PositionPoint.xPosition": "0.0",
+          "PositionPoint.yPosition": "0.0"
+        },
+        {
+          "Ravens.cimObjectType": "PositionPoint",
+          "PositionPoint.sequenceNumber": 1,
+          "PositionPoint.xPosition": "0.0",
+          "PositionPoint.yPosition": "0.0"
+        }
+      ]
+    },
+    "Energysource.source_Location_Location": {
+      "Ravens.cimObjectType": "Location",
+      "IdentifiedObject.mRID": "925900d6-5342-402a-a8c5-91882d0e4107",
+      "IdentifiedObject.name": "Energysource.source_Location_Location",
+      "Location.PositionPoints": [
+        {
+          "Ravens.cimObjectType": "PositionPoint",
+          "PositionPoint.sequenceNumber": 0,
+          "PositionPoint.xPosition": "0.0",
+          "PositionPoint.yPosition": "0.0"
+        }
+      ]
+    },
+    "b1_Location": {
+      "Ravens.cimObjectType": "Location",
+      "IdentifiedObject.mRID": "b58026e7-d26e-4cde-b078-2444f99aa5e7",
+      "IdentifiedObject.name": "b1_Location",
+      "Location.PositionPoints": [
+        {
+          "Ravens.cimObjectType": "PositionPoint",
+          "PositionPoint.sequenceNumber": 0,
+          "PositionPoint.xPosition": "0.0",
+          "PositionPoint.yPosition": "0.0"
+        }
+      ]
+    },
+    "Energysource.load2_Location_Location": {
+      "Ravens.cimObjectType": "Location",
+      "IdentifiedObject.mRID": "062fcf2c-9fc4-4a3b-9204-9bab47d9b15a",
+      "IdentifiedObject.name": "Energysource.load2_Location_Location",
+      "Location.PositionPoints": [
+        {
+          "Ravens.cimObjectType": "PositionPoint",
+          "PositionPoint.sequenceNumber": 0,
+          "PositionPoint.xPosition": "0.0",
+          "PositionPoint.yPosition": "0.0"
+        }
+      ]
+    },
+    "b2_Location": {
+      "Ravens.cimObjectType": "Location",
+      "IdentifiedObject.mRID": "becdc109-5dd8-4c5d-8254-7f2643e4b442",
+      "IdentifiedObject.name": "b2_Location",
+      "Location.PositionPoints": [
+        {
+          "Ravens.cimObjectType": "PositionPoint",
+          "PositionPoint.sequenceNumber": 0,
+          "PositionPoint.xPosition": "0.0",
+          "PositionPoint.yPosition": "0.0"
+        }
+      ]
+    },
+    "Energysource.load1_Location_Location": {
+      "Ravens.cimObjectType": "Location",
+      "IdentifiedObject.mRID": "cc9dce37-bf81-4b98-b679-d43b1a5adc0c",
+      "IdentifiedObject.name": "Energysource.load1_Location_Location",
+      "Location.PositionPoints": [
+        {
+          "Ravens.cimObjectType": "PositionPoint",
+          "PositionPoint.sequenceNumber": 0,
+          "PositionPoint.xPosition": "0.0",
+          "PositionPoint.yPosition": "0.0"
+        }
+      ]
+    }
+  },
+  "Versions": {
+    "IEC61970CIMVersion": {
+      "Ravens.cimObjectType": "IEC61970CIMVersion",
+      "IEC61970CIMVersion.version": "IEC61970CIM100",
+      "IEC61970CIMVersion.date": "2019-04-01"
+    },
+    "RavensVersion": {
+      "Ravens.cimObjectType": "RavensVersion",
+      "RavensVersion.date": "2026-06-12",
+      "RavensVersion.version": "RAVENSv0.3.0"
+    }
+  },
+  "OperationalLimitType": {
+    "absoluteValueType_5000000000.0s": {
+      "Ravens.cimObjectType": "OperationalLimitType",
+      "IdentifiedObject.mRID": "2f143520-02d0-4ec7-b289-2ebcd3495d5e",
+      "IdentifiedObject.name": "absoluteValueType_5000000000.0s",
+      "OperationalLimitType.direction": "OperationalLimitDirectionKind.absoluteValue",
+      "OperationalLimitType.acceptableDuration": 5000000000.0
+    },
+    "highType_5000000000.0s": {
+      "Ravens.cimObjectType": "OperationalLimitType",
+      "IdentifiedObject.mRID": "53f5f759-fbb9-4138-99db-7fc054a20ecb",
+      "IdentifiedObject.name": "highType_5000000000.0s",
+      "OperationalLimitType.direction": "OperationalLimitDirectionKind.high",
+      "OperationalLimitType.acceptableDuration": 5000000000.0
+    },
+    "lowType_5000000000.0s": {
+      "Ravens.cimObjectType": "OperationalLimitType",
+      "IdentifiedObject.mRID": "bfc3f7e0-3f85-4bb2-86cc-33e18d0b5c56",
+      "IdentifiedObject.name": "lowType_5000000000.0s",
+      "OperationalLimitType.direction": "OperationalLimitDirectionKind.low",
+      "OperationalLimitType.acceptableDuration": 5000000000.0
+    },
+    "absoluteValueType_86400.0s": {
+      "Ravens.cimObjectType": "OperationalLimitType",
+      "IdentifiedObject.mRID": "4b241ab5-343e-4ccf-8053-50489b661133",
+      "IdentifiedObject.name": "absoluteValueType_86400.0s",
+      "OperationalLimitType.direction": "OperationalLimitDirectionKind.absoluteValue",
+      "OperationalLimitType.acceptableDuration": 86400.0
+    }
+  },
+  "ConnectivityNode": {
+    "b2": {
+      "Ravens.cimObjectType": "ConnectivityNode",
+      "IdentifiedObject.mRID": "4fe6c458-f196-4322-83ce-eefa9567a41d",
+      "IdentifiedObject.name": "b2",
+      "ConnectivityNode.OperationalLimitSet": "OperationalLimitSet::'OpLimV_40.00000000000001-800.0'"
+    },
+    "b1": {
+      "Ravens.cimObjectType": "ConnectivityNode",
+      "IdentifiedObject.mRID": "bdfc7243-9f6b-491a-82f9-8b8041517664",
+      "IdentifiedObject.name": "b1"
+    }
+  },
+  "BaseVoltage": {
+    "BaseV_0.4": {
+      "Ravens.cimObjectType": "BaseVoltage",
+      "IdentifiedObject.mRID": "3ca533d4-9efc-4716-95b0-c2c020e183e4",
+      "IdentifiedObject.name": "BaseV_0.4",
+      "BaseVoltage.nominalVoltage": 400.0
+    }
+  },
+  "LoadResponseCharacteristic": {
+    "Constant kVA": {
+      "Ravens.cimObjectType": "LoadResponseCharacteristic",
+      "IdentifiedObject.mRID": "129f11e9-cbc7-44fa-8ce0-50391bbc5f50",
+      "IdentifiedObject.name": "Constant kVA",
+      "LoadResponseCharacteristic.pConstantPower": 100.0,
+      "LoadResponseCharacteristic.qConstantPower": 100.0
+    },
+    "Constant I": {
+      "Ravens.cimObjectType": "LoadResponseCharacteristic",
+      "IdentifiedObject.mRID": "830d1930-327e-4844-bd3e-64492e24eca1",
+      "IdentifiedObject.name": "Constant I",
+      "LoadResponseCharacteristic.pConstantCurrent": 100.0,
+      "LoadResponseCharacteristic.qConstantCurrent": 100.0
+    }
+  }
+}
