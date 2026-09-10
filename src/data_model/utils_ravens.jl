@@ -137,6 +137,12 @@ function _calc_shunt_admittance_matrix(terminals, b)
 
 end
 
+#the above function should probably be renamed to this
+"Calculates a balanced phase-to-ground shunt admittance matrix."
+function _calc_balanced_wye_shunt_admittance_matrix(terminals, y)
+    return y * Matrix(LinearAlgebra.I, length(terminals), length(terminals))
+end
+
 
 """
     apply_voltage_bounds_math!(data::Dict{String,<:Any}; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1)
