@@ -1,5 +1,5 @@
 "Solve on-load tap-changer OPF"
-function solve_mc_opf_oltc(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
+function solve_mc_opf_oltc(data::Union{DistributionModel,String}, model_type::Type, solver; kwargs...)
     return solve_mc_model(data, model_type, solver, build_mc_opf_oltc; kwargs...)
 end
 
@@ -14,7 +14,7 @@ end
 
 Solve multinetwork oltc optimal power flow problem
 """
-function solve_mn_mc_opf_oltc(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
+function solve_mn_mc_opf_oltc(data::Union{DistributionModel,String}, model_type::Type, solver; kwargs...)
     return solve_mc_model(data, model_type, solver, build_mn_mc_opf_oltc; multinetwork=true, kwargs...)
 end
 

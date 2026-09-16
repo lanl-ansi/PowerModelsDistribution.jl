@@ -6,17 +6,22 @@ _missing2false(a::Union{Missing,Bool}) = ismissing(a) ? false : a
 
 Helper function to check is data is ENGINEERING model
 """
-iseng(data::Dict{String,<:Any}) = _missing2false(get(data, "data_model", missing) == ENGINEERING)
-iseng(data::InfrastructureModel) = false
-
+iseng(data::Dict{String,<:Any}) = _missing2false(get(data, "data_model", missing) == ENGINEERING) || get(data, "iseng", false)
+iseng(::InfrastructureModel) = false
+iseng(::EngineeringModel) = true
+iseng(::DistributionModel) = false
+iseng(::InfrastructureObject) = false
 
 """
     ismath(data::Dict{String,Any})
 
 Helper function to check if data is MATHEMATICAL model
 """
-ismath(data::Dict{String,<:Any}) = _missing2false(get(data, "data_model", missing) == MATHEMATICAL)
-ismath(data::InfrastructureModel) = false
+ismath(data::Dict{String,<:Any}) = _missing2false(get(data, "data_model", missing) == MATHEMATICAL) || get(data, "ismath", false)
+ismath(::InfrastructureModel) = false
+ismath(::MathematicalModel) = true
+ismath(::DistributionModel) = false
+ismath(::InfrastructureObject) = false
 
 
 """
@@ -136,7 +141,7 @@ end
 
 
 "initializes the base components that are expected by powermodelsdistribution in the mathematical model"
-function _init_base_components!(data_math::Dict{String,<:Any})
+function _init_base_components!(data_math)
     for key in pmd_math_asset_types
         if !haskey(data_math, key)
             data_math[key] = Dict{String,Any}()
@@ -160,14 +165,14 @@ R. C. Dugan, “A perspective on transformer modeling for distribution system an
 in 2003 IEEE Power Engineering Society General Meeting (IEEE Cat. No.03CH37491), 2003, vol. 1, pp. 114-119 Vol. 1.
 """
 function _sc2br_impedance(Zsc::Dict{Tuple{Int,Int},Complex{Float64}})::Dict{Tuple{Int,Int},Complex}
-    N = maximum([maximum(k) for k in keys(Zsc)])
-    # check whether no keys are missing
+    N = maximum([maximum(k) for k in keys(Zsc)]) #get number of windings
     # Zsc should contain tupples for upper triangle of NxN
     for i in 1:N
         for j in i+1:N
             if !haskey(Zsc, (i,j))
                 if haskey(Zsc, (j,i))
                     # Zsc is symmetric; use value of lower triangle if defined
+                    # if (1,2) is missing but (2,1) is there, copy it
                     Zsc[(i,j)] =  Zsc[(j,i)]
                 else
                     error("Short-circuit impedance between winding $i and $j is missing.")
@@ -177,9 +182,12 @@ function _sc2br_impedance(Zsc::Dict{Tuple{Int,Int},Complex{Float64}})::Dict{Tupl
     end
 
     # if all zero, return all zeros
+    # Zsc and Zbr are electrically equivalent for special case of all zeros
     if all(values(Zsc).==0.0)
         return Zsc
     end
+    # extremely important note: this ONLY handles the case where ALL elements are zero. some problems can still occur with zeros in _certain places_
+    # what if Z12 = 0, Z13 = Z23 != 0. This still creates issues for pinv later
 
     # make Zb
     Zb = zeros(Complex{Float64}, N-1,N-1)
@@ -192,13 +200,14 @@ function _sc2br_impedance(Zsc::Dict{Tuple{Int,Int},Complex{Float64}})::Dict{Tupl
             Zb[j,i] = Zb[i,j]
         end
     end
-    # get Ybus
-    Y = LinearAlgebra.pinv(Zb)
-    Y = [-Y*ones(N-1) Y]
+
+    Y = LinearAlgebra.pinv(Zb) #if Zb is singular or nearly singular, pinv will still return something
+    #add tests here for bad Zb?
+    Y = [-Y*ones(N-1) Y] #add winding 1 back
     Y = [-ones(1,N-1)*Y; Y]
     # extract elements
     Zbr = Dict{Tuple{Int,Int},Complex}()
-    for k in keys(Zsc)
+    for k in keys(Zsc) #convert ybus off diagonals to branch Z
         Zbr[k] = (abs(Y[k...])==0) ? Inf : -1/Y[k...]
     end
     return Zbr
@@ -207,7 +216,7 @@ end
 
 "loss model builder for transformer decomposition"
 function _build_loss_model!(
-    data_math::Dict{String,<:Any},
+    data_math::MathematicalModel{NetworkModel},
     transformer_name::String,
     to_map::Vector{String},
     r_s::Vector{Float64},
@@ -223,7 +232,9 @@ function _build_loss_model!(
     tr_t_bus = collect(1:N)
     buses = Set(1:2*N)
 
+    # @show zsc
     zbr = _sc2br_impedance(zsc)
+    # @show zbr
 
     edges = [[[i,i+N] for i in 1:N]..., [[i+N,j+N] for (i,j) in keys(zbr)]...]
     lines = Dict(enumerate(edges))
@@ -589,7 +600,7 @@ end
 
 
 "initialization actions for unmapping"
-function _init_unmap_eng_obj!(data_eng::Dict{String,<:Any}, eng_obj_type::String, map::Dict{String,<:Any})::Dict{String,Any}
+function _init_unmap_eng_obj!(data_eng::EngineeringModel{NetworkModel}, eng_obj_type::String, map::Dict{String,<:Any})::Dict{String,Any}
     if !haskey(data_eng, eng_obj_type)
         data_eng[eng_obj_type] = Dict{String,Any}()
     end
@@ -601,8 +612,8 @@ end
 
 
 "returns component from the mathematical data model"
-function _get_math_obj(data_math::Dict{String,<:Any}, to_id::String)::Dict{String,Any}
-    math_type, math_id = split(to_id, '.')
+function _get_math_obj(data_math::MathematicalModel{NetworkModel}, to_id::String)::Dict{String,Any}
+    math_type, math_id = string.(split(to_id, '.'))
     return haskey(data_math, math_type) && haskey(data_math[math_type], math_id) ? data_math[math_type][math_id] : Dict{String,Any}()
 end
 
@@ -618,7 +629,7 @@ end
 
 
 "applies a xfmrcode to a transformer in preparation for converting to mathematical model"
-function _apply_xfmrcode!(eng_obj::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
+function _apply_xfmrcode!(eng_obj::Dict{String,<:Any}, data_eng::EngineeringModel{NetworkModel})
     if haskey(eng_obj, "xfmrcode") && haskey(data_eng, "xfmrcode") && haskey(data_eng["xfmrcode"], eng_obj["xfmrcode"])
         xfmrcode = data_eng["xfmrcode"][eng_obj["xfmrcode"]]
 
@@ -638,7 +649,7 @@ end
 
 
 "applies a linecode to a line in preparation for converting to mathematical model"
-function _apply_linecode!(eng_obj::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
+function _apply_linecode!(eng_obj::Dict{String,<:Any}, data_eng::Union{EngineeringModel,Dict{String,<:Any}})
     if haskey(eng_obj, "linecode") && haskey(data_eng, "linecode") && haskey(data_eng["linecode"], eng_obj["linecode"])
         linecode = data_eng["linecode"][eng_obj["linecode"]]
 
@@ -652,13 +663,13 @@ end
 
 
 "converts impendance in Ohm/m by multiplying by length"
-function _impedance_conversion(data_eng::Dict{String,<:Any}, eng_obj::Dict{String,<:Any}, key::String)
+function _impedance_conversion(data_eng::Union{EngineeringModel,Dict{String,<:Any}}, eng_obj::Dict{String,<:Any}, key::String)
     eng_obj[key] .* get(eng_obj, "length", 1.0)
 end
 
 
 "converts admittance by multiplying by 2πωl"
-function _admittance_conversion(data_eng::Dict{String,<:Any}, eng_obj::Dict{String,<:Any}, key::String)
+function _admittance_conversion(data_eng::Union{EngineeringModel,Dict{String,<:Any}}, eng_obj::Dict{String,<:Any}, key::String)
     2.0 .* pi .* data_eng["settings"]["base_frequency"] .* eng_obj[key] .* get(eng_obj, "length", 1.0) ./ 1e9
 end
 
@@ -686,7 +697,7 @@ end
 
 
 "slices branches based on connected terminals"
-function _slice_branches!(data_math::Dict{String,<:Any})
+function _slice_branches!(data_math::MathematicalModel{NetworkModel})
     for (_, branch) in data_math["branch"]
         if haskey(branch, "f_connections")
             N = length(branch["f_connections"])
@@ -699,7 +710,8 @@ end
 
 
 "finds maximal set of ungrounded phases"
-function _get_complete_conductor_set(data::Dict{String,<:Any})
+function _get_complete_conductor_set(data::EngineeringModel{NetworkModel})
+    haskey(data, "bus") || return nothing
     conductors = Set([])
     for (_, obj) in data["bus"]
         for t in obj["terminals"]
@@ -756,7 +768,7 @@ end
 
 
 "helper function to map non integer conductor ids into integers"
-function _map_conductor_ids!(data_math::Dict{String,<:Any})
+function _map_conductor_ids!(data_math::MathematicalModel{NetworkModel})
     if all(typeof(c) <: Int for c in data_math["conductor_ids"])
         cnd_map = Dict{Any,Int}(c => c for c in data_math["conductor_ids"])
     else

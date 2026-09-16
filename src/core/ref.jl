@@ -104,7 +104,7 @@ end
 
 Finds all conductor ids and puts a list of them under "conductor_ids" at the root level
 """
-function find_conductor_ids!(data::Dict{String,<:Any})
+function find_conductor_ids!(data::DistributionModel{NetworkModel})
     conductor_ids = []
 
     for (_,bus) in get(data, "bus", Dict())

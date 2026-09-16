@@ -25,6 +25,7 @@ module PowerModelsDistribution
     import LinearAlgebra
     import Statistics
     import SparseArrays
+    import UUIDs
 
     import LinearAlgebra: diagm, factorize
     import Statistics: mean, std
@@ -78,6 +79,7 @@ module PowerModelsDistribution
     include("data_model/dss/edge_constructors.jl")
     include("data_model/dss/data_constructors.jl")
 
+    include("data_model/base/ravens.jl")
     include("data_model/base/interfaces.jl")
     include("data_model/base/parse.jl")
     include("data_model/base/show.jl")
@@ -87,8 +89,10 @@ module PowerModelsDistribution
     include("data_model/transformations/dss2eng.jl")
     include("data_model/transformations/eng2math.jl")
     include("data_model/transformations/math2eng.jl")
+    include("data_model/transformations/math2ravens.jl")
     include("data_model/transformations/utils.jl")
     include("data_model/transformations/reduce.jl")
+    include("data_model/transformations/ravens2math.jl")
 
     include("core/data.jl")
     include("core/ref.jl")
@@ -131,6 +135,7 @@ module PowerModelsDistribution
     include("io/common.jl")
 
     include("data_model/utils.jl")
+    include("data_model/utils_ravens.jl")
     include("data_model/checks.jl")
     include("data_model/components.jl")
     include("data_model/multinetwork.jl")

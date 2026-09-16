@@ -18,7 +18,7 @@ between successive power flow solves
 The postfix `_idx` indicates the admittance matrix indexing convention.
 """
 mutable struct PowerFlowData
-    data_math::Dict
+    data_math::MathematicalModel
     ntype::Dict
     cc_ns_func_pairs::Vector{Tuple}
     indexed_nodes::Vector
@@ -45,8 +45,7 @@ v_start assigns the initialisation voltages to appropriate bus terminals.
 
 explicit_neutral indicates that the neutral conductor is explicitly modelled.
 """
-function PowerFlowData(data_math::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool)
-    @assert ismath(data_math) "The model is not a mathematical model "
+function PowerFlowData(data_math::MathematicalModel{NetworkModel}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool)
     ntype = Dict{Any,NodeType}()
     for (_, bus) in data_math["bus"]
         id = bus["index"]
@@ -212,9 +211,9 @@ Takes data in either the ENGINEERING or MATHEMATICAL model, a model type (_e.g._
 and model builder function (_e.g._, [`build_mc_opf`](@ref build_mc_opf)), and returns a solution in the original data model
 defined by `data`.
 
-Technical description of the native power flow can be found at https://arxiv.org/abs/2305.04405 where implementation fo the 
-fixed-point current injection algorithm, inspired by the existing open-source implementation in OpenDSS. 
-The current injection method is commonly conceived as a system of nonlinear equalities solved by Newton’s method. 
+Technical description of the native power flow can be found at https://arxiv.org/abs/2305.04405 where implementation fo the
+fixed-point current injection algorithm, inspired by the existing open-source implementation in OpenDSS.
+The current injection method is commonly conceived as a system of nonlinear equalities solved by Newton’s method.
 However, the fixed point iteration variant commonly outperforms most methods, while supporting meshed topologies from the ground up
 
 If `make_si` is false, data will remain in per-unit.
@@ -230,7 +229,7 @@ For an explanation of `ref_extensions`, see [`instantiate_mc_model`](@ref instan
 For an explanation of `map_math2eng_extensions`, `make_si`, `make_si_extensions`, and `dimensionalize_math_extensions`, see [`solution_make_si`](@ref solution_make_si)
 """
 function compute_mc_pf(
-    data::Dict{String,<:Any};
+    data::DistributionModel;
     explicit_neutral::Bool=false,
     max_iter::Int=100,
     v_start::Union{Dict{<:Any,<:Any},Missing}=missing,
@@ -267,7 +266,7 @@ function compute_mc_pf(
         result = _compute_mc_pf(data_math; v_start=v_start, explicit_neutral=explicit_neutral, max_iter=max_iter, stat_tol=stat_tol, verbose=verbose)
 
         result["solution"] = transform_solution(
-            result["solution"],
+            MathematicalModel(result["solution"]; multinetwork=multinetwork),
             data_math;
             map_math2eng_extensions=map_math2eng_extensions,
             make_si=make_si,
@@ -308,7 +307,7 @@ Computes native power flow and outputs the result dict (See https://arxiv.org/ab
 
 """
 function _compute_mc_pf(
-    data_math::Dict{String,<:Any};
+    data_math::MathematicalModel;
     v_start::Union{Dict{<:Any,<:Any},Missing}=missing,
     explicit_neutral::Bool=false,
     max_iter::Int=100,
@@ -1123,7 +1122,7 @@ const _CPF_COMPONENT_INTERFACES = Dict(
 
 Assigns the initialisation voltages to appropriate bus terminals.
 """
-function _bts_to_start_voltage(dm::Dict{String,<:Any})
+function _bts_to_start_voltage(dm::MathematicalModel{NetworkModel})
     v_start = Dict()
     for (i, bus) in dm["bus"]
         for (t, terminal) in enumerate(bus["terminals"])
