@@ -1,6 +1,6 @@
 @info "running explicit neutral opf bound tests"
 
-function calc_sol_pmd(data_math, form; optimizer=ipopt_solver)
+function calc_sol_pmd(data_math, form; optimizer=optimizer_with_attributes(Ipopt.Optimizer, "print_level"=>0, "sb"=>"yes", "tol"=>1e-6, "mu_strategy"=>"adaptive"))
     pm  = instantiate_mc_model(data_math, form, build_mc_opf)
     res = optimize_model!(pm, optimizer=optimizer)
     @test res["termination_status"] ∈ [LOCALLY_SOLVED, ALMOST_LOCALLY_SOLVED]
@@ -33,7 +33,7 @@ end
         @test all(isapprox.(abs.(c_to[1:3]), cm_ub[1:3], rtol=0.005))
 
         # IVRQuadraticENPowerModel
-        sol_pmd = calc_sol_pmd(data_math, IVRQuadraticENPowerModel, optimizer=optimizer_with_attributes(Ipopt.Optimizer, "print_level"=>0, "sb"=>"yes", "tol"=>1e-6, "mu_strategy"=>"adaptive"))
+        sol_pmd = calc_sol_pmd(data_math, IVRQuadraticENPowerModel)
         c_to = sol_pmd["line"]["line1"]["cr_to"]+im*sol_pmd["line"]["line1"]["ci_to"]
         @test all(isapprox.(abs.(c_to[1:3]), cm_ub[1:3], rtol=0.005))
 
@@ -78,7 +78,7 @@ end
         # ACRENPowerModel
         # This test is flakey.
         # mu_strategy = Sys.islinux() ? "adaptive" : "monotone"
-        sol_pmd = calc_sol_pmd(data_math, ACRENPowerModel; optimizer=optimizer_with_attributes(Ipopt.Optimizer, "print_level"=>0, "sb"=>"yes", "tol"=>1e-6, "mu_strategy"=>"adaptive"))
+        sol_pmd = calc_sol_pmd(data_math, ACRENPowerModel)
         s_to = sol_pmd["line"]["line1"]["pt"]+im*sol_pmd["line"]["line1"]["qt"]
         @test all(isapprox.(abs.(s_to[1:3]), sm_ub[1:3], rtol=0.005))
     end
