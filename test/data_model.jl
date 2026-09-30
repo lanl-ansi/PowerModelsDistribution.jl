@@ -82,8 +82,9 @@
 
     @testset "test manual 1-phase model creation" begin
         data = parse_file("../test/data/opendss/case3_unbalanced.dss"; data_model = MATHEMATICAL)
-        delete!(data["load"], "1")
-        delete!(data["load"], "3")
+        for k in [l for (l, load) in data["load"] if lowercase(load["source_id"]) != lowercase("Load.L2")]
+            delete!(data["load"], k)
+        end
         data["bus"]["3"]["terminals"] = Vector{Int}([2])
         data["bus"]["3"]["grounded"] = Vector{Bool}([0])
 
