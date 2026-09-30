@@ -33,7 +33,7 @@ end
         @test all(isapprox.(abs.(c_to[1:3]), cm_ub[1:3], rtol=0.005))
 
         # IVRQuadraticENPowerModel
-        sol_pmd = calc_sol_pmd(data_math, IVRQuadraticENPowerModel)
+        sol_pmd = calc_sol_pmd(data_math, IVRQuadraticENPowerModel, optimizer=optimizer_with_attributes(Ipopt.Optimizer, "print_level"=>0, "sb"=>"yes", "tol"=>1e-6, "mu_strategy"=>"adaptive"))
         c_to = sol_pmd["line"]["line1"]["cr_to"]+im*sol_pmd["line"]["line1"]["ci_to"]
         @test all(isapprox.(abs.(c_to[1:3]), cm_ub[1:3], rtol=0.005))
 
@@ -43,7 +43,7 @@ end
         @test all(isapprox.(abs.(c_to[1:3]), cm_ub[1:3], rtol=0.005))
 
         # ACRENPowerModel
-        sol_pmd = calc_sol_pmd(data_math, ACRENPowerModel, optimizer=ipopt_solver)
+        sol_pmd = calc_sol_pmd(data_math, ACRENPowerModel)
         s_to = sol_pmd["line"]["line1"]["pt"]+im*sol_pmd["line"]["line1"]["qt"]
         v_to = sol_pmd["bus"]["b2"]["vr"]+im*sol_pmd["bus"]["b2"]["vi"]
         c_to = conj.(s_to./v_to)
@@ -77,8 +77,8 @@ end
 
         # ACRENPowerModel
         # This test is flakey.
-        mu_strategy = Sys.islinux() ? "adaptive" : "monotone"
-        sol_pmd = calc_sol_pmd(data_math, ACRENPowerModel; optimizer=optimizer_with_attributes(Ipopt.Optimizer, "mu_strategy"=>mu_strategy, "sb"=>"yes", "print_level"=>0))
+        # mu_strategy = Sys.islinux() ? "adaptive" : "monotone"
+        sol_pmd = calc_sol_pmd(data_math, ACRENPowerModel; optimizer=optimizer_with_attributes(Ipopt.Optimizer, "print_level"=>0, "sb"=>"yes", "tol"=>1e-6, "mu_strategy"=>"adaptive"))
         s_to = sol_pmd["line"]["line1"]["pt"]+im*sol_pmd["line"]["line1"]["qt"]
         @test all(isapprox.(abs.(s_to[1:3]), sm_ub[1:3], rtol=0.005))
     end
