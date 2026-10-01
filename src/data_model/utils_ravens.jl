@@ -9,15 +9,21 @@ const _phasecode_map = Dict(
     "PhaseCode.C" => [3],
     "PhaseCode.AN" => [1],
     "PhaseCode.BN" => [2],
-    "PhaseCode.CN" => [3]
+    "PhaseCode.CN" => [3],
+    "PhaseCode.s1N" => [1],
+    "PhaseCode.s2N" => [2],
+    "PhaseCode.Ns2" => [2]
 )
 
 _phase_map = Dict(
     "SinglePhaseKind.A" => 1,
     "SinglePhaseKind.B" => 2,
     "SinglePhaseKind.C" => 3,
-    "SinglePhaseKind.N" => 4
+    "SinglePhaseKind.N" => 4,
+    "SinglePhaseKind.s1" => 1, # verify
+    "SinglePhaseKind.s2" => 2 # verify
 )
+
 
 const _multipliers_map = Dict(
     "UnitMultiplier.m" => 1e-3,
