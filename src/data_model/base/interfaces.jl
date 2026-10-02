@@ -42,9 +42,18 @@ Base.@propagate_inbounds function Base.iterate(@nospecialize(itr::T), i::Int=1) 
     i <= length(pn) ? (Base.@inbounds Pair{String,typeof(val)}(string(pn[i]), val), i + 1) : nothing
 end
 
-"Base.haskey for InfrastructureModel,InfrastructureObject to give them Dict-like behavior"
-Base.haskey(@nospecialize(h::T), key::String) where {T<:Union{InfrastructureModel,InfrastructureObject}} = (Symbol(key) ∈ [pn for pn in propertynames(h) if !isempty(getproperty(h, pn))])
-Base.haskey(@nospecialize(h::T), key::Symbol) where {T<:Union{InfrastructureModel,InfrastructureObject}} = (key ∈ [pn for pn in propertynames(h) if !isempty(getproperty(h, pn))])
+"Base.haskey for InfrastructureModel, InfrastructureObject to give them Dict-like behavior"
+Base.haskey(
+    @nospecialize(h::T),
+    key::String
+) where {T<:Union{InfrastructureModel,InfrastructureObject}} =
+    Symbol(key) in propertynames(h)
+
+Base.haskey(
+    @nospecialize(h::T),
+    key::Symbol
+) where {T<:Union{InfrastructureModel,InfrastructureObject}} =
+    key in propertynames(h)
 
 "Base.isempty for InfrastructureModel,InfrastructureObject to give them Dict-like behavior"
 Base.isempty(@nospecialize(h::T)) where {T<:Union{InfrastructureModel,InfrastructureObject}} = all(isempty(getproperty(h, pn)) for pn in propertynames(h))

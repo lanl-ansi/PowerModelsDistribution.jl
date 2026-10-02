@@ -1,6 +1,6 @@
 @info "running explicit neutral opf bound tests"
 
-function calc_sol_pmd(data_math, form; optimizer=ipopt_solver)
+function calc_sol_pmd(data_math, form; optimizer=optimizer_with_attributes(Ipopt.Optimizer, "print_level"=>0, "sb"=>"yes", "tol"=>1e-6, "mu_strategy"=>"adaptive", "warm_start_init_point"=>"yes"))
     pm  = instantiate_mc_model(data_math, form, build_mc_opf)
     res = optimize_model!(pm, optimizer=optimizer)
     @test res["termination_status"] ∈ [LOCALLY_SOLVED, ALMOST_LOCALLY_SOLVED]
@@ -14,7 +14,7 @@ end
     @testset "branch current magnitude bound" begin
         cm_ub = [6:-1:3...]
         data_eng = deepcopy(test_gen_3ph_wye)
-        data_eng["settings"]["sbase_default"] = 1.0
+        data_eng["settings"]["sbase_default"] = 10.0
         data_eng["line"]["line1"]["cm_ub"] = cm_ub
         data_math = transform_data_model(data_eng, multinetwork=false, kron_reduce=false, phase_project=false)
         add_start_vrvi!(data_math)
@@ -24,7 +24,7 @@ end
         gen_pv["pmax"] = fill(Inf, 3)
         # scale up objective to prevent feasibility issues
         for (_,gen) in data_math["gen"]
-            gen["cost"] *= 1E3
+            gen["cost"] *= 1E2
         end
 
         # IVRENPowerModel
@@ -43,7 +43,7 @@ end
         @test all(isapprox.(abs.(c_to[1:3]), cm_ub[1:3], rtol=0.005))
 
         # ACRENPowerModel
-        sol_pmd = calc_sol_pmd(data_math, ACRENPowerModel, optimizer=ipopt_solver)
+        sol_pmd = calc_sol_pmd(data_math, ACRENPowerModel)
         s_to = sol_pmd["line"]["line1"]["pt"]+im*sol_pmd["line"]["line1"]["qt"]
         v_to = sol_pmd["bus"]["b2"]["vr"]+im*sol_pmd["bus"]["b2"]["vi"]
         c_to = conj.(s_to./v_to)
@@ -53,7 +53,7 @@ end
     @testset "branch power magnitude bound" begin
         sm_ub = [90:-20:30...]
         data_eng = deepcopy(test_gen_3ph_wye)
-        data_eng["settings"]["sbase_default"] = 1.0
+        data_eng["settings"]["sbase_default"] = 10.0
         data_eng["line"]["line1"]["sm_ub"] = sm_ub
         data_math = transform_data_model(data_eng, multinetwork=false, kron_reduce=false, phase_project=false)
         add_start_vrvi!(data_math)
@@ -63,7 +63,7 @@ end
         gen_pv["pmax"] = fill(Inf, 3)
         # scale up objective to prevent feasibility issues
         for (_,gen) in data_math["gen"]
-            gen["cost"] *= 1E3
+            gen["cost"] *= 1E2
         end
 
         # IVRENPowerModel
@@ -77,8 +77,8 @@ end
 
         # ACRENPowerModel
         # This test is flakey.
-        mu_strategy = Sys.islinux() ? "adaptive" : "monotone"
-        sol_pmd = calc_sol_pmd(data_math, ACRENPowerModel; optimizer=optimizer_with_attributes(Ipopt.Optimizer, "mu_strategy"=>mu_strategy, "sb"=>"yes", "print_level"=>0))
+        # mu_strategy = Sys.islinux() ? "adaptive" : "monotone"
+        sol_pmd = calc_sol_pmd(data_math, ACRENPowerModel)
         s_to = sol_pmd["line"]["line1"]["pt"]+im*sol_pmd["line"]["line1"]["qt"]
         @test all(isapprox.(abs.(s_to[1:3]), sm_ub[1:3], rtol=0.005))
     end
