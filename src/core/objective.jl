@@ -580,7 +580,7 @@ function calc_max_cost_index(data::Dict{String,<:Any})
     end
 end
 
-function calc_max_cost_index(data_mdl::_PMD.MathematicalModel)
+function calc_max_cost_index(data_mdl::MathematicalModel)
     data = data_mdl.data
     pmd_data = get_pmd_data(data)
 
