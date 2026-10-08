@@ -465,7 +465,7 @@ function check_gen_cost_models(pm::AbstractUnbalancedPowerModel)
     end
 
     if gen_count == 0
-        error("no generators found while building fuel-cost objective")
+        println("no generators found while building fuel-cost objective")
     end
 
     return model
@@ -580,6 +580,21 @@ function calc_max_cost_index(data::Dict{String,<:Any})
     end
 end
 
+function calc_max_cost_index(data_mdl::_PMD.MathematicalModel)
+    data = data_mdl.data
+    pmd_data = get_pmd_data(data)
+
+    if ismultinetwork(pmd_data)
+        max_index = 0
+        for (i,nw_data) in pmd_data["nw"]
+            nw_max_index = _calc_max_cost_index(nw_data)
+            max_index = max(max_index, nw_max_index)
+        end
+        return max_index
+    else
+        return _calc_max_cost_index(pmd_data)
+    end
+end
 
 """
     _calc_max_cost_index(data::Dict{String,<:Any})
