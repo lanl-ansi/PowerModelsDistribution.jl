@@ -975,7 +975,7 @@ identify_islands(data::Dict{String,<:Any})::Set{Set} = calc_connected_components
 computes the connected components of the network graph
 returns a set of sets of bus ids, each set is a connected component
 """
-function calc_connected_components(data::Dict{String,<:Any}; edges::Union{Missing, Vector{String}}=missing, type::Union{Missing,String}=missing, check_enabled::Bool=true)::Set{Set}
+function calc_connected_components(data::Dict{String,<:Any}; edges::Union{Missing, Vector{String}}=missing, type::Union{Missing,String}=missing, check_enabled::Bool=false)::Set{Set}
     pmd_data = get_pmd_data(data)
 
     if ismultinetwork(pmd_data)
@@ -1054,7 +1054,7 @@ end
 computes the connected components of the network graph
 returns a set of sets of bus ids, each set is a connected component
 """
-function _calc_connected_components_math(data::Dict{String,<:Any}; edges::Vector{<:String}=_math_edge_elements, type::Union{Missing,String}=missing, check_enabled::Bool=true)::Set{Set{Int}}
+function _calc_connected_components_math(data::Dict{String,<:Any}; edges::Vector{<:String}=_math_edge_elements, type::Union{Missing,String}=missing, check_enabled::Bool=false)::Set{Set{Int}}
     @assert get(data, "data_model", MATHEMATICAL) == MATHEMATICAL
 
     active_bus = Dict{String,Dict{String,Any}}(x for x in data["bus"] if x.second[pmd_math_component_status["bus"]] != pmd_math_component_status_inactive["bus"] || !check_enabled)
