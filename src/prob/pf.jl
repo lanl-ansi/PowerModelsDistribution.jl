@@ -1,5 +1,5 @@
 "Power Flow Problem"
-function solve_mc_pf(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
+function solve_mc_pf(data::Union{DistributionModel,String}, model_type::Type, solver; kwargs...)
     return solve_mc_model(data, model_type, solver, build_mc_pf; kwargs...)
 end
 
