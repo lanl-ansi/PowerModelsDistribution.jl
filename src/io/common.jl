@@ -159,7 +159,7 @@ If `make_pu` is false, converting to per-unit will be skipped.
 
 See [`make_per_unit!`](@ref make_per_unit!)
 """
-function correct_network_data!(data::Union{DistributionModel, Dict{String,<:Any}}; make_pu::Bool=true, make_pu_extensions::Vector{<:Function}=Function[])
+function correct_network_data!(data::Dict{String,<:Any}; make_pu::Bool=true, make_pu_extensions::Vector{<:Function}=Function[])
     if iseng(data)
         check_eng_data_model(data)
     elseif ismath(data)
@@ -183,3 +183,30 @@ function correct_network_data!(data::Union{DistributionModel, Dict{String,<:Any}
         end
     end
 end
+
+function correct_network_data!(data_mdl::DistributionModel; make_pu::Bool=true, make_pu_extensions::Vector{<:Function}=Function[])
+    data = data_mdl.data
+    if iseng(data)
+        check_eng_data_model(data)
+    elseif ismath(data)
+        check_connectivity(data)
+
+        correct_branch_directions!(data)
+        check_branch_loops(data)
+
+        correct_bus_types!(data)
+
+        propagate_network_topology!(data)
+
+        if make_pu
+            make_per_unit!(data; make_pu_extensions=make_pu_extensions)
+
+            correct_mc_voltage_angle_differences!(data)
+            correct_mc_thermal_limits!(data)
+
+            correct_cost_functions!(data)
+            standardize_cost_terms!(data)
+        end
+    end
+end
+
