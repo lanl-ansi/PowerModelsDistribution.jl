@@ -465,7 +465,7 @@ function check_gen_cost_models(pm::AbstractUnbalancedPowerModel)
     end
 
     if gen_count == 0
-        println("no generators found while building fuel-cost objective")
+        error("no generators found while building fuel-cost objective")
     end
 
     return model
