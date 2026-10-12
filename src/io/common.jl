@@ -159,7 +159,7 @@ If `make_pu` is false, converting to per-unit will be skipped.
 
 See [`make_per_unit!`](@ref make_per_unit!)
 """
-function correct_network_data!(data::DistributionModel; make_pu::Bool=true, make_pu_extensions::Vector{<:Function}=Function[])
+function correct_network_data!(data::Union{DistributionModel, Dict{String,<:Any}}; make_pu::Bool=true, make_pu_extensions::Vector{<:Function}=Function[])
     if iseng(data)
         check_eng_data_model(data)
     elseif ismath(data)
