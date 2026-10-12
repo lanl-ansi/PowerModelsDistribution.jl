@@ -181,7 +181,7 @@ end
 
 
 "Combines transformers with 'bank' keyword into a single transformer"
-function _bank_transformers!(data_eng::Dict{String,<:Any})
+function _bank_transformers!(data_eng::EngineeringModel{NetworkModel})
     if haskey(data_eng, "transformer")
         bankable_transformers = Dict()
         for (id, tr) in data_eng["transformer"]
@@ -274,7 +274,7 @@ end
 
 
 "discovers all terminals in the network"
-function _discover_terminals!(data_eng::Dict{String,<:Any})
+function _discover_terminals!(data_eng::EngineeringModel{NetworkModel})
     terminals = Dict{String, Set{Int}}([(name, Set{Int}()) for (name,bus) in data_eng["bus"]])
 
     if haskey(data_eng, "line")
@@ -466,7 +466,7 @@ end
 
 
 "add engineering data object to engineering data model"
-function _add_eng_obj!(data_eng::Dict{String,<:Any}, eng_obj_type::String, eng_obj_id::Any, eng_obj::Dict{String,<:Any})
+function _add_eng_obj!(data_eng::EngineeringModel{NetworkModel}, eng_obj_type::String, eng_obj_id::Any, eng_obj::Dict{String,<:Any})
     if !haskey(data_eng, eng_obj_type)
         data_eng[eng_obj_type] = Dict{String,Any}()
     end

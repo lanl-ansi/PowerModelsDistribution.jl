@@ -9,6 +9,7 @@
 - Fixed typo in single phase line parameters, should have been `line.c0 = line.c1` (#468)
 - Fixed missing `npts` property in loadshape in case3_balanced.dss (#466)
 - Fixed typo in unit tests 'blanced' to 'balanced' (#461)
+- Updated `PolyhedralRelaxations` compat to v0.3.6
 
 ## v0.16.0
 

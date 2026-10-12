@@ -24,6 +24,18 @@ end
 
 
 """
+    parse_json(data::Dict{String,<:Any})
+
+parses json files that were dumped via JSON.print (or PMD.print_file)
+"""
+function parse_json(data::Dict{String,<:Any})
+    correct_json_import!(data)
+
+    return data
+end
+
+
+"""
     correct_json_import!(data::Dict{String,<:Any})
 
 helper function to correct data imported from json
@@ -97,7 +109,7 @@ function _fix_nulls!(obj, prop, val)
     elseif isa(val, Vector) && any(v === nothing for v in val)
         @debug "a 'null' was encountered in the json import, making an assumption that null values in $prop = $fill_val"
         obj[prop] = Vector{valtype(val) == Nothing ? typeof(fill_val) : valtype(val)}([v === nothing ? fill_val : v for v in val])
-    elseif val === nothing
+    elseif isnothing(val)
         @debug "a 'null' was encountered in the json import, making an assumption that null values in $prop = $fill_val"
         obj[prop] = fill_val
     end

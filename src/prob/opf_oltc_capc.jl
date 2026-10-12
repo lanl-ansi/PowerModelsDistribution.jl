@@ -3,7 +3,7 @@
 
 Solve OPF with capacitor control
 """
-function solve_mc_opf_oltc_capc(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
+function solve_mc_opf_oltc_capc(data::Union{DistributionModel,String}, model_type::Type, solver; kwargs...)
     return solve_mc_model(data, model_type, solver, build_mc_opf_oltc_capc; kwargs...)
 end
 

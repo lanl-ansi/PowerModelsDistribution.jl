@@ -1,17 +1,17 @@
 "Solve load shedding problem with storage"
-function solve_mc_mld(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
+function solve_mc_mld(data::Union{DistributionModel,String}, model_type::Type, solver; kwargs...)
     return solve_mc_model(data, model_type, solver, build_mc_mld; kwargs...)
 end
 
 
 "Solve multinetwork load shedding problem with storage"
-function solve_mn_mc_mld_simple(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
+function solve_mn_mc_mld_simple(data::Union{DistributionModel,String}, model_type::Type, solver; kwargs...)
     return solve_mc_model(data, model_type, solver, build_mn_mc_mld_simple; multinetwork=true, kwargs...)
 end
 
 
 "Solve unit commitment load shedding problem (!relaxed)"
-function solve_mc_mld_uc(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
+function solve_mc_mld_uc(data::Union{DistributionModel,String}, model_type::Type, solver; kwargs...)
     return solve_mc_model(data, model_type, solver, build_mc_mld_uc; kwargs...)
 end
 

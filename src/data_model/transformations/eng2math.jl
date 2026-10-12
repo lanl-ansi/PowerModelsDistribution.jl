@@ -130,7 +130,7 @@ To add additional per-unit transformations, a user can supply custom functions t
 See [`make_per_unit!`](@ref make_per_unit!) for further explanation.
 """
 function transform_data_model(
-    data::Dict{String,<:Any};
+    data::EngineeringModel;
     kron_reduce::Bool=true,
     phase_project::Bool=false,
     multinetwork::Bool=false,
@@ -140,47 +140,86 @@ function transform_data_model(
     make_pu::Bool=true,
     make_pu_extensions::Vector{<:Function}=Function[],
     correct_network_data::Bool=true,
-    )::Dict{String,Any}
+    )::MathematicalModel
 
-    current_data_model = get(data, "data_model", MATHEMATICAL)
-
-    if iseng(data)
-        if multinetwork && !ismultinetwork(data)
-            data = make_multinetwork(data; global_keys=global_keys)
-        end
-
-        data_math = _map_eng2math(
-            data;
-            kron_reduce=kron_reduce,
-            phase_project=phase_project,
-            eng2math_extensions=eng2math_extensions,
-            eng2math_passthrough=eng2math_passthrough,
-            global_keys=global_keys,
-        )
-        correct_network_data && correct_network_data!(data_math; make_pu=make_pu, make_pu_extensions=make_pu_extensions)
-
-        return data_math
-    elseif ismath(data)
-        @info "A MATHEMATICAL data model cannot be converted back to an ENGINEERING data model, irreversible transformations have already been made"
-        return data
-    else
-        @info "Data model '$current_data_model' is not recognized, no model type transformation performed"
-        return data
+    if multinetwork && !ismultinetwork(data)
+        data = make_multinetwork(data; global_keys=global_keys)
     end
+
+    data_math = _map_eng2math(
+        data;
+        kron_reduce=kron_reduce,
+        phase_project=phase_project,
+        eng2math_extensions=eng2math_extensions,
+        eng2math_passthrough=eng2math_passthrough,
+        global_keys=global_keys,
+    )
+    correct_network_data && correct_network_data!(data_math; make_pu=make_pu, make_pu_extensions=make_pu_extensions)
+
+    return data_math
+end
+
+function transform_data_model(
+    data::Dict{String,Any};
+    kron_reduce::Bool=true,
+    phase_project::Bool=false,
+    multinetwork::Bool=false,
+    global_keys::Set{String}=Set{String}(),
+    eng2math_passthrough::Dict{String,<:Vector{<:String}}=Dict{String,Vector{String}}(),
+    eng2math_extensions::Vector{<:Function}=Function[],
+    make_pu::Bool=true,
+    make_pu_extensions::Vector{<:Function}=Function[],
+    correct_network_data::Bool=true,
+    )
+
+    if get(data, "data_model", missing) === MATHEMATICAL
+        return MathematicalModel(data)
+    end
+    
+    data_eng = EngineeringModel(data)
+
+    if multinetwork && !ismultinetwork(data_eng)
+        data_eng = make_multinetwork(data_eng; global_keys=global_keys)
+    end
+
+    data_math = _map_eng2math(
+        data_eng;
+        kron_reduce=kron_reduce,
+        phase_project=phase_project,
+        eng2math_extensions=eng2math_extensions,
+        eng2math_passthrough=eng2math_passthrough,
+        global_keys=global_keys,
+    )
+
+    correct_network_data && correct_network_data!(
+        data_math;
+        make_pu=make_pu,
+        make_pu_extensions=make_pu_extensions,
+    )
+
+    return data_math
+end
+
+function transform_data_model(data::InfrastructureModel; kwargs...)::InfrastructureModel
+    @info "Data model '$(typeof(data))' is not recognized, no model type transformation performed"
+    return data
+end
+
+function transform_data_model(data::MathematicalModel; kwargs...)::MathematicalModel
+    @info "A MATHEMATICAL data model cannot be converted back to an ENGINEERING data model, irreversible transformations have already been made"
+    return data
 end
 
 
 "base function for converting engineering model to mathematical model"
 function _map_eng2math(
-    data_eng::Dict{String,<:Any};
+    data_eng::EngineeringModel{T};
     kron_reduce::Bool=true,
     phase_project::Bool=false,
     eng2math_extensions::Vector{<:Function}=Function[],
     eng2math_passthrough::Dict{String,Vector{String}}=Dict{String,Vector{String}}(),
     global_keys::Set{String}=Set{String}(),
-    )::Dict{String,Any}
-
-    @assert iseng(data_eng)
+    )::MathematicalModel{T} where T
 
     _data_eng = deepcopy(data_eng)
 
@@ -193,37 +232,41 @@ function _map_eng2math(
         apply_phase_projection!(_data_eng)
     end
 
-    if ismultinetwork(data_eng)
-        data_math = Dict{String,Any}(
-            "name" => get(_data_eng, "name", ""),
-            "data_model" => MATHEMATICAL,
-            "nw" => Dict{String,Any}(
-                n => Dict{String,Any}(
-                    "per_unit" => get(_data_eng, "per_unit", false),
-                    "is_projected" => get(nw, "is_projected", false),
-                    "is_kron_reduced" => get(nw, "is_kron_reduced", false),
-                    "settings" => deepcopy(nw["settings"]),
-                    "time_elapsed" => get(nw, "time_elapsed", 1.0),
-                ) for (n,nw) in _data_eng["nw"]
-            ),
-            "multinetwork" => ismultinetwork(data_eng),
-            [k => data_eng[k] for k in global_keys if haskey(data_eng, k)]...
+    if T === MultinetworkModel
+        data_math = MathematicalModel{T}(
+            Dict{String,Any}(
+                "name" => get(_data_eng, "name", ""),
+                "data_model" => MATHEMATICAL,
+                "nw" => Dict{String,Any}(
+                    n => Dict{String,Any}(
+                        "per_unit" => get(_data_eng, "per_unit", false),
+                        "is_projected" => get(nw, "is_projected", false),
+                        "is_kron_reduced" => get(nw, "is_kron_reduced", false),
+                        "settings" => get(nw, "settings", Dict()),  #formerly deepcopy. potential issues if this is actually just an empty dict
+                        "time_elapsed" => get(nw, "time_elapsed", 1.0),
+                    ) for (n,nw) in _data_eng["nw"]
+                ),
+                "multinetwork" => ismultinetwork(data_eng),
+                [k => data_eng[k] for k in global_keys if haskey(data_eng, k)]...
+            )
         )
     else
-        data_math = Dict{String,Any}(
-            "name" => get(_data_eng, "name", ""),
-            "per_unit" => get(_data_eng, "per_unit", false),
-            "data_model" => MATHEMATICAL,
-            "is_projected" => get(_data_eng, "is_projected", false),
-            "is_kron_reduced" => get(_data_eng, "is_kron_reduced", false),
-            "settings" => deepcopy(_data_eng["settings"]),
-            "time_elapsed" => get(_data_eng, "time_elapsed", 1.0),
+        data_math = MathematicalModel{T}(
+            Dict{String,Any}(
+                "name" => get(_data_eng, "name", ""),
+                "per_unit" => get(_data_eng, "per_unit", false),
+                "data_model" => MATHEMATICAL,
+                "is_projected" => get(_data_eng, "is_projected", false),
+                "is_kron_reduced" => get(_data_eng, "is_kron_reduced", false),
+                "settings" => get(_data_eng, "settings", Dict()),  #formerly deepcopy. potential issues if this is actually just an empty dict
+                "time_elapsed" => get(_data_eng, "time_elapsed", 1.0),
+            )
         )
     end
 
     apply_pmd!(_map_eng2math_nw!, data_math, _data_eng; eng2math_passthrough=eng2math_passthrough, eng2math_extensions=eng2math_extensions)
 
-    if ismultinetwork(data_eng)
+    if T === MultinetworkModel
         _collect_nw_maps!(data_math)
         _collect_nw_bus_lookups!(data_math)
     end
@@ -234,33 +277,44 @@ end
 
 """
 """
-function _collect_nw_maps!(data_math::Dict{String,<:Any})
-    @assert ismultinetwork(data_math)
-    @assert ismath(data_math)
+function _collect_nw_maps!(data_math::MathematicalModel{MultinetworkModel})
+    maps = Dict{String,Vector{Dict{String,Any}}}()
 
-    data_math["map"] = Dict{String,Vector{Dict{String,Any}}}()
-    for (n,nw) in data_math["nw"]
-        data_math["map"][n] = pop!(nw, "map")
+    for (n, nw) in data_math["nw"]
+        if haskey(nw, "map")
+            maps[n] = pop!(nw, "map")
+        else
+            @warn "network has no map; using empty map" n=n keys=collect(keys(nw))
+            maps[n] = Dict{String,Any}[]
+        end
     end
+
+    data_math["map"] = maps
+
+    return data_math
+end
+"""
+"""
+function _collect_nw_bus_lookups!(data_math::MathematicalModel{MultinetworkModel})
+    bus_lookups = Dict{String,Dict{String,Any}}()
+
+    for (n, nw) in data_math["nw"]
+        if haskey(nw, "bus_lookup")
+            bus_lookups[n] = pop!(nw, "bus_lookup")
+        else
+            @warn "network has no bus_lookup; using empty lookup" n=n keys=collect(keys(nw))
+            bus_lookups[n] = Dict{String,Any}()
+        end
+    end
+
+    data_math["bus_lookup"] = bus_lookups
+
+    return data_math
 end
 
-
 """
 """
-function _collect_nw_bus_lookups!(data_math::Dict{String,<:Any})
-    @assert ismultinetwork(data_math)
-    @assert ismath(data_math)
-
-    data_math["bus_lookup"] = Dict{String,Dict{String,Any}}()
-    for (n,nw) in data_math["nw"]
-        data_math["bus_lookup"][n] = pop!(nw, "bus_lookup")
-    end
-end
-
-
-"""
-"""
-function _map_eng2math_nw!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any}; eng2math_passthrough::Dict{String,Vector{String}}=Dict{String,Vector{String}}(), eng2math_extensions::Vector{<:Function}=Function[])
+function _map_eng2math_nw!(data_math::MathematicalModel{NetworkModel}, data_eng::EngineeringModel; eng2math_passthrough::Dict{String,Vector{String}}=Dict{String,Vector{String}}(), eng2math_extensions::Vector{<:Function}=Function[])
     data_math["map"] = Vector{Dict{String,Any}}([
         Dict{String,Any}("unmap_function" => "_map_math2eng_root!")
     ])
@@ -297,7 +351,7 @@ function _map_eng2math_nw!(data_math::Dict{String,<:Any}, data_eng::Dict{String,
 end
 
 
-function _map_settings_vbases_default!(data_math::Dict{String,<:Any})
+function _map_settings_vbases_default!(data_math::MathematicalModel{NetworkModel})
     vbases_default = Dict{String,Real}()
     for (bus,vbase) in get(data_math["settings"], "vbases_default", Dict())
         vbases_default["$(data_math["bus_lookup"][bus])"] = vbase
@@ -308,7 +362,7 @@ end
 
 
 "converts engineering bus components into mathematical bus components"
-function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any}; pass_props::Vector{String}=String[])
+function _map_eng2math_bus!(data_math::MathematicalModel{NetworkModel}, data_eng::EngineeringModel{NetworkModel}; pass_props::Vector{String}=String[])
     for (name, eng_obj) in get(data_eng, "bus", Dict{String,Any}())
         terminals = eng_obj["terminals"]
 
@@ -364,7 +418,7 @@ end
 
 
 "converts engineering lines into mathematical branches"
-function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any}; pass_props::Vector{String}=String[])
+function _map_eng2math_line!(data_math::MathematicalModel{NetworkModel}, data_eng::EngineeringModel{NetworkModel}; pass_props::Vector{String}=String[])
     for (name, eng_obj) in get(data_eng, "line", Dict{Any,Dict{String,Any}}())
         _apply_linecode!(eng_obj, data_eng)
 
@@ -406,7 +460,7 @@ end
 
 
 "converts engineering n-winding transformers into mathematical ideal 2-winding lossless transformer branches and impedance branches to represent the loss model"
-function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any}; pass_props::Vector{String}=String[])
+function _map_eng2math_transformer!(data_math::MathematicalModel{NetworkModel}, data_eng::EngineeringModel{NetworkModel}; pass_props::Vector{String}=String[])
     for (name, eng_obj) in get(data_eng, "transformer", Dict{Any,Dict{String,Any}}())
         # Build map first, so we can update it as we decompose the transformer
         push!(data_math["map"], Dict{String,Any}(
@@ -418,6 +472,8 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
         to_map = data_math["map"][end]["to"]
 
         _apply_xfmrcode!(eng_obj, data_eng)
+        
+
 
         if haskey(eng_obj, "f_bus") && haskey(eng_obj, "t_bus")
             @assert all(haskey(eng_obj, k) for k in ["f_bus", "t_bus", "f_connections", "t_connections"]) "Incomplete definition of AL2W tranformer $name, aborting eng2math conversion"
@@ -487,6 +543,7 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
                 # 2-WINDING TRANSFORMER
                 # make virtual bus and mark it for reduction
                 tm_nom = eng_obj["configuration"][w]==DELTA ? eng_obj["vm_nom"][w]*sqrt(3) : eng_obj["vm_nom"][w]
+
                 transformer_2wa_obj = Dict{String,Any}(
                     "name"          => "_virtual_transformer.$name.$w",
                     "source_id"     => "_virtual_transformer.$(eng_obj["source_id"]).$w",
@@ -552,7 +609,7 @@ end
 
 
 "converts engineering switches into mathematical switches and (if neeed) impedance branches to represent loss model"
-function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any}; pass_props::Vector{String}=String[])
+function _map_eng2math_switch!(data_math::MathematicalModel{NetworkModel}, data_eng::EngineeringModel{NetworkModel}; pass_props::Vector{String}=String[])
     # TODO enable real switches (right now only using vitual lines)
     for (name, eng_obj) in get(data_eng, "switch", Dict{Any,Dict{String,Any}}())
         nphases = length(eng_obj["f_connections"])
@@ -642,7 +699,7 @@ end
 
 
 "converts engineering generic shunt components into mathematical shunt components"
-function _map_eng2math_shunt!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any}; pass_props::Vector{String}=String[])
+function _map_eng2math_shunt!(data_math::MathematicalModel{NetworkModel}, data_eng::EngineeringModel{NetworkModel}; pass_props::Vector{String}=String[])
     for (name, eng_obj) in get(data_eng, "shunt", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("shunt", name, eng_obj, length(data_math["shunt"])+1; pass_props=pass_props)
 
@@ -706,7 +763,7 @@ end
 
 
 "converts engineering load components into mathematical load components"
-function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any}; pass_props::Vector{String}=String[])
+function _map_eng2math_load!(data_math::MathematicalModel{NetworkModel}, data_eng::EngineeringModel{NetworkModel}; pass_props::Vector{String}=String[])
     for (name, eng_obj) in get(data_eng, "load", Dict{Any,Dict{String,Any}}())
         if eng_obj["model"]==ZIP
             to_map = String[]
@@ -760,7 +817,7 @@ end
 
 
 "converts engineering generators into mathematical generators"
-function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any}; pass_props::Vector{String}=String[])
+function _map_eng2math_generator!(data_math::MathematicalModel{NetworkModel}, data_eng::EngineeringModel{NetworkModel}; pass_props::Vector{String}=String[])
     for (name, eng_obj) in get(data_eng, "generator", Dict{String,Any}())
         math_obj = _init_math_obj("generator", name, eng_obj, length(data_math["gen"])+1; pass_props=pass_props)
 
@@ -809,7 +866,7 @@ end
 
 
 "converts engineering solar components into mathematical generators"
-function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any}; pass_props::Vector{String}=String[])
+function _map_eng2math_solar!(data_math::MathematicalModel{NetworkModel}, data_eng::EngineeringModel{NetworkModel}; pass_props::Vector{String}=String[])
     for (name, eng_obj) in get(data_eng, "solar", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("solar", name, eng_obj, length(data_math["gen"])+1; pass_props=pass_props)
 
@@ -857,7 +914,7 @@ end
 
 
 "converts engineering storage into mathematical storage"
-function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any}; pass_props::Vector{String}=String[])
+function _map_eng2math_storage!(data_math::MathematicalModel{NetworkModel}, data_eng::EngineeringModel{NetworkModel}; pass_props::Vector{String}=String[])
     for (name, eng_obj) in get(data_eng, "storage", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("storage", name, eng_obj, length(data_math["storage"])+1; pass_props=pass_props)
 
@@ -900,7 +957,7 @@ end
 
 
 "converts engineering voltage sources into mathematical generators and (if needed) impedance branches to represent the loss model"
-function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any}; pass_props::Vector{String}=String[])
+function _map_eng2math_voltage_source!(data_math::MathematicalModel{NetworkModel}, data_eng::EngineeringModel{NetworkModel}; pass_props::Vector{String}=String[])
     for (name, eng_obj) in get(data_eng, "voltage_source", Dict{String,Any}())
         nconductors = length(eng_obj["connections"])
         nphases = get(eng_obj, "configuration", WYE) == WYE && !get(data_eng, "is_kron_reduced", false) ? nconductors - 1 : nconductors

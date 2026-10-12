@@ -8,7 +8,7 @@ the total length of the merged lines.
 If `remove_original_lines`, the original lines and eliminated buses will be deleted from the data structure,
 otherwise the lines and buses will be `DISABLED`.
 """
-function reduce_line_series!(eng::Dict{String,<:Any}; remove_original_lines::Bool=false)
+function reduce_line_series!(eng::EngineeringModel{NetworkModel}; remove_original_lines::Bool=false)
     G = Graphs.Graph(sum([length(get(eng, k, Dict())) for k in ["bus", PowerModelsDistribution._eng_node_elements...]]))
 
     id_map = Dict((k,i) => n for (n,(k,i)) in enumerate([(k,i) for k in ["bus", PowerModelsDistribution._eng_node_elements...] for i in keys(get(eng, k, Dict()))]))

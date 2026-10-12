@@ -77,7 +77,7 @@ end
 function _convert_model_to_dict(data::Union{InfrastructureModel,InfrastructureObject})::Dict{String,Any}
     out = Dict{String,Any}(
     )
-
+    
     for property in propertynames(data)
         item = getproperty(data, property)
 
@@ -95,6 +95,13 @@ function _convert_model_to_dict(data::Union{InfrastructureModel,InfrastructureOb
         else
             out["$property"] = item
         end
+    end
+    
+    if iseng(data)
+        out["iseng"] = true
+    end
+    if ismath(data)
+        out["ismath"] = true
     end
 
     return filter(x->!ismissing(x.second), out)
