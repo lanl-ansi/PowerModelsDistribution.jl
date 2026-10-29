@@ -2,6 +2,12 @@
 
 ## staged
 
+- Fixed `solve_mc_model` with `Dict` input to return `result["solution"]` as a `Dict`, and to accept MATHEMATICAL `Dict` data
+- Fixed `dss2eng_extensions` to receive the ENGINEERING `Dict` rather than an `EngineeringModel`
+- Fixed `calc_voltage_bases` on ENGINEERING `Dict` data returning `missing` for all buses, which caused `apply_voltage_bounds!` to silently apply no bounds
+- Fixed `_convert_model_to_dict` on `EngineeringModel`/`MathematicalModel` nesting all data under a `"data"` key, which also broke `print_file` JSON output
+- Fixed `parse_file` on PMD JSON files to return an `EngineeringModel`/`MathematicalModel`
+- Added `==` for `EngineeringModel`, `MathematicalModel`, `EngineeringSolution`, and `MathematicalSolution`
 - Fixed `_eng_model_dtypes` checks (#465)
 - Fixed unstable test "3-bus unbalanced lpubfdiag opf_bf with delta loads" by bounding objective
 - Fixed typo in `create_transformer`, `create_xfmrcode` and ENGINEERING model documentation, `configurations` -> `configuration` and `buses` -> `bus` on transformer objects (#463)

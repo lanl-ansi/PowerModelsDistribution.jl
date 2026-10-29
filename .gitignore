@@ -19,3 +19,6 @@ examples/*.toml
 examples/Native Power Flow - script.jl
 
 debug/
+
+CLAUDE.md
+*plan.md

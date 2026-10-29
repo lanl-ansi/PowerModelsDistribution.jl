@@ -73,6 +73,18 @@ function _fill_vector!(vector::Vector{T}, elements::Vector{String})::Nothing whe
 end
 
 
+"Helper function to convert Dict-backed models (EngineeringModel, MathematicalModel, and their solutions) into Dict{String,Any}"
+function _convert_model_to_dict(data::StandardDataModels)::Dict{String,Any}
+    out = Dict{String,Any}(k => (v isa StandardDataModels ? _convert_model_to_dict(v) : v) for (k, v) in data.data)
+
+    if haskey(out, "nw")
+        out["nw"] = Dict{String,Any}("$n" => (nw isa StandardDataModels ? _convert_model_to_dict(nw) : nw) for (n, nw) in out["nw"])
+    end
+
+    return out
+end
+
+
 "Helper function to convert InfrastructureModel,InfrastructureObject into Dict{String,Any}"
 function _convert_model_to_dict(data::Union{InfrastructureModel,InfrastructureObject})::Dict{String,Any}
     out = Dict{String,Any}(
