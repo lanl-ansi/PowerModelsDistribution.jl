@@ -16,6 +16,7 @@
 - Fixed missing `npts` property in loadshape in case3_balanced.dss (#466)
 - Fixed typo in unit tests 'blanced' to 'balanced' (#461)
 - Updated `PolyhedralRelaxations` compat to v0.3.6
+- Updated `CSV` compat to v1, dropping support for v0.8.5-v0.10
 
 ## v0.16.0
 
