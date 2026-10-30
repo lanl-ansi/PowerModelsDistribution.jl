@@ -1088,7 +1088,7 @@ function parse_opendss(
     end
 
     for dss2eng_func! in dss2eng_extensions
-        dss2eng_func!(data_eng, data_dss)
+        dss2eng_func!(data_eng.data, data_dss)
     end
 
     find_conductor_ids!(data_eng)

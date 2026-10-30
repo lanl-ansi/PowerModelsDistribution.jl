@@ -187,7 +187,7 @@
         delete!(math1, "map")
         delete!(math2, "map")
 
-        @test_broken math1 == math2
+        @test math1 == math2
 
         dss1 = parse_dss("../test/data/opendss/case3_balanced.dss")
         dss2 = parse_dss("../test/data/opendss/case3_balanced_prop-order.dss")
@@ -330,5 +330,5 @@ end
     print_file(io, eng)
     eng_json_file = parse_file(io)
 
-    @test_broken eng == eng_json_file
+    @test eng == eng_json_file
 end

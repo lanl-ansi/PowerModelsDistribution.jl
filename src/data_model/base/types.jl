@@ -285,6 +285,7 @@ Base.iterate(rd::T, i::Int=1) where T<:StandardDataModels = iterate(rd.data, i)
 Base.length(rd::T) where T<:(StandardDataModels) = length(rd.data)
 Base.delete!(rd::T, key::String) where T<:(StandardDataModels) = delete!(rd.data, key)
 Base.pop!(rd::T, key) where T<:(StandardDataModels) = pop!(rd.data, key)
+Base.:(==)(a::T, b::U) where {T<:StandardDataModels,U<:StandardDataModels} = typeof(a) == typeof(b) && a.data == b.data
 # Base.convert(rd::T, ::U) where {T<:StandardDataModels,U<:Dict{String,<:Any}} = rd.data
 
 transform_data_model(::Type{T}, data::EngineeringModel; kwargs...) where T<:MathematicalModel = transform_data_model(data; kwargs...)
