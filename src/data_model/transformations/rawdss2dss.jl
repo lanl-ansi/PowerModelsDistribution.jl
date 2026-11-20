@@ -160,10 +160,14 @@ function _apply_property_pairs(dss_obj::T, property_pairs::Vector{Pair{String,St
 
         if pn ∈ ["csvfile", "sngfile", "dblfile", "pqcsvfile"]
             setproperty!(dss_obj, Symbol(pn), v)
-
             interval = typeof(dss_obj) <: DssIntervalMultObjects ? true : interval_leq_zero
             pn = typeof(dss_obj) <: DssSpectrum ? "pqcsvfile" : pn
-            hour, mult, pmult, qmult = getproperty(PowerModelsDistribution, Symbol("_parse_$(pn)"))(joinpath(__path__, v); interval=interval)
+
+            ## explicit header check; if typeof first argument is convertible to Float64, then header=false 
+            is_string = tryparse(Float64,split(readline(joinpath(__path__,v)),",")[1]) # returns 'nothing' if parse fails 
+            header = is_string === nothing ? true : false
+
+            hour, mult, pmult, qmult = getproperty(PowerModelsDistribution, Symbol("_parse_$(pn)"))(joinpath(__path__, v); interval=interval, header=header)
 
             if typeof(dss_obj) <: DssLoadshape
                 if !isempty(hour)
@@ -352,9 +356,20 @@ end
 """
 """
 function _parse_csvfile(path::String; header::Bool=false, interval::Bool=false, npts::Union{Int,Missing}=missing)::NTuple{4, Vector{Float64}}
-    d = open(path, "r") do io
-        parse.(Float64, mapreduce(permutedims, vcat, split.(readlines(io)[(header ? 2 : 1):end], r",")))
+
+    # if unreadable; try brief encoding fix (WindowsOS issue)
+    d = try
+        open(path, "r") do io
+            parse.(Float64, mapreduce(permutedims, vcat, split.(readlines(io)[(header ? 2 : 1):end], r",")))
+        end
+    catch
+        run(`dos2unix -q $path`) ## in-place correction to file encoding. 
+
+        open(path, "r") do io
+            parse.(Float64, mapreduce(permutedims, vcat, split.(readlines(io)[(header ? 2 : 1):end], r",")))
+        end
     end
+    
 
     if interval
         hour = d[:,1]
@@ -364,15 +379,25 @@ function _parse_csvfile(path::String; header::Bool=false, interval::Bool=false, 
         mult = d[:,1]
     end
 
-    return (hour, mult, mult, mult)
+    return (hour, mult, mult, mult) 
 end
 
 
 """
 """
 function _parse_pqcsvfile(path::String; header::Bool=false, interval::Bool=false, npts::Union{Int,Missing}=missing)::NTuple{4, Vector{Float64}}
-    d = open(path, "r") do io
-        parse.(Float64, mapreduce(permutedims, vcat, split.(readlines(io)[(header ? 2 : 1):end], r",")))
+    
+    # if unreadable; try brief encoding fix (WindowsOS issue)
+    d = try
+        open(path, "r") do io
+            parse.(Float64, mapreduce(permutedims, vcat, split.(readlines(io)[(header ? 2 : 1):end], r",")))
+        end
+    catch
+        run(`dos2unix -q $path`) ## in-place correction to file encoding. 
+
+        open(path, "r") do io
+            parse.(Float64, mapreduce(permutedims, vcat, split.(readlines(io)[(header ? 2 : 1):end], r",")))
+        end
     end
 
     if interval
@@ -497,14 +522,17 @@ function _parse_file_inside_mult!(dss_obj::DssObject, __path__::String, pn::Stri
     for _match in eachmatch(_dss_cmd_new_regex, v)
         push!(_property_pairs, _parse_match_element(_match, "",))
     end
+
     raw_fields = _get_raw_fields(_property_pairs)
     _properties = Dict{String,String}(_property_pairs)
 
     col = parse(Int, get(_properties, "col", "1"))
+    
     _header = get(_properties, "header", "false")
     header = parse(Bool, startswith(_header, "y") || startswith(_header, "t") ? "true" : "false")
     interval = :pqcsvfile ∈ raw_fields ? col > 2 : col > 1
     col = col + (interval ? 0 : 1)
+
 
     if :csvfile ∈ raw_fields
         setproperty!(dss_obj, Symbol(pn), _parse_csvfile(joinpath(__path__, _properties["csvfile"]); interval=interval, header=header)[col])
