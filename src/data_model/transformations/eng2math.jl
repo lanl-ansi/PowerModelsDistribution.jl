@@ -362,6 +362,62 @@ end
 
 
 "converts engineering bus components into mathematical bus components"
+function _map_eng2math_bus!(data_math_dict::Dict{String, Any}, data_eng_dict::Dict{String, Any}; pass_props::Vector{String}=String[])
+    data_math = MathematicalModel(data_math_dict)
+    data_eng = EngineeringModel(data_eng_dict)
+    for (name, eng_obj) in get(data_eng, "bus", Dict{String,Any}())
+        terminals = eng_obj["terminals"]
+
+        math_obj = _init_math_obj("bus", name, eng_obj, length(data_math["bus"])+1; pass_props=pass_props)
+
+        math_obj["bus_i"] = math_obj["index"]
+        math_obj["bus_type"] = eng_obj["status"] == DISABLED ? 4 : 1
+        math_obj["source_id"] = "bus.$name"
+
+        # take care of grounding; convert to shunt if lossy
+        grounded_perfect, shunts = _convert_grounding(eng_obj["terminals"], eng_obj["grounded"], eng_obj["rg"], eng_obj["xg"])
+
+        math_obj["grounded"] = grounded_perfect
+        to_sh = []
+        for (sh_connections, sh_y) in shunts
+            sh_index = length(data_math["shunt"]) + 1
+            data_math["shunt"]["$sh_index"] = Dict(
+                "index" => sh_index,
+                "shunt_bus" => math_obj["bus_i"],
+                "connections" => sh_connections,
+                "gs" => real.(sh_y),
+                "bs" => imag.(sh_y),
+            )
+            push!(to_sh, "shunt.$sh_index")
+        end
+
+        if haskey(eng_obj, "vm")
+            math_obj["vm"] = eng_obj["vm"]
+        end
+        if haskey(eng_obj, "va")
+            math_obj["va"] = eng_obj["va"]
+        end
+
+        math_obj["vmin"], math_obj["vmax"] = _get_tight_absolute_voltage_magnitude_bounds(eng_obj)
+        math_obj["vm_pair_lb"], math_obj["vm_pair_ub"] = _get_tight_pairwise_voltage_magnitude_bounds(eng_obj)
+        _add_implicit_absolute_bounds!(math_obj, terminals)
+
+        data_math["bus"]["$(math_obj["index"])"] = math_obj
+
+        if !haskey(data_math, "bus_lookup")
+            data_math["bus_lookup"] = Dict{Any,Int}()
+        end
+
+        data_math["bus_lookup"][name] = math_obj["index"]
+
+        push!(data_math["map"], Dict{String,Any}(
+            "from" => name,
+            "to" => "bus.$(math_obj["index"])",
+            "unmap_function" => "_map_math2eng_bus!",
+        ))
+    end
+end
+"converts engineering bus components into mathematical bus components"
 function _map_eng2math_bus!(data_math::MathematicalModel{NetworkModel}, data_eng::EngineeringModel{NetworkModel}; pass_props::Vector{String}=String[])
     for (name, eng_obj) in get(data_eng, "bus", Dict{String,Any}())
         terminals = eng_obj["terminals"]

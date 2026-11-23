@@ -62,6 +62,8 @@ include("test_cases.jl")
 
     include("data_model.jl")
 
+    include("dict_compat.jl")
+
     include("en_opf_bounds.jl")
 
     include("en_pf_validation.jl")

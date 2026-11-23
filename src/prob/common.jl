@@ -57,75 +57,35 @@ function _solve_mc_model(
     return result
 end
 
+"""
+    solve_mc_model(data::Dict{String,Any}, model_type::Type, optimizer, build_mc::Function; kwargs...)::Dict{String,Any}
+
+Legacy `Dict` interface to [`solve_mc_model`](@ref solve_mc_model). `data` is wrapped in an `EngineeringModel` or
+`MathematicalModel` according to its `data_model`, and `result["solution"]` is returned as a `Dict{String,Any}`
+so that downstream packages working with `Dict` data are unaffected by the typed data models.
+"""
 function solve_mc_model(
     data_dict::Dict{String, Any},
     model_type::Type,
     optimizer,
     build_mc::Function;
-    ref_extensions::Vector{<:Function}=Function[],
     multinetwork::Bool=false,
-    global_keys::Set{String}=Set{String}(),
-    eng2math_extensions::Vector{<:Function}=Function[],
-    eng2math_passthrough::Dict{String,<:Vector{<:String}}=Dict{String,Vector{String}}(),
-    make_pu_extensions::Vector{<:Function}=Function[],
-    map_math2eng_extensions::Dict{String,<:Function}=Dict{String,Function}(),
     make_si::Bool=!get(data_dict, "per_unit", false),
-    make_si_extensions::Vector{<:Function}=Function[],
-    dimensionalize_math_extensions::Dict{String,Dict{String,Vector{String}}}=Dict{String,Dict{String,Vector{String}}}(),
     kwargs...
-    )::Union{MathematicalSolution,EngineeringSolution,RavensModel,Dict{String, Any}}
+    )::Dict{String,Any}
 
-    data = EngineeringModel(data_dict)
-
-    if iseng(data)
-        data_math = transform_data_model(
-            data;
-            multinetwork=multinetwork,
-            eng2math_extensions=eng2math_extensions,
-            eng2math_passthrough=eng2math_passthrough,
-            make_pu_extensions=make_pu_extensions,
-            global_keys=global_keys,
-        )
-
-        result = _solve_mc_model(
-            data_math,
-            model_type,
-            optimizer,
-            build_mc;
-            ref_extensions=ref_extensions,
-            multinetwork=multinetwork,
-            global_keys=global_keys,
-            kwargs...
-        )
-
-        result["solution"] = transform_solution(
-            MathematicalModel(result["solution"]; multinetwork=multinetwork),
-            data_math;
-            map_math2eng_extensions=map_math2eng_extensions,
-            make_si=make_si,
-            make_si_extensions=make_si_extensions,
-            dimensionalize_math_extensions=dimensionalize_math_extensions,
-        )
-    elseif ismath(data)
-        result = _solve_mc_model(
-            data,
-            model_type,
-            optimizer,
-            build_mc;
-            ref_extensions=ref_extensions,
-            multinetwork=multinetwork,
-            eng2math_extensions=eng2math_extensions,
-            eng2math_passthrough=eng2math_passthrough,
-            global_keys=global_keys,
-            kwargs...
-        )
-
-        result["solution"] = MathematicalModel(
-            result["solution"];
-            multinetwork=multinetwork,
-        )
+    if iseng(data_dict)
+        data = EngineeringModel(data_dict; multinetwork=multinetwork)
+    elseif ismath(data_dict)
+        data = MathematicalModel(data_dict; multinetwork=multinetwork)
     else
-        error("unrecognized data model format '$(get(data, "data_model", missing))'")
+        error("unrecognized data model format '$(get(data_dict, "data_model", missing))'")
+    end
+
+    result = solve_mc_model(data, model_type, optimizer, build_mc; multinetwork=multinetwork, make_si=make_si, kwargs...)
+
+    if result["solution"] isa StandardDataModels
+        result["solution"] = _convert_model_to_dict(result["solution"])
     end
 
     return result

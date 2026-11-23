@@ -235,7 +235,7 @@ Calculates voltage bases for each voltage zone for buses and branches for a MATH
 calc_voltage_bases(data_model::MathematicalModel, vbase_sources::Dict{String,<:Real})::Tuple{Dict,Dict} = _calc_voltage_bases(data_model, vbase_sources, _math_edge_elements)
 
 #version for some of the looser data structures in PMP, PMONM
-calc_voltage_bases(data_model::Dict{String, Any}, vbase_sources::Dict{String,<:Real})::Tuple{Dict,Dict} = _calc_voltage_bases(data_model, vbase_sources, _math_edge_elements)
+calc_voltage_bases(data_model::Dict{String, Any}, vbase_sources::Dict{String,<:Real})::Tuple{Dict,Dict} = _calc_voltage_bases(data_model, vbase_sources, ismath(data_model) ? _math_edge_elements : _eng_edge_elements)
 
 
 """

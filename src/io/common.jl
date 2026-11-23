@@ -70,6 +70,7 @@ function parse_file(
             data = RavensModel(Dict(raw_data))
         elseif haskey(raw_data, "data_model")
             data = parse_json(raw_data)
+            data = ismath(data) ? MathematicalModel(data) : EngineeringModel(data)
         else
             # default to trying RavensModel
             data = RavensModel(raw_data)
