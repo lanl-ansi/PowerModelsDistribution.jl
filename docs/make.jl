@@ -13,8 +13,10 @@ makedocs(
         mathengine = Documenter.MathJax(),
         prettyurls=false,
         collapselevel=1,
+        size_threshold=nothing,
+        size_threshold_warn=nothing,
     ),
-    strict=false,
+    warnonly = true,
     sitename = "PowerModelsDistribution",
     authors = "David M Fobes, Carleton Coffrin, Frederik Geth, Sander Claeys, and contributors",
     pages = [
